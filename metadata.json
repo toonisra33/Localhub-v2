@@ -1,0 +1,10 @@
+{
+  "name": "LocalHub",
+  "description": "LocalHub ศูนย์รวมข้อมูล ข่าวสาร บรอดแคสเตือนภัย และตลาดนัดชุมชนใกล้ตัวคุณ",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

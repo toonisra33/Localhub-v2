@@ -1,0 +1,163 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile, personal information, authentication credentials and reputation score",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID of the user" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "displayName": { "type": "string", "maxLength": 100, "description": "Display name of the resident" },
+        "photoURL": { "type": "string", "maxLength": 1000, "description": "Avatar photo URL" },
+        "phone": { "type": "string", "maxLength": 30, "description": "Phone number" },
+        "address": { "type": "string", "maxLength": 300, "description": "Resident address" },
+        "villageOrCondo": { "type": "string", "maxLength": 150, "description": "Village or condominium name" },
+        "bio": { "type": "string", "maxLength": 500, "description": "User biography" },
+        "role": { "type": "string", "enum": ["user", "admin", "moderator"], "description": "User role in community" },
+        "isVerified": { "type": "boolean", "description": "Whether resident identity is verified" },
+        "reputationScore": { "type": "number", "description": "Community trust score" },
+        "lastLoginAt": { "type": "string", "format": "date-time", "description": "Last login timestamp" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Account update timestamp" }
+      },
+      "required": ["uid", "email"]
+    },
+    "UserSession": {
+      "title": "UserSession",
+      "description": "Log of user login sessions and app access history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Session record ID" },
+        "userId": { "type": "string", "description": "UID of the user" },
+        "userName": { "type": "string", "description": "Name of the user during session" },
+        "userEmail": { "type": "string", "description": "Email of the user" },
+        "loginMethod": { "type": "string", "enum": ["google", "password", "anonymous"], "description": "Authentication method used" },
+        "ipOrLocation": { "type": "string", "description": "Location or device info when logged in" },
+        "userAgent": { "type": "string", "description": "Browser user agent info" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Session timestamp" }
+      },
+      "required": ["userId", "loginMethod"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Community posts, news, media (photos/videos) and check-in items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique post identifier" },
+        "authorUid": { "type": "string", "description": "UID of the post creator" },
+        "authorName": { "type": "string", "maxLength": 100, "description": "Author display name" },
+        "authorAvatar": { "type": "string", "maxLength": 1000, "description": "Author avatar photo URL" },
+        "content": { "type": "string", "maxLength": 5000, "description": "Post text content" },
+        "category": { "type": "string", "maxLength": 50, "description": "Post category" },
+        "images": { "type": "array", "description": "Array of image URLs or base64 data strings" },
+        "videoUrl": { "type": "string", "maxLength": 1000, "description": "Optional video URL or attachment" },
+        "location": { "type": "object", "description": "Location details when post was published" },
+        "checkIn": { "type": "object", "description": "Check-in place info if attached" },
+        "likes": { "type": "number", "description": "Total like count" },
+        "comments": { "type": "number", "description": "Total comment count" },
+        "likedBy": { "type": "array", "description": "List of user UIDs who liked the post" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last modified timestamp" }
+      },
+      "required": ["authorUid", "content", "category"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Comment on a post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Comment ID" },
+        "postId": { "type": "string", "description": "Parent post ID" },
+        "authorUid": { "type": "string", "description": "Author UID" },
+        "authorName": { "type": "string", "maxLength": 100, "description": "Author name" },
+        "authorAvatar": { "type": "string", "maxLength": 1000, "description": "Author avatar URL" },
+        "content": { "type": "string", "maxLength": 2000, "description": "Comment text" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["postId", "authorUid", "content"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "Community safety and incident alert",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Alert ID" },
+        "title": { "type": "string", "maxLength": 200, "description": "Alert title" },
+        "type": { "type": "string", "description": "Alert type" },
+        "severity": { "type": "string", "enum": ["high", "medium", "low"], "description": "Severity level" },
+        "location": { "type": "string", "description": "Location description" },
+        "description": { "type": "string", "maxLength": 2000, "description": "Incident details" },
+        "reportedBy": { "type": "string", "description": "Reporter name" },
+        "authorUid": { "type": "string", "description": "Reporter UID" },
+        "confirmations": { "type": "number", "description": "Confirmation count" },
+        "rejections": { "type": "number", "description": "Rejection count" },
+        "status": { "type": "string", "description": "Alert status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "type", "severity", "description"]
+    },
+    "Broadcast": {
+      "title": "Broadcast",
+      "description": "Official community announcements created by admins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Broadcast ID" },
+        "title": { "type": "string", "maxLength": 250, "description": "Announcement title" },
+        "content": { "type": "string", "maxLength": 5000, "description": "Announcement content" },
+        "category": { "type": "string", "description": "Broadcast category" },
+        "authorName": { "type": "string", "description": "Admin author name" },
+        "authorUid": { "type": "string", "description": "Admin UID" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "content"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Community marketplace listing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Product ID" },
+        "name": { "type": "string", "maxLength": 200, "description": "Product title" },
+        "price": { "type": "number", "description": "Price in THB" },
+        "category": { "type": "string", "description": "Category" },
+        "seller": { "type": "string", "description": "Seller name" },
+        "sellerUid": { "type": "string", "description": "Seller UID" },
+        "sellerPhone": { "type": "string", "description": "Seller phone" },
+        "description": { "type": "string", "maxLength": 2000, "description": "Description" },
+        "image": { "type": "string", "description": "Product image URL" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["name", "price", "seller"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "User" },
+      "description": "Stores user personal profiles, credentials, settings and verification status"
+    },
+    "/user_sessions/{sessionId}": {
+      "schema": { "$ref": "UserSession" },
+      "description": "Logs all user access, login history and active sessions"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "Post" },
+      "description": "Community feed posts, attached media (images/videos), check-in locations and likes"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": { "$ref": "Comment" },
+      "description": "Resident comments on community posts"
+    },
+    "/alerts/{alertId}": {
+      "schema": { "$ref": "Alert" },
+      "description": "Community safety and incident alerts"
+    },
+    "/broadcasts/{broadcastId}": {
+      "schema": { "$ref": "Broadcast" },
+      "description": "Official community PR and administrative announcements"
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "Product" },
+      "description": "Resident marketplace listings"
+    }
+  }
+}
