@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { AdminBroadcast, UserRole, BroadcastCategory, BroadcastSeverity } from '../types';
+import { db, saveEntityToFirestore } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface BroadcastContextType {
   role: UserRole;
@@ -52,21 +54,27 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [activeBroadcast, setActiveBroadcast] = useState<AdminBroadcast | null>(() => {
-    try {
-      const todayStr = getLocalDateStr();
-      const saved = localStorage.getItem(BROADCAST_STORAGE_KEY);
-      if (saved) {
-        const parsed: AdminBroadcast = JSON.parse(saved);
-        if (parsed.broadcastDateStr === todayStr && parsed.isActive && !parsed.id.startsWith('bc_default_')) {
-          return parsed;
+  const [activeBroadcast, setActiveBroadcast] = useState<AdminBroadcast | null>(null);
+
+  // Subscribe to active broadcast from Firestore
+  useEffect(() => {
+    if (!db) return;
+    const unsub = onSnapshot(doc(db, 'broadcasts', 'active'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() as AdminBroadcast;
+        const todayStr = getLocalDateStr();
+        if (data.broadcastDateStr === todayStr && data.isActive) {
+          setActiveBroadcast(data);
+          return;
         }
       }
-      return null;
-    } catch {
-      return null;
-    }
-  });
+      setActiveBroadcast(null);
+    }, (error) => {
+      console.warn('Firestore subscription warning (broadcasts):', error);
+    });
+    
+    return () => unsub();
+  }, []);
 
   const [deviceRemainingSeconds, setDeviceRemainingSeconds] = useState<number>(0);
   const [isBroadcastVisible, setIsBroadcastVisible] = useState<boolean>(false);
@@ -81,7 +89,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Check and calculate device viewing timer for active broadcast
+    // Check and calculate device viewing timer for active broadcast
   const updateTimer = useCallback(() => {
     if (!activeBroadcast || !activeBroadcast.isActive) {
       setIsBroadcastVisible(false);
@@ -92,14 +100,8 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     const todayStr = getLocalDateStr();
     // Midnight reset condition
     if (activeBroadcast.broadcastDateStr !== todayStr) {
-      setActiveBroadcast(null);
       setIsBroadcastVisible(false);
       setDeviceRemainingSeconds(0);
-      try {
-        localStorage.removeItem(BROADCAST_STORAGE_KEY);
-      } catch {
-        // ignore
-      }
       return;
     }
 
@@ -170,31 +172,24 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
       isActive: true,
     };
 
-    // Store in localStorage
+    // Store in Firestore
     try {
-      localStorage.setItem(BROADCAST_STORAGE_KEY, JSON.stringify(newBroadcast));
+      saveEntityToFirestore('broadcasts', 'active', newBroadcast);
       // Reset device first seen timestamp for this device so it gets fresh 15 mins
       localStorage.setItem(`${DEVICE_VIEW_PREFIX}${newBroadcast.id}`, now.toString());
-    } catch {
-      // ignore
+    } catch (e) {
+      console.error('Failed to save broadcast', e);
     }
-
-    setActiveBroadcast(newBroadcast);
-    setDeviceRemainingSeconds(BROADCAST_DURATION_SECONDS);
-    setIsBroadcastVisible(true);
   };
 
   const cancelBroadcast = () => {
     if (activeBroadcast) {
       const updated = { ...activeBroadcast, isActive: false };
       try {
-        localStorage.removeItem(BROADCAST_STORAGE_KEY);
-      } catch {
-        // ignore
+        saveEntityToFirestore('broadcasts', 'active', updated);
+      } catch (e) {
+        console.error('Failed to cancel broadcast', e);
       }
-      setActiveBroadcast(null);
-      setIsBroadcastVisible(false);
-      setDeviceRemainingSeconds(0);
     }
   };
 

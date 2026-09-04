@@ -325,6 +325,32 @@ export async function deletePostFromFirestore(postId: string): Promise<void> {
 }
 
 /**
+ * Generic Save/Update Entity to Firestore
+ */
+export async function saveEntityToFirestore(collectionName: string, id: string, data: any): Promise<void> {
+  const path = `${collectionName}/${id}`;
+  try {
+    const docRef = doc(db, collectionName, id);
+    await setDoc(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Generic Delete Entity from Firestore
+ */
+export async function deleteEntityFromFirestore(collectionName: string, id: string): Promise<void> {
+  const path = `${collectionName}/${id}`;
+  try {
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+/**
  * Sign out of Firebase Auth
  */
 export async function signOutAuth() {

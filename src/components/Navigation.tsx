@@ -20,8 +20,6 @@ export function Navigation({ activeTab, setActiveTab }: NavigationProps) {
     { id: 'home', icon: Home, label: 'หน้าหลัก' },
     { id: 'map', icon: MapPin, label: 'รอบตัว' },
     { id: 'community', icon: Users, label: 'ฟีดชุมชน' },
-    { id: 'market', icon: Store, label: 'ตลาด' },
-    { id: 'chats', icon: MessageCircle, label: 'แชท' },
     ...(isAdmin ? [{ id: 'admin_dashboard', icon: BarChart3, label: 'แดชบอร์ด' }] : []),
     { id: 'me', icon: User, label: 'ฉัน' },
   ] as const;

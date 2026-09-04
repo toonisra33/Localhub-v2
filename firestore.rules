@@ -80,6 +80,14 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (resource.data.sellerUid == request.auth.uid || isAdmin());
     }
 
+    // Events (Community events)
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
     // Contact Requests (Direct messages to admin)
     match /contact_requests/{requestId} {
       allow read: if isAuthenticated() && (resource.data.authorUid == request.auth.uid || isAdmin());

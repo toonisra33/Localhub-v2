@@ -39,6 +39,8 @@ import {
   logUserSession,
   testConnection,
   handleFirestoreError,
+  saveEntityToFirestore,
+  deleteEntityFromFirestore,
   OperationType
 } from '../lib/firebase';
 import { 
@@ -209,32 +211,9 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [posts, setPosts] = useState<Post[]>(() => {
-    try {
-      const saved = localStorage.getItem('locallink_posts');
-      return saved ? JSON.parse(saved) : initialPosts;
-    } catch {
-      return initialPosts;
-    }
-  });
-
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const saved = localStorage.getItem('locallink_products');
-      return saved ? JSON.parse(saved) : initialProducts;
-    } catch {
-      return initialProducts;
-    }
-  });
-
-  const [events, setEvents] = useState<LocalEvent[]>(() => {
-    try {
-      const saved = localStorage.getItem('locallink_events');
-      return saved ? JSON.parse(saved) : mockEvents;
-    } catch {
-      return mockEvents;
-    }
-  });
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [events, setEvents] = useState<LocalEvent[]>([]);
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     try {
@@ -568,6 +547,37 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   // Listen for Firebase Auth state changes
   useEffect(() => {
+    // Subscriptions to Firestore collections
+    const unsubPosts = onSnapshot(
+      query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(100)),
+      (snapshot) => {
+        const fetchedPosts: Post[] = [];
+        snapshot.forEach(doc => fetchedPosts.push(doc.data() as Post));
+        setPosts(fetchedPosts);
+      },
+      (error) => console.warn('Firestore subscription warning (posts):', error)
+    );
+
+    const unsubProducts = onSnapshot(
+      query(collection(db, 'products'), orderBy('createdAt', 'desc'), limit(100)),
+      (snapshot) => {
+        const fetchedProds: Product[] = [];
+        snapshot.forEach(doc => fetchedProds.push(doc.data() as Product));
+        setProducts(fetchedProds);
+      },
+      (error) => console.warn('Firestore subscription warning (products):', error)
+    );
+
+    const unsubEvents = onSnapshot(
+      query(collection(db, 'events'), limit(50)),
+      (snapshot) => {
+        const fetchedEvents: LocalEvent[] = [];
+        snapshot.forEach(doc => fetchedEvents.push(doc.data() as LocalEvent));
+        setEvents(fetchedEvents);
+      },
+      (error) => console.warn('Firestore subscription warning (events):', error)
+    );
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         setIsLoggedIn(true);
@@ -610,6 +620,18 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
           }
         } catch (e) {
           console.error('Error fetching Firestore user profile:', e);
+          // Fallback if offline
+          setUserProfile(prev => ({
+            ...prev,
+            id: firebaseUser.uid,
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || prev.name,
+            email: firebaseUser.email || prev.email,
+            avatar: firebaseUser.photoURL || prev.avatar,
+            isVerified: false,
+            role: role as 'admin' | 'user',
+            isGoogleUser: true
+          }));
         }
       } else {
         // User is signed out
@@ -633,7 +655,12 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unsubPosts();
+      unsubProducts();
+      unsubEvents();
+    };
   }, []);
 
   // Persistence helpers for localStorage caching
@@ -645,17 +672,18 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem('locallink_alerts', JSON.stringify(alerts)); } catch {}
   }, [alerts]);
 
-  useEffect(() => {
-    try { localStorage.setItem('locallink_posts', JSON.stringify(posts)); } catch {}
-  }, [posts]);
+  // Disable local storage for posts, products, events as we use Firestore now
+  // useEffect(() => {
+  //   try { localStorage.setItem('locallink_posts', JSON.stringify(posts)); } catch {}
+  // }, [posts]);
 
-  useEffect(() => {
-    try { localStorage.setItem('locallink_products', JSON.stringify(products)); } catch {}
-  }, [products]);
+  // useEffect(() => {
+  //   try { localStorage.setItem('locallink_products', JSON.stringify(products)); } catch {}
+  // }, [products]);
 
-  useEffect(() => {
-    try { localStorage.setItem('locallink_events', JSON.stringify(events)); } catch {}
-  }, [events]);
+  // useEffect(() => {
+  //   try { localStorage.setItem('locallink_events', JSON.stringify(events)); } catch {}
+  // }, [events]);
 
   useEffect(() => {
     try { localStorage.setItem('locallink_notifications', JSON.stringify(notifications)); } catch {}
@@ -870,7 +898,8 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   };
 
   // Products Actions
-  const addProduct = (prodData: Omit<Product, 'id' | 'seller' | 'distance'>) => {
+  // Add Product (Firestore Sync)
+  const addProduct = async (prodData: Omit<Product, 'id' | 'seller' | 'distance'>) => {
     const newProd: Product = {
       ...prodData,
       id: `prod_${Date.now()}`,
@@ -878,23 +907,42 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       sellerPhone: userProfile.phone,
       distance: 0.1
     };
+    
+    // Optimistic UI update
     setProducts(prev => [newProd, ...prev]);
     showToast('🛍️ ลงขายสินค้าในตลาดชุมชนเรียบร้อยแล้ว');
+    
+    // Save to Firestore
+    try {
+      await saveEntityToFirestore('products', newProd.id, newProd);
+    } catch (e) {
+      console.warn('Failed to sync product to Firestore', e);
+    }
   };
 
-  // Events Actions
-  const toggleJoinEvent = (eventId: string) => {
+  // Events Actions (Firestore Sync)
+  const toggleJoinEvent = async (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+    
+    const isJoined = !event.isJoined;
+    const count = isJoined ? event.joinedCount + 1 : Math.max(0, event.joinedCount - 1);
+    
+    const updatedEvent = { ...event, isJoined, joinedCount: count };
+    
     setEvents(prev => prev.map(ev => {
       if (ev.id !== eventId) return ev;
-      const isJoined = !ev.isJoined;
-      const count = isJoined ? ev.joinedCount + 1 : Math.max(0, ev.joinedCount - 1);
-      showToast(isJoined ? '🎉 คุณได้เข้าร่วมกิจกรรมนี้แล้ว' : 'ยกเลิกการเข้าร่วมกิจกรรมแล้ว', 'info');
-      return {
-        ...ev,
-        isJoined,
-        joinedCount: count
-      };
+      return updatedEvent;
     }));
+    
+    showToast(isJoined ? '🎉 คุณได้เข้าร่วมกิจกรรมนี้แล้ว' : 'ยกเลิกการเข้าร่วมกิจกรรมแล้ว', 'info');
+    
+    // Save to Firestore
+    try {
+      await saveEntityToFirestore('events', updatedEvent.id, updatedEvent);
+    } catch(e) {
+      console.warn('Failed to sync event to Firestore', e);
+    }
   };
 
   // Notifications Actions

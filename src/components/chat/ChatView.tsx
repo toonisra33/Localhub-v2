@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
 import { ChatRoom, UserProfileData } from '../../types';
 import { subscribeToChats, subscribeToFriends, getUserDetails } from '../../lib/chat';
-import { MessageCircle, Users, Search, ChevronRight } from 'lucide-react';
+import { MessageCircle, Users, Bot, Sparkles, X } from 'lucide-react';
 import { ChatRoomModal } from './ChatRoomModal';
 import { PublicProfileModal } from '../modals/PublicProfileModal';
 
-export function ChatView() {
+interface ChatViewProps {
+  onOpenAiChat?: () => void;
+  onClose?: () => void;
+}
+
+export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
   const { isLoggedIn, userProfile } = useCommunity();
   const [activeTab, setActiveTab] = useState<'chats' | 'friends'>('chats');
   const [chats, setChats] = useState<ChatRoom[]>([]);
@@ -59,10 +64,17 @@ export function ChatView() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 pb-24">
+    <div className={`flex flex-col bg-slate-50 ${onClose ? 'h-full overflow-hidden' : 'min-h-screen pb-24'}`}>
       {/* Header */}
-      <div className="bg-white px-4 pt-safe-top pb-3 shadow-sm sticky top-0 z-20">
-        <h1 className="text-[22px] font-extrabold text-slate-900 mt-2">ข้อความ & เพื่อน</h1>
+      <div className="bg-white px-4 pt-safe-top pb-3 shadow-sm sticky top-0 z-20 shrink-0">
+        <div className="flex justify-between items-center mt-2">
+          <h1 className="text-[22px] font-extrabold text-slate-900">ข้อความ & เพื่อน</h1>
+          {onClose && (
+            <button onClick={onClose} className="p-2 -mr-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
+              <X size={20} />
+            </button>
+          )}
+        </div>
         
         <div className="flex bg-slate-100 p-1 rounded-xl mt-4">
           <button
@@ -87,9 +99,32 @@ export function ChatView() {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className={`p-4 ${onClose ? 'overflow-y-auto flex-1' : ''}`}>
         {activeTab === 'chats' && (
           <div className="space-y-3">
+            {/* AI Assistant Chat Row */}
+            {onOpenAiChat && (
+              <div 
+                onClick={onOpenAiChat}
+                className="bg-gradient-to-r from-slate-900 to-indigo-950 p-3.5 rounded-2xl shadow-md flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer border border-slate-700/50"
+              >
+                <div className="w-12 h-12 rounded-full shrink-0 bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg border-2 border-slate-800 relative">
+                  <Bot size={24} className="text-white" />
+                  <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5">
+                    <Sparkles size={10} className="text-emerald-500" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <h3 className="font-extrabold text-white text-sm truncate flex items-center gap-1.5">
+                      AI ประจำชุมชน
+                    </h3>
+                  </div>
+                  <p className="text-slate-300 text-xs truncate">พร้อมช่วยเหลือและให้ข้อมูลเสมอ</p>
+                </div>
+              </div>
+            )}
+
             {chats.length === 0 ? (
               <div className="text-center py-10">
                 <div className="bg-emerald-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">

@@ -27,7 +27,7 @@ import {
   BarChart3,
   Megaphone,
   ChevronRight,
-  Send
+  MessageCircle
 } from 'lucide-react';
 import { mockMorningBrief } from '../data';
 import { Alert } from '../types';
