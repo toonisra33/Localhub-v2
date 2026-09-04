@@ -3,6 +3,8 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signOut, 
   onAuthStateChanged,
   User as FirebaseUser,
@@ -159,60 +161,76 @@ export async function logUserSession(
 }
 
 /**
- * Sign in with Google Popup and automatically sync with Firestore users collection & user_sessions
+ * Check redirect result after returning from Google Login
+ */
+export async function checkAuthRedirectResult() {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result && result.user) {
+      const user = result.user;
+      const isAdmin = isAuthorizedAdminEmail(user.email);
+      const role = isAdmin ? 'admin' : 'user';
+      const locationString = typeof window !== 'undefined' ? sessionStorage.getItem('locallink_pending_loc') || 'กรุงเทพมหานคร' : 'กรุงเทพมหานคร';
+
+      // Sync or update user in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+
+      const userData = {
+        uid: user.uid,
+        email: user.email || '',
+        displayName: user.displayName || 'สมาชิกชุมชน',
+        photoURL: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+        role: role,
+        isVerified: true,
+        lastLoginAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          ...userData,
+          createdAt: serverTimestamp(),
+          phone: user.phoneNumber || '',
+          address: locationString,
+          villageOrCondo: 'ชุมชนในพื้นที่',
+          bio: 'สมาชิกชุมชนผู้ใช้งานผ่าน Google Account',
+          reputationScore: isAdmin ? 100 : 80,
+        });
+      } else {
+        const existingData = userSnap.data();
+        const finalRole = isAdmin ? 'admin' : (existingData.role || 'user');
+        await setDoc(userRef, {
+          ...userData,
+          role: finalRole,
+        }, { merge: true });
+      }
+
+      await logUserSession(
+        user.uid,
+        user.displayName || user.email || 'สมาชิก Google',
+        user.email || '',
+        'google',
+        locationString
+      );
+    }
+  } catch (error) {
+    console.error('Redirect auth error:', error);
+  }
+}
+
+/**
+ * Sign in with Google Auth (uses Redirect for mobile compatibility)
  */
 export async function signInWithGoogleAuth(locationString?: string) {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
-
-    const isAdmin = isAuthorizedAdminEmail(user.email);
-    const role = isAdmin ? 'admin' : 'user';
-
-    // Sync or update user in Firestore
-    const userRef = doc(db, 'users', user.uid);
-    const userSnap = await getDoc(userRef);
-
-    const userData = {
-      uid: user.uid,
-      email: user.email || '',
-      displayName: user.displayName || 'สมาชิกชุมชน',
-      photoURL: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
-      role: role,
-      isVerified: true,
-      lastLoginAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-
-    if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        ...userData,
-        createdAt: serverTimestamp(),
-        phone: user.phoneNumber || '',
-        address: locationString || 'กรุงเทพมหานคร',
-        villageOrCondo: 'ชุมชนในพื้นที่',
-        bio: 'สมาชิกชุมชนผู้ใช้งานผ่าน Google Account',
-        reputationScore: isAdmin ? 100 : 80,
-      });
-    } else {
-      const existingData = userSnap.data();
-      const finalRole = isAdmin ? 'admin' : (existingData.role || 'user');
-      await setDoc(userRef, {
-        ...userData,
-        role: finalRole,
-      }, { merge: true });
+    if (typeof window !== 'undefined' && locationString) {
+      sessionStorage.setItem('locallink_pending_loc', locationString);
     }
-
-    // Record access/session log
-    await logUserSession(
-      user.uid,
-      user.displayName || user.email || 'สมาชิก Google',
-      user.email || '',
-      'google',
-      locationString
-    );
-
-    return { user, role };
+    // Mobile browsers often block popups, redirect is much safer
+    await signInWithRedirect(auth, googleProvider);
+    // Code below will not execute because page redirects
+    return { user: auth.currentUser, role: 'user' }; 
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'users');
     throw error;

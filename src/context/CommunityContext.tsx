@@ -29,6 +29,7 @@ import {
   auth, 
   db, 
   signInWithGoogleAuth, 
+  checkAuthRedirectResult,
   signOutAuth, 
   isAuthorizedAdminEmail,
   savePostToFirestore,
@@ -547,6 +548,9 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   // Listen for Firebase Auth state changes
   useEffect(() => {
+    // Check if coming back from Google Redirect Login
+    checkAuthRedirectResult();
+
     // Subscriptions to Firestore collections
     const unsubPosts = onSnapshot(
       query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(100)),
@@ -1127,45 +1131,8 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
       const locStr = `ต.${location.subdistrict}, ${location.district}`;
-      const { user, role } = await signInWithGoogleAuth(locStr);
-      setIsLoggedIn(true);
-      setIsAuthModalOpen(false);
-
-      const updatedProfile: UserProfileData = {
-        id: user.uid,
-        uid: user.uid,
-        name: user.displayName || user.email?.split('@')[0] || (role === 'admin' ? 'แอดมินศูนย์ควบคุมชุมชน' : 'สมาชิกชุมชน'),
-        phone: user.phoneNumber || userProfile.phone || '081-000-0000',
-        email: user.email || '',
-        address: userProfile.address || `${location.district}, ${location.province}`,
-        villageOrCondo: userProfile.villageOrCondo || location.village || 'ชุมชนท้องถิ่น',
-        bio: `สมาชิกผ่านการยืนยันตัวตนด้วย Google (${role === 'admin' ? 'ผู้ดูแลระบบสูงสุด' : 'ผู้อยู่อาศัย'})`,
-        avatar: user.photoURL || userProfile.avatar,
-        isVerified: false,
-        joinedDate: 'วันนี้',
-        reputationScore: role === 'admin' ? 100 : 85,
-        role: role as 'admin' | 'user',
-        isGoogleUser: true
-      };
-
-      setUserProfile(updatedProfile);
-      
-      if (role === 'admin') {
-        try {
-          localStorage.setItem('locallink_user_role', 'admin');
-        } catch {}
-        showToast(`👑 ยินดีต้อนรับผู้ดูแลระบบสูงสุด (${user.email})! ได้รับสิทธิ์แอดมินและบันทึกลงฐานข้อมูลแล้ว`, 'success');
-      } else {
-        try {
-          localStorage.setItem('locallink_user_role', 'user');
-        } catch {}
-        showToast(`✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับคุณ ${updatedProfile.name}`, 'success');
-      }
-
-      if (pendingAuthAction) {
-        pendingAuthAction();
-        setPendingAuthAction(null);
-      }
+      await signInWithGoogleAuth(locStr);
+      // Since it redirects, code execution stops here
       return true;
     } catch (err: any) {
       console.error('Google Sign-in failed:', err);
