@@ -227,10 +227,10 @@ export async function signInWithGoogleAuth(locationString?: string) {
     if (typeof window !== 'undefined' && locationString) {
       sessionStorage.setItem('locallink_pending_loc', locationString);
     }
-    // Mobile browsers often block popups, redirect is much safer
-    await signInWithRedirect(auth, googleProvider);
-    // Code below will not execute because page redirects
-    return { user: auth.currentUser, role: 'user' }; 
+    
+    // We must use signInWithPopup because signInWithRedirect gets blocked inside the AI Studio iframe (403 Forbidden).
+    const result = await signInWithPopup(auth, googleProvider);
+    return { user: result.user, role: 'user' }; 
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'users');
     throw error;

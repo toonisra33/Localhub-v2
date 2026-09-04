@@ -202,6 +202,11 @@ export interface UserProfileData {
   villageOrCondo?: string;
   bio: string;
   avatar: string;
+  occupation?: string; // อาชีพ / ความเชี่ยวชาญ
+  emergencyContactName?: string; // ชื่อผู้ติดต่อฉุกเฉิน
+  emergencyContactPhone?: string; // เบอร์ผู้ติดต่อฉุกเฉิน
+  birthDate?: string; // วันเกิด
+  relationshipStatus?: string; // สถานะความสัมพันธ์
   isVerified: boolean;
   verificationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   joinedDate: string;

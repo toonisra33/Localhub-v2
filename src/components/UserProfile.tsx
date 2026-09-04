@@ -28,7 +28,10 @@ import {
   Database,
   Activity,
   Server,
-  Video as VideoIcon
+  Video as VideoIcon,
+  Phone,
+  Briefcase,
+  HeartPulse
 } from 'lucide-react';
 import { useBroadcast } from '../context/BroadcastContext';
 import { useCommunity } from '../context/CommunityContext';
@@ -268,10 +271,10 @@ export function UserProfile() {
                 </h2>
                 <button
                   onClick={() => setShowEditProfileModal(true)}
-                  className="text-slate-400 hover:text-emerald-600 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
-                  title="แก้ไขข้อมูลโปรไฟล์"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-full transition-colors shrink-0 shadow-sm"
                 >
-                  <Edit3 size={14} />
+                  <Edit3 size={12} />
+                  แก้ไขโปรไฟล์
                 </button>
               </div>
 
@@ -320,10 +323,49 @@ export function UserProfile() {
               </button>
             </div>
           )}
+
+          {/* Expanded Profile Info Display */}
+          <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-1 gap-2.5">
+            {userProfile.bio && (
+              <p className="text-[11.5px] text-slate-600 font-medium leading-relaxed italic bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
+                "{userProfile.bio}"
+              </p>
+            )}
+            
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {userProfile.phone && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
+                  <Phone size={12} className="text-slate-400 shrink-0" />
+                  <span className="truncate">{userProfile.phone}</span>
+                </div>
+              )}
+              {userProfile.occupation && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
+                  <Briefcase size={12} className="text-slate-400 shrink-0" />
+                  <span className="truncate">{userProfile.occupation}</span>
+                </div>
+              )}
+              {userProfile.relationshipStatus && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-pink-50 p-2 rounded-xl border border-pink-100 shadow-xs col-span-2 sm:col-span-1">
+                  <Heart size={12} className="text-pink-400 shrink-0" />
+                  <span className="truncate text-pink-700 font-medium">สถานะ: {userProfile.relationshipStatus}</span>
+                </div>
+              )}
+              {userProfile.emergencyContactName && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-rose-50 p-2 rounded-xl border border-rose-100 shadow-xs col-span-2">
+                  <HeartPulse size={12} className="text-rose-500 shrink-0" />
+                  <span className="truncate text-rose-700 font-semibold flex-1">ฉุกเฉิน: {userProfile.emergencyContactName}</span>
+                  {userProfile.emergencyContactPhone && (
+                    <span className="text-rose-600 font-bold shrink-0">{userProfile.emergencyContactPhone}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* TOP ACTION BUTTONS BAR (เรียงกันด้านบนฟีดจากซ้ายไปขวา: ติดต่อแอดมิน, ร้านของฉัน, บันทึก, พื้นที่ติดตาม, เหตุการณ์รายงาน) */}
+      {/* TOP ACTION BUTTONS BAR */}
       <div className="px-3.5 mt-3.5">
         <div className="flex items-center justify-between mb-2 px-1">
           <h3 className="text-[12px] font-extrabold text-slate-700 tracking-tight flex items-center gap-1.5">
