@@ -46,7 +46,7 @@ jobs:
           npm install @bubblewrap/core
 
           # Restore original Google Play upload keystore
-echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android.keystore
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android.keystore
           cat << 'EOF' > twa-manifest.json
           {
             "packageId": "com.toon.localhub",
@@ -116,17 +116,17 @@ echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android.keystore
             build().catch(err => { console.error(err); process.exit(1); });
           "
 
-      - name: Build Signed AAB Bundle with Gradle
+            - name: Build Signed AAB Bundle with Gradle
         run: |
           cd android-build
           chmod +x gradlew
           ./gradlew bundleRelease assembleRelease
 
-          # Sign AAB if needed
-      AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
-      if [ -f "$AAB_FILE" ]; then
-        jarsigner -keystore android.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" "$AAB_FILE" localhub
-      fi
+          # Sign AAB with original Google Play upload keystore
+          AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
+          if [ -f "$AAB_FILE" ]; then
+            jarsigner -keystore android.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" "$AAB_FILE" localhub
+          fi
 
       - name: Upload Android App Bundle (.AAB) Artifact
         uses: actions/upload-artifact@v4
