@@ -39,9 +39,11 @@ import { UserProfileData, Post, PostComment, UserSessionLog } from '../types';
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)')
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
+export const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }, (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") ? firebaseConfig.firestoreDatabaseId : undefined);
+//
+
+
 export const googleProvider = new GoogleAuthProvider();
 
 // Configured Root Admins (Initial bootstrap emails)
@@ -214,7 +216,11 @@ export async function checkAuthRedirectResult() {
         locationString
       );
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error && error.message && error.message.includes("Database is closing")) {
+      console.warn("Firebase Auth: Ignored 'Database is closing' error during getRedirectResult. This is a common harmless warning in Android WebViews.");
+      return;
+    }
     console.error('Redirect auth error:', error);
   }
 }

@@ -622,8 +622,12 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
               isGoogleUser: true
             }));
           }
-        } catch (e) {
-          console.error('Error fetching Firestore user profile:', e);
+        } catch (e: any) {
+          if (e && e.message && e.message.includes('offline')) {
+            console.warn('Firebase: Operating in offline mode. Using local user data.');
+          } else {
+            console.error('Error fetching Firestore user profile:', e);
+          }
           // Fallback if offline
           setUserProfile(prev => ({
             ...prev,
