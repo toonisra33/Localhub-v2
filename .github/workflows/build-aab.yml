@@ -65,8 +65,8 @@ jobs:
               "path": "./android.keystore",
               "alias": "localhub"
             },
-            "appVersionName": "1.0.0",
-            "appVersionCode": 1,
+            "appVersionName": "1.0.1",
+            "appVersionCode": 2,
             "shortcuts": [],
             "generatorApp": "bubblewrap-core",
             "webManifestUrl": "https://localhub-69fbe.web.app/manifest.json",
