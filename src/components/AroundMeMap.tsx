@@ -265,7 +265,7 @@ export function AroundMeMap() {
         distance: calculateDistanceStr(location.latitude || mapCenter.lat, location.longitude || mapCenter.lng, p.checkIn!.latitude, p.checkIn!.longitude),
         category: p.checkIn!.category === 'restaurant' ? 'ร้านอาหาร/คาเฟ่' : p.checkIn!.category === 'shop' ? 'ร้านค้า/ตลาด' : 'โพสต์เช็คอินชุมชน',
         rating: 5.0,
-        description: `💬 โพสต์โดย ${p.author.name}: "${p.content.slice(0, 90)}${p.content.length > 90 ? '...' : ''}"`,
+        description: `💬 โพสต์โดย ${p.author?.name}: "${p.content.slice(0, 90)}${p.content.length > 90 ? '...' : ''}"`,
         image: p.images?.[0] || p.image,
         isCustomPin: true
       }));

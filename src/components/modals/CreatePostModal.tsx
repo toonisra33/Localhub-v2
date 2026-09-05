@@ -185,13 +185,13 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
             <div className="flex items-center gap-2.5">
               <img
                 src={userProfile.avatar}
-                alt={userProfile.name}
+                alt={userProfile?.name}
                 className="w-10 h-10 rounded-2xl object-cover ring-2 ring-emerald-500/20"
               />
               <div>
                 <h2 className="text-[16px] font-extrabold text-slate-900 leading-tight">สร้างโพสต์ใหม่</h2>
                 <div className="flex items-center gap-1.5 text-[11.5px] text-slate-500 font-medium">
-                  <span className="text-slate-800 font-bold">{userProfile.name}</span>
+                  <span className="text-slate-800 font-bold">{userProfile?.name}</span>
                   <span>•</span>
                   <span>{userProfile.badge || 'ลูกบ้าน'}</span>
                 </div>

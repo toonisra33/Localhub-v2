@@ -54,12 +54,12 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
             <div className="flex items-center gap-3">
               <img
-                src={post.author.avatar}
-                alt={post.author.name}
+                src={post.author?.avatar}
+                alt={post.author?.name}
                 className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
               />
               <div>
-                <h3 className="font-extrabold text-slate-900 text-[14px] leading-tight">{post.author.name}</h3>
+                <h3 className="font-extrabold text-slate-900 text-[14px] leading-tight">{post.author?.name}</h3>
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 mt-0.5">
                   <span>{post.time}</span>
                   <span>•</span>
@@ -84,7 +84,7 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
                       onClick={() => openMediaViewer({
                         url: img,
                         type: 'image',
-                        title: `โพสต์โดย ${post.author.name} (${idx + 1}/${post.images!.length})`,
+                        title: `โพสต์โดย ${post.author?.name} (${idx + 1}/${post.images!.length})`,
                         subtitle: `ต.${post.location.subdistrict} • ${post.time}`
                       })}
                       className={`relative bg-slate-900 cursor-pointer group ${post.images!.length === 1 ? 'max-h-52' : 'aspect-square'}`}
@@ -113,7 +113,7 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
                 onClick={() => openMediaViewer({
                   url: post.image!,
                   type: 'image',
-                  title: `โพสต์โดย ${post.author.name}`,
+                  title: `โพสต์โดย ${post.author?.name}`,
                   subtitle: `ต.${post.location.subdistrict} • ${post.time}`
                 })}
                 className="rounded-xl overflow-hidden max-h-52 bg-slate-900 border border-slate-200 cursor-pointer relative group"
@@ -161,14 +161,14 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
               comments.map(c => (
                 <div key={c.id} className="flex gap-2.5 bg-white p-3 rounded-2xl border border-slate-150 shadow-sm">
                   <img
-                    src={c.author.avatar}
-                    alt={c.author.name}
+                    src={c.author?.avatar}
+                    alt={c.author?.name}
                     className="w-8 h-8 rounded-xl object-cover shrink-0 ring-1 ring-slate-100"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-1 mb-0.5">
                       <span className="font-extrabold text-[12.5px] text-slate-900 truncate">
-                        {c.author.name}
+                        {c.author?.name}
                       </span>
                       <span className="text-[10.5px] font-semibold text-slate-400 shrink-0">
                         {c.time}

@@ -738,7 +738,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       confirmations: 1,
       rejections: 0,
       userVoted: 'up',
-      reportedBy: userProfile.name
+      reportedBy: userProfile?.name
     };
     setAlerts(prev => [newAlert, ...prev]);
     showToast('📢 รายงานเหตุการณ์เรียบร้อยแล้ว');
@@ -798,7 +798,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     const newPost: Post = {
       id: postId,
       author: {
-        name: userProfile.name,
+        name: userProfile?.name,
         avatar: userProfile.avatar
       },
       authorUid: auth.currentUser?.uid || userProfile.id,
@@ -865,7 +865,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     const newComment = {
       id: commentId,
       author: {
-        name: userProfile.name,
+        name: userProfile?.name,
         avatar: userProfile.avatar
       },
       authorUid: auth.currentUser?.uid || userProfile.id,
@@ -911,7 +911,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     const newProd: Product = {
       ...prodData,
       id: `prod_${Date.now()}`,
-      seller: userProfile.name,
+      seller: userProfile?.name,
       sellerPhone: userProfile.phone,
       distance: 0.1
     };
@@ -1000,7 +1000,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     const newRequest: VerificationRequest = {
       id: requestId,
       userId: userProfile.uid || userProfile.id || 'unknown',
-      userName: userProfile.name,
+      userName: userProfile?.name,
       idCardNumber,
       imageUrl,
       status: 'pending',

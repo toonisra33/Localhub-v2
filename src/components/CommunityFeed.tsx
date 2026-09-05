@@ -72,7 +72,7 @@ export function CommunityFeed() {
           className="flex gap-3 items-center bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group"
         >
           <img 
-            src={userProfile.avatar} 
+            src={userProfile?.avatar} 
             alt="Me" 
             className="w-9 h-9 rounded-xl object-cover ring-2 ring-emerald-500/20 shrink-0" 
           />
@@ -120,7 +120,7 @@ export function CommunityFeed() {
             <PostCard 
               key={post.id} 
               post={post}
-              isMyPost={post.author.name === userProfile.name}
+              isMyPost={post.author?.name === userProfile?.name}
               onLike={() => toggleLikePost(post.id)}
               onOpenComments={() => setSelectedPostForComments(post)}
               onDelete={() => deletePost(post.id)}

@@ -262,7 +262,7 @@ export async function syncUserProfileToFirestore(userId: string, profileData: Pa
     const userRef = doc(db, 'users', userId);
     await setDoc(userRef, {
       ...profileData,
-      displayName: profileData.name,
+      displayName: profileData?.name,
       photoURL: profileData.avatar,
       updatedAt: serverTimestamp()
     }, { merge: true });
@@ -281,8 +281,8 @@ export async function savePostToFirestore(post: Post): Promise<void> {
     await setDoc(postRef, {
       id: post.id,
       authorUid: post.authorUid || auth.currentUser?.uid || 'anonymous',
-      authorName: post.author.name,
-      authorAvatar: post.author.avatar,
+      authorName: post.author?.name || 'ไม่ระบุตัวตน',
+      authorAvatar: post.author?.avatar || '',
       content: post.content,
       category: post.category || 'ทั่วไป',
       images: post.images || (post.image ? [post.image] : []),
@@ -328,8 +328,8 @@ export async function addCommentToFirestore(postId: string, comment: PostComment
       id: comment.id,
       postId: postId,
       authorUid: comment.authorUid || auth.currentUser?.uid || 'user_comment',
-      authorName: comment.author.name,
-      authorAvatar: comment.author.avatar,
+      authorName: comment.author?.name || 'ไม่ระบุตัวตน',
+      authorAvatar: comment.author?.avatar || '',
       content: comment.content,
       createdAt: serverTimestamp()
     });

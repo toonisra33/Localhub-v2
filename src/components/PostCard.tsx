@@ -92,9 +92,9 @@ export const PostCard: React.FC<PostCardProps> = ({
           onClick={() => {
             let targetUid = post.authorUid;
             if (!targetUid) {
-              if (post.author.name === 'สมชาย รักดี') targetUid = 'user_default_somchai';
-              else if (post.author.name === 'ป้าศรี ของหวานโบราณ') targetUid = 'user_default_pasri';
-              else if (post.author.name === 'คณะกรรมการพัฒนาชุมชน') targetUid = 'user_default_comm';
+              if (post.author?.name === 'สมชาย รักดี') targetUid = 'user_default_somchai';
+              else if (post.author?.name === 'ป้าศรี ของหวานโบราณ') targetUid = 'user_default_pasri';
+              else if (post.author?.name === 'คณะกรรมการพัฒนาชุมชน') targetUid = 'user_default_comm';
             }
             
             if (targetUid) {
@@ -105,13 +105,13 @@ export const PostCard: React.FC<PostCardProps> = ({
           }}
         >
           <img 
-            src={post.author.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'} 
-            alt={post.author.name} 
+            src={post.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'} 
+            alt={post.author?.name} 
             className="w-10 h-10 rounded-2xl object-cover ring-2 ring-slate-100 shrink-0" 
           />
           <div>
             <div className="flex items-center gap-1.5">
-              <h3 className="font-extrabold text-slate-900 text-[14px] leading-tight">{post.author.name}</h3>
+              <h3 className="font-extrabold text-slate-900 text-[14px] leading-tight">{post.author?.name}</h3>
               {post.category && (
                 <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
                   {post.category}
@@ -234,7 +234,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 onClick={() => openMediaViewer({
                   url: img,
                   type: 'image',
-                  title: `โพสต์โดย ${post.author.name} (${idx + 1}/${post.images!.length})`,
+                  title: `โพสต์โดย ${post.author?.name} (${idx + 1}/${post.images!.length})`,
                   subtitle: `ต.${post.location.subdistrict} • ${post.time}`
                 })}
                 className={`relative bg-slate-900 cursor-pointer group ${post.images!.length === 1 ? 'max-h-72' : 'aspect-square'}`}
@@ -268,7 +268,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           onClick={() => openMediaViewer({
             url: post.image!,
             type: 'image',
-            title: `โพสต์โดย ${post.author.name}`,
+            title: `โพสต์โดย ${post.author?.name}`,
             subtitle: `ต.${post.location.subdistrict} • ${post.time}`
           })}
           className="mb-4 rounded-2xl overflow-hidden border border-slate-150 bg-slate-900 max-h-72 cursor-pointer relative group"

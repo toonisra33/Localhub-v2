@@ -12,8 +12,8 @@ export const getOrCreateChatRoom = async (userId1: string, userId2: string, user
       id: roomId,
       participants: [userId1, userId2],
       participantDetails: {
-        [userId1]: { name: user1Details.name, avatar: user1Details.avatar },
-        [userId2]: { name: user2Details.name, avatar: user2Details.avatar }
+        [userId1]: { name: user1Details?.name, avatar: user1Details?.avatar },
+        [userId2]: { name: user2Details?.name, avatar: user2Details?.avatar }
       },
       lastMessage: '',
       lastMessageTime: Date.now(),

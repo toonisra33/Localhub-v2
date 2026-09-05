@@ -9,7 +9,7 @@ interface EditProfileModalProps {
 export function EditProfileModal({ onClose }: EditProfileModalProps) {
   const { userProfile, updateUserProfile, showToast } = useCommunity();
   
-  const [name, setName] = useState(userProfile.name || '');
+  const [name, setName] = useState(userProfile?.name || '');
   const [phone, setPhone] = useState(userProfile.phone || '');
   const [address, setAddress] = useState(userProfile.address || '');
   const [villageOrCondo, setVillageOrCondo] = useState(userProfile.villageOrCondo || '');

@@ -51,7 +51,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
   const [detail, setDetail] = useState('');
   const [targetArea, setTargetArea] = useState(`${location.district} • ${location.subdistrict}`);
   const [preferredTime, setPreferredTime] = useState('ประกาศโดยเร็วที่สุด');
-  const [senderName, setSenderName] = useState(userProfile.name || '');
+  const [senderName, setSenderName] = useState(userProfile?.name || '');
   const [senderPhone, setSenderPhone] = useState(userProfile.phone || '');
   const [senderEmail, setSenderEmail] = useState(userProfile.email || '');
   const [mediaUrl, setMediaUrl] = useState('');
@@ -68,7 +68,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
 
   // Update sender info if profile changes
   useEffect(() => {
-    if (userProfile.name && !senderName) setSenderName(userProfile.name);
+    if (userProfile?.name && !senderName) setSenderName(userProfile?.name);
     if (userProfile.phone && !senderPhone) setSenderPhone(userProfile.phone);
     if (userProfile.email && !senderEmail) setSenderEmail(userProfile.email);
   }, [userProfile]);

@@ -60,7 +60,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               <div>
                 <h4 className="font-extrabold text-slate-900 text-[13.5px]">บัญชีผู้ใช้งาน (User Account)</h4>
                 <p className="text-[11.5px] text-slate-500">
-                  {isLoggedIn ? `เข้าสู่ระบบในชื่อ: ${userProfile.name}` : 'ยังไม่ได้เข้าสู่ระบบ (โหมดผู้เยี่ยมชม)'}
+                  {isLoggedIn ? `เข้าสู่ระบบในชื่อ: ${userProfile?.name}` : 'ยังไม่ได้เข้าสู่ระบบ (โหมดผู้เยี่ยมชม)'}
                 </p>
               </div>
               <span className={`text-[11px] font-extrabold px-2.5 py-1 rounded-full ${

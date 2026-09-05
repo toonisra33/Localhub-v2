@@ -194,9 +194,9 @@ export function HomeFeed() {
               <button
                 onClick={() => setActiveTab('me')}
                 className="w-8 h-8 rounded-xl overflow-hidden ring-2 ring-slate-700 hover:ring-emerald-500 transition-all shrink-0"
-                title={userProfile.name}
+                title={userProfile?.name}
               >
-                <img src={userProfile.avatar} alt={userProfile.name} className="w-full h-full object-cover" />
+                <img src={userProfile?.avatar} alt={userProfile?.name} className="w-full h-full object-cover" />
               </button>
             )}
           </div>

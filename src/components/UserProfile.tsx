@@ -98,8 +98,8 @@ export function UserProfile() {
   const isRealAdmin = isAuthorizedAdmin && role === 'admin';
 
   // Filter user specific content
-  const myPosts = posts.filter(p => p.author.name === userProfile.name);
-  const myProducts = products.filter(p => p.seller === userProfile.name);
+  const myPosts = posts.filter(p => p.author?.name === userProfile?.name);
+  const myProducts = products.filter(p => p?.seller === userProfile?.name);
   // User's alerts (matching user's district or recent activity)
   const myAlerts = alerts.filter(a => a.userVoted !== undefined || a.location.subdistrict === location.subdistrict);
   // Saved posts/items (demonstrated with liked or bookmarked posts)
@@ -267,7 +267,7 @@ export function UserProfile() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <h2 className="text-[15.5px] font-extrabold text-slate-900 tracking-tight truncate">
-                  {isRealAdmin ? 'แอดมินศูนย์ควบคุมชุมชน' : userProfile.name}
+                  {isRealAdmin ? 'แอดมินศูนย์ควบคุมชุมชน' : userProfile?.name}
                 </h2>
                 <button
                   onClick={() => setShowEditProfileModal(true)}
@@ -437,7 +437,7 @@ export function UserProfile() {
                   ฟีดส่วนตัวของฉัน
                 </h3>
                 <p className="text-[10.5px] font-semibold text-slate-400 mt-0.5">
-                  {userProfile.name} • ต.{location.subdistrict}
+                  {userProfile?.name} • ต.{location.subdistrict}
                 </p>
               </div>
             </div>
@@ -757,7 +757,7 @@ export function UserProfile() {
                 <PostCard 
                   key={post.id} 
                   post={post}
-                  isMyPost={post.author.name === userProfile.name}
+                  isMyPost={post.author?.name === userProfile?.name}
                   onLike={() => toggleLikePost(post.id)}
                   onOpenComments={() => setSelectedPostForComments(post)}
                   onDelete={() => deletePost(post.id)}

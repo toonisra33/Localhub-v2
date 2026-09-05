@@ -60,7 +60,7 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
 
   const handleOpenChat = (roomId: string, otherUserId: string, otherUserDetail: any) => {
     setSelectedChatRoom(roomId);
-    setSelectedChatUser({ id: otherUserId, name: otherUserDetail.name, avatar: otherUserDetail.avatar });
+    setSelectedChatUser({ id: otherUserId, name: otherUserDetail?.name, avatar: otherUserDetail?.avatar });
   };
 
   return (
@@ -145,10 +145,10 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
                     onClick={() => handleOpenChat(chat.id, otherUserId, otherUserDetail)}
                     className="bg-white p-3.5 rounded-2xl border border-slate-150 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer"
                   >
-                    <img src={otherUserDetail.avatar || 'https://via.placeholder.com/150'} alt={otherUserDetail.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
+                    <img src={otherUserDetail?.avatar || 'https://via.placeholder.com/150'} alt={otherUserDetail?.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-0.5">
-                        <h3 className="font-extrabold text-slate-900 text-sm truncate">{otherUserDetail.name}</h3>
+                        <h3 className="font-extrabold text-slate-900 text-sm truncate">{otherUserDetail?.name}</h3>
                         <span className="text-[10px] text-slate-400 font-medium shrink-0 ml-2">{timeStr}</span>
                       </div>
                       <p className="text-slate-500 text-xs truncate">{chat.lastMessage || 'เริ่มการสนทนา...'}</p>
@@ -180,9 +180,9 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
                     className="bg-white p-3 rounded-2xl border border-slate-150 shadow-sm flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => setViewProfileId(id)}>
-                      <img src={detail.avatar || 'https://via.placeholder.com/150'} alt={detail.name} className="w-11 h-11 rounded-full object-cover" />
+                      <img src={detail?.avatar || 'https://via.placeholder.com/150'} alt={detail?.name} className="w-11 h-11 rounded-full object-cover" />
                       <div>
-                        <h3 className="font-extrabold text-slate-900 text-sm">{detail.name}</h3>
+                        <h3 className="font-extrabold text-slate-900 text-sm">{detail?.name}</h3>
                         <p className="text-slate-500 text-xs truncate max-w-[150px]">{detail.bio || 'เพื่อนของคุณ'}</p>
                       </div>
                     </div>
