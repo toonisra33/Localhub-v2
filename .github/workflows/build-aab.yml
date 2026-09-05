@@ -8,7 +8,12 @@ on:
 jobs:
   build-aab:
     runs-on: ubuntu-latest
-
+    
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+  
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -40,9 +45,8 @@ jobs:
           npm init -y
           npm install @bubblewrap/core
 
-          # Generate Keystore
-          keytool -genkey -v -keystore android.keystore -alias localhub -keyalg RSA -keysize 2048 -validity 10000 -storepass localhub123456 -keypass localhub123456 -dname "CN=Toon Isra, OU=LocalHub, O=LocalHub, L=Bangkok, ST=Bangkok, C=TH"
-
+          # Restore original Google Play upload keystore
+echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android.keystore
           cat << 'EOF' > twa-manifest.json
           {
             "packageId": "com.toon.localhub",
@@ -119,10 +123,10 @@ jobs:
           ./gradlew bundleRelease assembleRelease
 
           # Sign AAB if needed
-          AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
-          if [ -f "$AAB_FILE" ]; then
-            jarsigner -keystore android.keystore -storepass localhub123456 -keypass localhub123456 "$AAB_FILE" localhub || true
-          fi
+      AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
+      if [ -f "$AAB_FILE" ]; then
+        jarsigner -keystore android.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" "$AAB_FILE" localhub
+      fi
 
       - name: Upload Android App Bundle (.AAB) Artifact
         uses: actions/upload-artifact@v4
@@ -131,4 +135,4 @@ jobs:
           path: |
             android-build/app/build/outputs/bundle/release/*.aab
             android-build/app/build/outputs/apk/release/*.apk
-            android-build/android.keystore
+            
