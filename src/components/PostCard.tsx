@@ -84,7 +84,9 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-[26px] p-5 border border-slate-200/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.03)] hover:shadow-md transition-all relative">
+    <div className={`bg-white rounded-[26px] p-5 border shadow-[0_4px_24px_-4px_rgba(0,0,0,0.03)] hover:shadow-md transition-all relative ${
+      post.category === 'แจ้งเหตุฉุกเฉิน' ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200/80'
+    }`}>
       {/* Author Header */}
       <div className="flex justify-between items-start mb-3">
         <div 
@@ -105,7 +107,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           }}
         >
           <img 
-            src={post.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'} 
+            src={post.author?.avatar || 'https://ui-avatars.com/api/?name=U&background=random'} 
             alt={post.author?.name} 
             className="w-10 h-10 rounded-2xl object-cover ring-2 ring-slate-100 shrink-0" 
           />

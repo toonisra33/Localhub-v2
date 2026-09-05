@@ -42,7 +42,7 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
   const [showCheckInPicker, setShowCheckInPicker] = useState<boolean>(false);
 
   const categories = [
-    'ข่าวสารชุมชน', 'ตามหาของ/สัตว์เลี้ยง', 'ร้านอร่อยชุมชน', 'ประกาศทั่วไป', 'ขอความช่วยเหลือ', 'พูดคุยแลกเปลี่ยน'
+    'ข่าวสารชุมชน', 'ซื้อ-ขาย/บริการ', 'แจ้งเหตุฉุกเฉิน', 'ตามหาของ/สัตว์เลี้ยง', 'ร้านอร่อยชุมชน', 'ประกาศทั่วไป', 'ขอความช่วยเหลือ', 'พูดคุยแลกเปลี่ยน'
   ];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

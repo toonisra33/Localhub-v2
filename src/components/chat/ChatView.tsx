@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
 import { ChatRoom, UserProfileData } from '../../types';
-import { subscribeToChats, subscribeToFriends, getUserDetails } from '../../lib/chat';
+import { subscribeToChats, subscribeToFriends, getUserDetails, subscribeToPendingRequests, acceptFriendRequest, rejectFriendRequest } from '../../lib/chat';
+import { Check, X as XIcon } from 'lucide-react';
 import { MessageCircle, Users, Bot, Sparkles, X } from 'lucide-react';
 import { ChatRoomModal } from './ChatRoomModal';
 import { PublicProfileModal } from '../modals/PublicProfileModal';
@@ -16,6 +17,7 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
   const [activeTab, setActiveTab] = useState<'chats' | 'friends'>('chats');
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [friendIds, setFriendIds] = useState<string[]>([]);
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
   const [friendsDetails, setFriendsDetails] = useState<Record<string, UserProfileData>>({});
   
   const [selectedChatRoom, setSelectedChatRoom] = useState<string | null>(null);
@@ -32,8 +34,18 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
 
     const unsubFriends = subscribeToFriends(userProfile.id, (fIds) => {
       setFriendIds(fIds);
-      // Fetch details for new friends
       fIds.forEach(id => {
+        getUserDetails(id).then(details => {
+          if (details) {
+            setFriendsDetails(prev => ({ ...prev, [id]: details }));
+          }
+        });
+      });
+    });
+
+    const unsubPending = subscribeToPendingRequests(userProfile.id, (pIds) => {
+      setPendingIds(pIds);
+      pIds.forEach(id => {
         getUserDetails(id).then(details => {
           if (details) {
             setFriendsDetails(prev => ({ ...prev, [id]: details }));
@@ -45,6 +57,7 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
     return () => {
       unsubChats();
       unsubFriends();
+      unsubPending();
     };
   }, [isLoggedIn, userProfile?.id]);
 
@@ -161,41 +174,80 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
         )}
 
         {activeTab === 'friends' && (
-          <div className="space-y-3">
-            {friendIds.length === 0 ? (
-              <div className="text-center py-10">
-                <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Users size={24} className="text-slate-400" />
-                </div>
-                <p className="text-slate-500 font-medium text-sm">คุณยังไม่มีเพื่อน</p>
-                <p className="text-slate-400 text-xs mt-1">ไปที่ฟีดชุมชนแล้วกดเพิ่มเพื่อนเพื่อติดต่อกัน</p>
-              </div>
-            ) : (
-              friendIds.map(id => {
-                const detail = friendsDetails[id];
-                if (!detail) return null;
-                return (
-                  <div 
-                    key={id} 
-                    className="bg-white p-3 rounded-2xl border border-slate-150 shadow-sm flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setViewProfileId(id)}>
-                      <img src={detail?.avatar || 'https://via.placeholder.com/150'} alt={detail?.name} className="w-11 h-11 rounded-full object-cover" />
-                      <div>
-                        <h3 className="font-extrabold text-slate-900 text-sm">{detail?.name}</h3>
-                        <p className="text-slate-500 text-xs truncate max-w-[150px]">{detail.bio || 'เพื่อนของคุณ'}</p>
+          <div className="space-y-5">
+            {pendingIds.length > 0 && (
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 mb-3 px-1">คำขอเป็นเพื่อน ({pendingIds.length})</h3>
+                <div className="space-y-3">
+                  {pendingIds.map(id => {
+                    const detail = friendsDetails[id];
+                    if (!detail) return null;
+                    return (
+                      <div key={id} className="bg-white p-3 rounded-2xl border border-amber-200 shadow-sm flex items-center justify-between">
+                        <div className="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onClick={() => setViewProfileId(id)}>
+                          <img src={detail?.avatar || 'https://ui-avatars.com/api/?name=U'} alt={detail?.name} className="w-11 h-11 rounded-full object-cover shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-extrabold text-slate-900 text-sm truncate">{detail?.name}</h3>
+                            <p className="text-slate-500 text-xs truncate">ต้องการเป็นเพื่อนกับคุณ</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <button 
+                            onClick={() => acceptFriendRequest(userProfile.id!, id)}
+                            className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 shadow-sm"
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button 
+                            onClick={() => rejectFriendRequest(userProfile.id!, id)}
+                            className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"
+                          >
+                            <XIcon size={16} />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <button 
-                      onClick={() => handleOpenChat('', id, detail)}
-                      className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100"
-                    >
-                      <MessageCircle size={16} />
-                    </button>
-                  </div>
-                );
-              })
+                    );
+                  })}
+                </div>
+              </div>
             )}
+
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 mb-3 px-1">เพื่อนของคุณ ({friendIds.length})</h3>
+              {friendIds.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Users size={20} className="text-slate-400" />
+                  </div>
+                  <p className="text-slate-500 font-medium text-sm">คุณยังไม่มีเพื่อน</p>
+                  <p className="text-slate-400 text-xs mt-1">กดที่โปรไฟล์สมาชิกในฟีดเพื่อเพิ่มเพื่อน</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {friendIds.map(id => {
+                    const detail = friendsDetails[id];
+                    if (!detail) return null;
+                    return (
+                      <div key={id} className="bg-white p-3 rounded-2xl border border-slate-150 shadow-sm flex items-center justify-between">
+                        <div className="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onClick={() => setViewProfileId(id)}>
+                          <img src={detail?.avatar || 'https://ui-avatars.com/api/?name=U'} alt={detail?.name} className="w-11 h-11 rounded-full object-cover shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-extrabold text-slate-900 text-sm truncate">{detail?.name}</h3>
+                            <p className="text-slate-500 text-xs truncate max-w-[150px]">{detail.bio || 'เพื่อนของคุณ'}</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => handleOpenChat('', id, detail)}
+                          className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100"
+                        >
+                          <MessageCircle size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -216,10 +268,9 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
           isOpen={true}
           onClose={() => setViewProfileId(null)}
           userId={viewProfileId}
-          onMessageClick={() => {
-            const detail = friendsDetails[viewProfileId] || { name: 'User', avatar: '' };
+          onMessageClick={(user) => {
             setViewProfileId(null);
-            setTimeout(() => handleOpenChat('', viewProfileId, detail), 300);
+            setTimeout(() => handleOpenChat('', user.id, { name: user.name, avatar: user.avatar }), 300);
           }}
         />
       )}

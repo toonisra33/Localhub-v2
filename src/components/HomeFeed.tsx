@@ -68,6 +68,12 @@ export function HomeFeed() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  
+  React.useEffect(() => {
+    const handleOpenNotif = () => setShowNotificationsModal(true);
+    window.addEventListener('open-notifications', handleOpenNotif);
+    return () => window.removeEventListener('open-notifications', handleOpenNotif);
+  }, []);
   const [alertFilter, setAlertFilter] = useState<'all' | 'flood' | 'road' | 'power'>('all');
 
   const quickMenus = [

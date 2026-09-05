@@ -40,7 +40,9 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
-export const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }, (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") ? firebaseConfig.firestoreDatabaseId : undefined);
+export const db = initializeFirestore(app, { 
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+}, (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") ? firebaseConfig.firestoreDatabaseId : undefined);
 //
 
 
@@ -182,7 +184,7 @@ export async function checkAuthRedirectResult() {
         uid: user.uid,
         email: user.email || '',
         displayName: user.displayName || 'สมาชิกชุมชน',
-        photoURL: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+        photoURL: user.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
         role: role,
         isVerified: true,
         lastLoginAt: serverTimestamp(),

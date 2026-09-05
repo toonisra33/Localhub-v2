@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { X, MessageCircle, UserPlus, Check } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
-import { getUserDetails, addFriend, subscribeToFriends } from '../../lib/chat';
+import { getUserDetails, sendFriendRequest, acceptFriendRequest, subscribeToFriendshipStatus } from '../../lib/chat';
 import { UserProfileData } from '../../types';
 
 interface PublicProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
-  onMessageClick?: () => void;
+  onMessageClick?: (user: { id: string, name: string, avatar: string }) => void;
 }
 
 export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: PublicProfileModalProps) {
-  const { userProfile, isLoggedIn, showToast } = useCommunity();
+  const { userProfile, isLoggedIn, showToast, posts } = useCommunity();
   const [profile, setProfile] = useState<UserProfileData | null>(null);
-  const [isFriend, setIsFriend] = useState(false);
+  const [friendStatus, setFriendStatus] = useState<{status: 'none' | 'pending' | 'accepted', requesterId?: string}>({status: 'none'});
   
   useEffect(() => {
     if (!isOpen) return;
@@ -53,20 +53,32 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
             isVerified: true
           } as any);
         } else {
-          setProfile({
-            id: userId,
-            name: 'ผู้ใช้ชุมชน (ไม่มีข้อมูล)',
-            avatar: 'https://via.placeholder.com/150',
-            bio: 'ไม่พบข้อมูลโปรไฟล์ของผู้ใช้งานรายนี้ในระบบ (อาจเป็นโพสต์จากระบบดั้งเดิม)',
-          } as any);
+          const postByUser = posts?.find(p => p.authorUid === userId);
+          if (postByUser) {
+            setProfile({
+              id: userId,
+              name: postByUser.author?.name || 'ผู้ใช้ชุมชน',
+              avatar: postByUser.author?.avatar || 'https://ui-avatars.com/api/?name=U&background=random',
+              bio: 'สมาชิกชุมชน (เข้าสู่ระบบก่อนการอัปเดตระบบโปรไฟล์)',
+              address: 'พื้นที่ชุมชน',
+              phone: '',
+            } as any);
+          } else {
+            setProfile({
+              id: userId,
+              name: 'ผู้ใช้ชุมชน (ไม่มีข้อมูล)',
+              avatar: 'https://via.placeholder.com/150',
+              bio: 'ไม่พบข้อมูลโปรไฟล์ของผู้ใช้งานรายนี้ในระบบ (อาจเป็นโพสต์จากระบบดั้งเดิม)',
+            } as any);
+          }
         }
   
       }
     });
     
     if (isLoggedIn && userProfile?.id) {
-      const unsub = subscribeToFriends(userProfile.id, (friends) => {
-        setIsFriend(friends.includes(userId));
+      const unsub = subscribeToFriendshipStatus(userProfile.id, userId, (status) => {
+        setFriendStatus(status);
       });
       return unsub;
     }
@@ -74,13 +86,18 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
 
   if (!isOpen) return null;
 
-  const handleAddFriend = async () => {
+  const handleFriendAction = async () => {
     if (!isLoggedIn || !userProfile?.id) {
-      showToast('กรุณาเข้าสู่ระบบเพื่อเพิ่มเพื่อน', 'error');
+      showToast('กรุณาเข้าสู่ระบบเพื่อดำเนินการ', 'error');
       return;
     }
-    await addFriend(userProfile.id, userId);
-    showToast('เพิ่มเพื่อนเรียบร้อยแล้ว', 'success');
+    if (friendStatus.status === 'none') {
+      await sendFriendRequest(userProfile.id, userId);
+      showToast('ส่งคำขอเป็นเพื่อนแล้ว', 'success');
+    } else if (friendStatus.status === 'pending' && friendStatus.requesterId !== userProfile.id) {
+      await acceptFriendRequest(userProfile.id, userId);
+      showToast('คุณเป็นเพื่อนกันแล้ว', 'success');
+    }
   };
 
   const handleMessage = () => {
@@ -88,8 +105,8 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
       showToast('กรุณาเข้าสู่ระบบเพื่อส่งข้อความ', 'error');
       return;
     }
-    if (onMessageClick) {
-      onMessageClick();
+    if (onMessageClick && profile) {
+      onMessageClick({ id: profile.id || userId, name: profile.name, avatar: profile.avatar });
     }
   };
 
@@ -120,14 +137,20 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
               {userProfile?.id !== userId && (
                 <div className="flex gap-3 mt-6 justify-center">
                   <button 
-                    onClick={handleAddFriend}
-                    disabled={isFriend}
+                    onClick={handleFriendAction}
+                    disabled={friendStatus.status === 'accepted' || (friendStatus.status === 'pending' && friendStatus.requesterId === userProfile?.id)}
                     className={`flex-1 max-w-[140px] py-2.5 rounded-xl text-[13px] font-extrabold flex items-center justify-center gap-1.5 transition-colors ${
-                      isFriend ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      friendStatus.status === 'accepted' ? 'bg-slate-100 text-slate-500' 
+                      : (friendStatus.status === 'pending' && friendStatus.requesterId === userProfile?.id) ? 'bg-amber-50 text-amber-600'
+                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                     }`}
                   >
-                    {isFriend ? (
+                    {friendStatus.status === 'accepted' ? (
                       <><Check size={16} /> เป็นเพื่อนแล้ว</>
+                    ) : friendStatus.status === 'pending' && friendStatus.requesterId === userProfile?.id ? (
+                      <>รอการตอบรับ</>
+                    ) : friendStatus.status === 'pending' && friendStatus.requesterId !== userProfile?.id ? (
+                      <><Check size={16} /> ยอมรับคำขอ</>
                     ) : (
                       <><UserPlus size={16} /> เพิ่มเพื่อน</>
                     )}

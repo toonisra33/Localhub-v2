@@ -314,7 +314,7 @@ export function AuthModal() {
                   {/* Current Selected / Uploaded Avatar */}
                   <div className="relative shrink-0">
                     <img 
-                      src={selectedAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'} 
+                      src={selectedAvatar || 'https://ui-avatars.com/api/?name=U&background=random'} 
                       alt="Avatar preview" 
                       className="w-16 h-16 rounded-2xl object-cover ring-3 ring-emerald-500/30 shadow-md"
                     />

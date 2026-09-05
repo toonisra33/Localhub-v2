@@ -252,6 +252,7 @@ export interface AdminContactRequest {
   mediaType?: 'image' | 'video';
   preferredTime?: string;
   createdAt: number;
+  requesterId?: string;
   timeStr: string;
   status: ContactRequestStatus;
   adminNote?: string;
@@ -264,6 +265,7 @@ export interface Message {
   senderId: string;
   text: string;
   createdAt: number;
+  requesterId?: string;
   readBy: string[];
 }
 
@@ -281,4 +283,5 @@ export interface Friendship {
   users: string[];
   status: 'pending' | 'accepted';
   createdAt: number;
+  requesterId?: string;
 }

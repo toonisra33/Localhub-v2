@@ -244,30 +244,30 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem('locallink_profile');
       return saved ? JSON.parse(saved) : {
         id: 'user_default',
-        name: 'สมชาย รักดี',
-        phone: '081-234-5678',
-        email: 'somchai.local@email.com',
-        address: 'หมู่บ้านพหลโยธินวิลล่า ซอย 3',
-        villageOrCondo: 'พหลโยธินวิลล่า',
-        bio: 'ชาวชุมชนพหลโยธิน สนใจงานจิตอาสาและอาหารการกิน',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+        name: 'ผู้เยี่ยมชม',
+        phone: '',
+        email: '',
+        address: '',
+        villageOrCondo: '',
+        bio: '',
+        avatar: 'https://ui-avatars.com/api/?name=U&background=random',
         isVerified: false,
         joinedDate: 'มกราคม 2024',
-        reputationScore: 98
+        reputationScore: 0
       };
     } catch {
       return {
         id: 'user_default',
-        name: 'สมชาย รักดี',
-        phone: '081-234-5678',
-        email: 'somchai.local@email.com',
-        address: 'หมู่บ้านพหลโยธินวิลล่า ซอย 3',
-        villageOrCondo: 'พหลโยธินวิลล่า',
-        bio: 'ชาวชุมชนพหลโยธิน สนใจงานจิตอาสาและอาหารการกิน',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+        name: 'ผู้เยี่ยมชม',
+        phone: '',
+        email: '',
+        address: '',
+        villageOrCondo: '',
+        bio: '',
+        avatar: 'https://ui-avatars.com/api/?name=U&background=random',
         isVerified: false,
         joinedDate: 'มกราคม 2024',
-        reputationScore: 98
+        reputationScore: 0
       };
     }
   });
@@ -384,11 +384,13 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
           
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`, {
             signal: controller.signal,
-            headers: { 'Accept-Language': 'th,en' }
+            headers: { 
+              'Accept-Language': 'th,en' 
+            }
           });
           clearTimeout(timeoutId);
 
@@ -396,14 +398,24 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
             const data = await res.json();
             if (data && data.address) {
               const addr = data.address;
-              matchedProvince = addr.province || addr.state || addr.city || 'กรุงเทพมหานคร';
-              matchedDistrict = addr.city_district || addr.district || addr.suburb || addr.town || addr.county || 'จตุจักร';
-              matchedSubdistrict = addr.subdistrict || addr.neighbourhood || addr.quarter || addr.village || 'ลาดยาว';
+              matchedProvince = addr.province || addr.state || addr.city || 'ระบุไม่ได้';
+              matchedDistrict = addr.city_district || addr.district || addr.suburb || addr.town || addr.county || 'ระบุไม่ได้';
+              matchedSubdistrict = addr.subdistrict || addr.neighbourhood || addr.quarter || addr.village || 'ระบุไม่ได้';
               matchedVillage = addr.road || addr.residential || `ใกล้เคียง (${accuracy} ม.)`;
+            } else {
+              matchedProvince = 'พิกัด GPS';
+              matchedDistrict = lat.toFixed(4);
+              matchedSubdistrict = lng.toFixed(4);
             }
+          } else {
+             matchedProvince = 'พิกัด GPS';
+             matchedDistrict = lat.toFixed(4);
+             matchedSubdistrict = lng.toFixed(4);
           }
         } catch {
-          // Keep defaults
+           matchedProvince = 'พิกัด GPS';
+           matchedDistrict = lat.toFixed(4);
+           matchedSubdistrict = lng.toFixed(4);
         }
 
         const realLoc: Location = {
@@ -463,56 +475,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       setIsFirestoreConnected(connected);
     });
 
-    // Subscribe to Firestore Posts in real-time
-    const postsQuery = query(collection(db, 'posts'), limit(50));
-    const unsubscribePosts = onSnapshot(postsQuery, (snapshot) => {
-      if (!snapshot.empty) {
-        const firestorePosts: Post[] = snapshot.docs.map(docSnap => {
-          const data = docSnap.data();
-          const currentUid = auth.currentUser?.uid || userProfile.id;
-          const likedByArray: string[] = data.likedBy || [];
-          const isLiked = currentUid ? likedByArray.includes(currentUid) : false;
-
-          return {
-            id: docSnap.id,
-            author: {
-              name: data.authorName || 'สมาชิกชุมชน',
-              avatar: data.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
-            },
-            authorUid: data.authorUid,
-            content: data.content || '',
-            category: data.category || 'ทั่วไป',
-            images: data.images || (data.image ? [data.image] : []),
-            videoUrl: data.videoUrl || undefined,
-            location: data.location || location,
-            checkIn: data.checkIn || undefined,
-            likes: data.likes || 0,
-            comments: data.comments || 0,
-            isLiked: isLiked,
-            likedBy: likedByArray,
-            time: data.createdAt?.seconds 
-              ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-              : 'เมื่อสักครู่',
-            createdAt: data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now(),
-            commentList: []
-          };
-        });
-
-        // Merge with initial posts if needed or set directly
-        setPosts(prev => {
-          // Combine and deduplicate
-          const combined = [...firestorePosts];
-          prev.forEach(p => {
-            if (!combined.some(fp => fp.id === p.id)) {
-              combined.push(p);
-            }
-          });
-          return combined;
-        });
-      }
-    }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'posts');
-    });
+    
 
     // Subscribe to User Sessions Log in real-time
     const sessionsQuery = query(collection(db, 'user_sessions'), limit(20));
@@ -541,7 +504,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      unsubscribePosts();
+
       unsubscribeSessions();
     };
   }, []);
@@ -556,7 +519,29 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(100)),
       (snapshot) => {
         const fetchedPosts: Post[] = [];
-        snapshot.forEach(doc => fetchedPosts.push(doc.data() as Post));
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          // Filter out dummy avatars
+          let avatarUrl = data.author?.avatar || data.authorAvatar || 'https://ui-avatars.com/api/?name=U&background=random';
+          if (avatarUrl.includes('images.unsplash.com')) {
+            avatarUrl = 'https://ui-avatars.com/api/?name=U&background=random';
+          }
+          let authorName = data.author?.name || data.authorName || 'สมาชิกชุมชน';
+          
+          fetchedPosts.push({
+            ...data,
+            id: docSnap.id,
+            author: {
+              name: authorName,
+              avatar: avatarUrl
+            },
+            authorUid: data.authorUid || data.author?.uid,
+            isLiked: auth.currentUser?.uid ? (data.likedBy || []).includes(auth.currentUser.uid) : false,
+            time: data.createdAt?.seconds 
+              ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+              : data.time || 'เมื่อสักครู่',
+          } as Post);
+        });
         setPosts(fetchedPosts);
       },
       (error) => console.warn('Firestore subscription warning (posts):', error)
@@ -610,13 +595,35 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
               isGoogleUser: true
             }));
           } else {
+            const newName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || userProfile?.name || 'User';
+            const newAvatar = firebaseUser.photoURL || userProfile?.avatar || 'https://ui-avatars.com/api/?name=U&background=random';
+            
+            // Create the document if it doesn't exist
+            try {
+              await setDoc(userRef, {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email || '',
+                displayName: newName,
+                name: newName,
+                photoURL: newAvatar,
+                avatar: newAvatar,
+                role: role,
+                isVerified: false,
+                isGoogleUser: true,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              });
+            } catch (err) {
+              console.warn("Could not create user document in onAuthStateChanged", err);
+            }
+
             setUserProfile(prev => ({
               ...prev,
               id: firebaseUser.uid,
               uid: firebaseUser.uid,
-              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || prev.name,
+              name: newName,
               email: firebaseUser.email || prev.email,
-              avatar: firebaseUser.photoURL || prev.avatar,
+              avatar: newAvatar,
               isVerified: false,
               role: role as 'admin' | 'user',
               isGoogleUser: true
@@ -652,7 +659,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
           address: '',
           villageOrCondo: '',
           bio: '',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+          avatar: 'https://ui-avatars.com/api/?name=U&background=random',
           isVerified: false,
           joinedDate: '',
           reputationScore: 0,
@@ -712,6 +719,34 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try { localStorage.setItem('locallink_user_location', JSON.stringify(location)); } catch {}
   }, [location]);
+
+
+  // Auto-request GPS or Prompt after login
+  useEffect(() => {
+    if (isLoggedIn) {
+      const checkAndPromptGPS = async () => {
+        if (navigator.permissions) {
+          try {
+            const result = await navigator.permissions.query({ name: 'geolocation' });
+            if (result.state === 'granted') {
+              // Silently update location if already granted
+              requestRealLocation();
+            } else if (result.state === 'prompt') {
+              // Prompt once per session if not granted
+              const hasPrompted = localStorage.getItem('locallink_gps_prompt_shown');
+              if (!hasPrompted) {
+                localStorage.setItem('locallink_gps_prompt_shown', 'true');
+                openLocationPermissionModal();
+              }
+            }
+          } catch (e) {
+            console.warn("Permissions API error", e);
+          }
+        }
+      };
+      checkAndPromptGPS();
+    }
+  }, [isLoggedIn]);
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
@@ -1083,7 +1118,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
           uid: user.uid,
           name: data.displayName || user.displayName || 'สมาชิก',
           email: data.email || user.email || '',
-          avatar: data.photoURL || user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+          avatar: data.photoURL || user.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
           phone: data.phone || '',
           address: data.address || '',
           villageOrCondo: data.villageOrCondo || '',
@@ -1157,7 +1192,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       
       await updateProfile(user, {
         displayName: data.name.trim(),
-        photoURL: data.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
+        photoURL: data.avatar || 'https://ui-avatars.com/api/?name=U&background=random'
       });
       
       await sendEmailVerification(user);
@@ -1170,7 +1205,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         uid: user.uid,
         email: user.email,
         displayName: data.name.trim(),
-        photoURL: data.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+        photoURL: data.avatar || 'https://ui-avatars.com/api/?name=U&background=random',
         phone: data.phone.trim(),
         address: data.address.trim(),
         villageOrCondo: data.villageOrCondo?.trim() || location.village || 'ชุมชนท้องถิ่น',
@@ -1191,6 +1226,23 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         data.address.trim() || `ต.${location.subdistrict}, ${location.district}`
       );
       
+      setUserProfile({
+        id: user.uid,
+        uid: user.uid,
+        name: data.name.trim(),
+        email: user.email || "",
+        avatar: data.avatar || "https://ui-avatars.com/api/?name=U&background=random",
+        phone: data.phone.trim(),
+        address: data.address.trim(),
+        villageOrCondo: data.villageOrCondo?.trim() || location.village || "ชุมชนท้องถิ่น",
+        bio: data.bio?.trim() || `สมาชิกใหม่แห่งชุมชน ${location.district}`,
+        role: assignedRole,
+        isVerified: false,
+        isGoogleUser: false,
+        reputationScore: isAdmin ? 100 : 50,
+        joinedDate: new Date().toLocaleDateString("th-TH")
+      });
+
       showToast(`สมัครสมาชิกสำเร็จ! บันทึกข้อมูลลงฐานข้อมูลและส่งลิงก์ยืนยันตัวตนไปยัง ${data.email} แล้ว`, 'success');
       
       if (pendingAuthAction) {

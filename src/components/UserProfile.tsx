@@ -253,7 +253,7 @@ export function UserProfile() {
           <div className="flex items-center gap-3">
             <div className="relative group cursor-pointer shrink-0" onClick={() => setShowEditProfileModal(true)}>
               <img 
-                src={userProfile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'} 
+                src={userProfile.avatar || 'https://ui-avatars.com/api/?name=U&background=random'} 
                 alt="Profile" 
                 className="w-13 h-13 rounded-2xl object-cover ring-3 ring-slate-100 shadow-sm group-hover:scale-105 transition-transform" 
               />
@@ -457,7 +457,7 @@ export function UserProfile() {
             className="flex gap-2 items-center bg-slate-50 hover:bg-slate-100 p-2 rounded-xl border border-slate-200/80 transition-all cursor-pointer group mb-3"
           >
             <img 
-              src={userProfile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'} 
+              src={userProfile.avatar || 'https://ui-avatars.com/api/?name=U&background=random'} 
               alt="Me" 
               className="w-7 h-7 rounded-lg object-cover ring-1 ring-emerald-500/20 shrink-0" 
             />

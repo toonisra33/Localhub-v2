@@ -7,6 +7,7 @@ import { CommunityFeed } from './components/CommunityFeed';
 import { LocalMarket } from './components/LocalMarket';
 import { UserProfile } from './components/UserProfile';
 import { ChatView } from './components/chat/ChatView';
+import { ChatRoomModal } from './components/chat/ChatRoomModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AiChat } from './components/AiChat';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
@@ -40,6 +41,7 @@ function AppContent() {
   const { isBroadcastVisible, activeBroadcast, role } = useBroadcast();
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
+  const [directChatUser, setDirectChatUser] = useState<{id: string, name: string, avatar: string} | null>(null);
 
   const renderContent = () => {
     // Access Control check
@@ -118,10 +120,21 @@ function AppContent() {
           isOpen={true}
           onClose={closePublicProfile}
           userId={viewingProfileId}
-          onMessageClick={() => {
+          onMessageClick={(user) => {
             closePublicProfile();
-            setIsChatMenuOpen(true);
+            setDirectChatUser(user);
           }}
+        />
+      )}
+      
+      {directChatUser && (
+        <ChatRoomModal
+          isOpen={true}
+          onClose={() => setDirectChatUser(null)}
+          roomId={null}
+          otherUserId={directChatUser.id}
+          otherUserName={directChatUser.name}
+          otherUserAvatar={directChatUser.avatar}
         />
       )}
       
