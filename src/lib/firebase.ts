@@ -228,9 +228,19 @@ export async function signInWithGoogleAuth(locationString?: string) {
       sessionStorage.setItem('locallink_pending_loc', locationString);
     }
     
-    // We must use signInWithPopup because signInWithRedirect gets blocked inside the AI Studio iframe (403 Forbidden).
-    const result = await signInWithPopup(auth, googleProvider);
-    return { user: result.user, role: 'user' }; 
+    // Check if we are running inside an iframe (like AI Studio preview)
+    const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+    if (isInsideIframe) {
+      // Use popup for AI Studio iframe to avoid 403 Forbidden errors
+      const result = await signInWithPopup(auth, googleProvider);
+      return { user: result.user, role: 'user' };
+    } else {
+      // Use redirect for normal web and Android apps (TWA) to prevent external browser bounce
+      await signInWithRedirect(auth, googleProvider);
+      // Code below will not execute immediately because the page redirects
+      return { user: auth.currentUser, role: 'user' }; 
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'users');
     throw error;
