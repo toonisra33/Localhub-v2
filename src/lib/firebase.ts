@@ -39,10 +39,8 @@ import { UserProfileData, Post, PostComment, UserSessionLog } from '../types';
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
-export const db = initializeFirestore(app, { 
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-}, (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") ? firebaseConfig.firestoreDatabaseId : undefined);
+export const db = getFirestore(app, (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") ? firebaseConfig.firestoreDatabaseId : undefined);
+
 //
 
 
@@ -167,7 +165,7 @@ export async function logUserSession(
 /**
  * Check redirect result after returning from Google Login
  */
-export async function checkAuthRedirectResult() {
+export async function checkAuthRedirectResult(): Promise<boolean> {
   try {
     const result = await getRedirectResult(auth);
     if (result && result.user) {
@@ -179,7 +177,6 @@ export async function checkAuthRedirectResult() {
       // Sync or update user in Firestore
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
-
       const userData = {
         uid: user.uid,
         email: user.email || '',
@@ -217,13 +214,16 @@ export async function checkAuthRedirectResult() {
         'google',
         locationString
       );
+      return true;
     }
+    return false;
   } catch (error: any) {
     if (error && error.message && error.message.includes("Database is closing")) {
       console.warn("Firebase Auth: Ignored 'Database is closing' error during getRedirectResult. This is a common harmless warning in Android WebViews.");
-      return;
+      return false;
     }
     console.error('Redirect auth error:', error);
+    return false;
   }
 }
 
@@ -239,16 +239,10 @@ export async function signInWithGoogleAuth(locationString?: string) {
     // Check if we are running inside an iframe (like AI Studio preview)
     const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
-    if (isInsideIframe) {
-      // Use popup for AI Studio iframe to avoid 403 Forbidden errors
-      const result = await signInWithPopup(auth, googleProvider);
-      return { user: result.user, role: 'user' };
-    } else {
-      // Use redirect for normal web and Android apps (TWA) to prevent external browser bounce
-      await signInWithRedirect(auth, googleProvider);
-      // Code below will not execute immediately because the page redirects
-      return { user: auth.currentUser, role: 'user' }; 
-    }
+    // Use redirect for normal web and Android apps (TWA) to prevent external browser bounce
+    await signInWithRedirect(auth, googleProvider);
+    // Code below will not execute immediately because the page redirects
+    return { user: auth.currentUser, role: 'user' }; 
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'users');
     throw error;

@@ -216,13 +216,7 @@ export function AuthModal() {
     try {
       const success = await loginWithGoogle();
       if (success) {
-        // Automatically sync role
-        const currentUserRole = localStorage.getItem('locallink_user_role');
-        if (currentUserRole === 'admin') {
-          setRole('admin');
-        } else {
-          setRole('user');
-        }
+        closeAuthModal();
       }
     } finally {
       setIsSigningInGoogle(false);

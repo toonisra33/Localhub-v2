@@ -512,7 +512,13 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   // Listen for Firebase Auth state changes
   useEffect(() => {
     // Check if coming back from Google Redirect Login
-    checkAuthRedirectResult();
+    checkAuthRedirectResult().then((isSuccess) => {
+      // If we successfully returned and processed a redirect, ensure the auth modal is closed
+      if (isSuccess) {
+         sessionStorage.removeItem('locallink_pending_loc');
+         setIsAuthModalOpen(false);
+      }
+    });
 
     // Subscriptions to Firestore collections
     const unsubPosts = onSnapshot(
@@ -570,6 +576,8 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         setIsLoggedIn(true);
+        // Force modal closed if it was left open (e.g. returning from popup)
+        setIsAuthModalOpen(false);
         const isAdmin = isAuthorizedAdminEmail(firebaseUser.email);
         const role = isAdmin ? 'admin' : 'user';
 

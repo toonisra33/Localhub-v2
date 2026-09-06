@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tab } from './types';
 import { Navigation } from './components/Navigation';
 import { HomeFeed } from './components/HomeFeed';
@@ -38,7 +38,18 @@ function AppContent() {
     isLoggedIn,
     userProfile
   } = useCommunity();
-  const { isBroadcastVisible, activeBroadcast, role } = useBroadcast();
+
+  const { isBroadcastVisible, activeBroadcast, role, setRole } = useBroadcast();
+
+  // Keep BroadcastContext role in sync with UserProfile role
+  useEffect(() => {
+    if (isLoggedIn && userProfile?.role) {
+      if (role !== userProfile.role) {
+        setRole(userProfile.role);
+      }
+    }
+  }, [isLoggedIn, userProfile?.role, role, setRole]);
+
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
   const [directChatUser, setDirectChatUser] = useState<{id: string, name: string, avatar: string} | null>(null);
