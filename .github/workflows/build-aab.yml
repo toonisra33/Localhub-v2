@@ -47,8 +47,8 @@ jobs:
             echo "Restoring Keystore from Secrets..."
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android.keystore
           else
-            echo "No Secret found! Creating a temporary new one..."
-            keytool -genkey -v -keystore android.keystore -alias localhub -keyalg RSA -keysize 2048 -validity 10000 -storepass localhub123456 -keypass localhub123456 -dname "CN=Toon Isra, OU=LocalHub, O=LocalHub, L=Bangkok, ST=Bangkok, C=TH"
+            echo "Error: ANDROID_KEYSTORE_BASE64 secret is missing!"
+            exit 1
           fi
           
           cat << 'INNER_EOF' > twa-manifest.json
@@ -113,11 +113,21 @@ jobs:
             build().catch(err => { console.error(err); process.exit(1); });
           "
 
-      - name: Build Signed AAB Bundle with Gradle
+      - name: Build Unsigned AAB Bundle with Gradle
         run: |
           cd android-build
           chmod +x gradlew
-          ./gradlew bundleRelease assembleRelease
+          ./gradlew bundleRelease 
+
+      - name: Sign AAB with Original Key
+        id: sign_aab
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: ./android-build/app/build/outputs/bundle/release
+          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Upload Android App Bundle (.AAB) Artifact
         uses: actions/upload-artifact@v4
@@ -125,5 +135,3 @@ jobs:
           name: LocalHub-Android-Bundle-aab
           path: |
             android-build/app/build/outputs/bundle/release/*.aab
-            android-build/app/build/outputs/apk/release/*.apk
-            android-build/android.keystore
