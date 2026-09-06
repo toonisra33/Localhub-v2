@@ -1,5 +1,4 @@
 name: Build Android App Bundle (AAB)
-
 on:
   push:
     branches: [ main, master ]
@@ -8,13 +7,11 @@ on:
 jobs:
   build-aab:
     runs-on: ubuntu-latest
-
     env:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -121,14 +118,6 @@ jobs:
           cd android-build
           chmod +x gradlew
           ./gradlew bundleRelease assembleRelease
-          
-          AAB_FILE=$(find app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
-          if [ -f "$AAB_FILE" ]; then
-            STORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-localhub123456}"
-            KEY_PASS="${ANDROID_KEY_PASSWORD:-localhub123456}"
-            ALIAS="${ANDROID_KEY_ALIAS:-localhub}"
-            jarsigner -keystore android.keystore -storepass "$STORE_PASS" -keypass "$KEY_PASS" "$AAB_FILE" "$ALIAS" || true
-          fi
 
       - name: Upload Android App Bundle (.AAB) Artifact
         uses: actions/upload-artifact@v4
