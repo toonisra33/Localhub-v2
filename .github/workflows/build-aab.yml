@@ -7,11 +7,6 @@ on:
 jobs:
   build-aab:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -42,15 +37,6 @@ jobs:
           npm init -y
           npm install @bubblewrap/core
           
-          # Restore original Google Play upload keystore from GitHub Secrets
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "Restoring Keystore from Secrets..."
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android.keystore
-          else
-            echo "Error: ANDROID_KEYSTORE_BASE64 secret is missing!"
-            exit 1
-          fi
-          
           cat << 'INNER_EOF' > twa-manifest.json
           {
             "packageId": "com.toon.localhub",
@@ -69,10 +55,6 @@ jobs:
             "iconUrl": "https://raw.githubusercontent.com/toonisra33/localhub/main/public/icon-512.png",
             "maskableIconUrl": "https://raw.githubusercontent.com/toonisra33/localhub/main/public/icon-512.png",
             "splashScreenFadeOutDuration": 300,
-            "signingKey": {
-              "path": "./android.keystore",
-              "alias": "localhub"
-            },
             "appVersionName": "1.0.1",
             "appVersionCode": 2,
             "shortcuts": [],
@@ -104,7 +86,6 @@ jobs:
             const fs = require('fs');
             async function build() {
               const data = JSON.parse(fs.readFileSync('./twa-manifest.json', 'utf8'));
-              if (process.env.ANDROID_KEY_ALIAS) data.signingKey.alias = process.env.ANDROID_KEY_ALIAS;
               const manifest = new TwaManifest(data);
               const generator = new TwaGenerator();
               await generator.createTwaProject('./', manifest);
@@ -118,16 +99,6 @@ jobs:
           cd android-build
           chmod +x gradlew
           ./gradlew bundleRelease 
-
-      - name: Sign AAB with Original Key
-        id: sign_aab
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: ./android-build/app/build/outputs/bundle/release
-          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Upload Android App Bundle (.AAB) Artifact
         uses: actions/upload-artifact@v4
