@@ -3,6 +3,7 @@ import { X, Send, Bot, Sparkles, Loader2 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { Message } from '../../types';
 import { subscribeToMessages, sendMessage, getOrCreateChatRoom } from '../../lib/chat';
+import { soundManager } from '../../lib/sounds';
 
 interface ChatRoomModalProps {
   isOpen: boolean;
@@ -20,6 +21,9 @@ export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUse
   const [roomId, setRoomId] = useState<string | null>(initialRoomId);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Track previous message count to detect new messages
+  const prevMessageCountRef = useRef(0);
 
   useEffect(() => {
     if (!isOpen || !userProfile?.id) return;
@@ -33,6 +37,16 @@ export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUse
       
       const unsub = subscribeToMessages(rId, (msgs) => {
         setMessages(msgs);
+        
+        // Play sound if new message arrived and it's not from us
+        if (msgs.length > prevMessageCountRef.current && prevMessageCountRef.current > 0) {
+          const lastMsg = msgs[msgs.length - 1];
+          if (lastMsg.senderId !== userProfile.id) {
+            soundManager.playChatSound();
+          }
+        }
+        prevMessageCountRef.current = msgs.length;
+        
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       });
       return unsub;

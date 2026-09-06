@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { AdminBroadcast, UserRole, BroadcastCategory, BroadcastSeverity } from '../types';
 import { db, saveEntityToFirestore } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { soundManager } from '../lib/sounds';
+import { AppNotifications } from '../lib/notifications';
 
 interface BroadcastContextType {
   role: UserRole;
@@ -32,6 +34,7 @@ interface BroadcastContextType {
 const BROADCAST_STORAGE_KEY = 'locallink_admin_broadcast';
 const DEVICE_VIEW_PREFIX = 'locallink_device_view_';
 const USER_ROLE_KEY = 'locallink_user_role';
+
 export const BROADCAST_DURATION_SECONDS = 15 * 60; // 15 minutes (900 seconds)
 
 const BroadcastContext = createContext<BroadcastContextType | undefined>(undefined);
@@ -55,6 +58,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
   });
 
   const [activeBroadcast, setActiveBroadcast] = useState<AdminBroadcast | null>(null);
+  const previousBroadcastIdRef = useRef<string | null>(null);
 
   // Subscribe to active broadcast from Firestore
   useEffect(() => {
@@ -65,10 +69,21 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
         const todayStr = getLocalDateStr();
         if (data.broadcastDateStr === todayStr && data.isActive) {
           setActiveBroadcast(data);
+          
+          // If this is a newly received broadcast that we haven't seen yet, play the alert sound
+          if (previousBroadcastIdRef.current !== data.id) {
+             soundManager.playAlertSound();
+             AppNotifications.send(`⚠️ แจ้งเตือนฉุกเฉิน: ${data.title}`, {
+               body: data.message,
+               requireInteraction: true,
+             });
+             previousBroadcastIdRef.current = data.id;
+          }
           return;
         }
       }
       setActiveBroadcast(null);
+      previousBroadcastIdRef.current = null;
     }, (error) => {
       console.warn('Firestore subscription warning (broadcasts):', error);
     });

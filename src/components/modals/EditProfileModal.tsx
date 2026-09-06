@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { X, User, Camera, Check, Upload, Briefcase, HeartPulse, Calendar, Home, Heart } from 'lucide-react';
+import { X, User, Camera, Check, Upload, Briefcase, HeartPulse, Calendar, Home, Heart, Shield } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 
 interface EditProfileModalProps {
   onClose: () => void;
+  onOpenVerification?: () => void;
 }
 
-export function EditProfileModal({ onClose }: EditProfileModalProps) {
+export function EditProfileModal({ onClose, onOpenVerification }: EditProfileModalProps) {
   const { userProfile, updateUserProfile, showToast } = useCommunity();
   
   const [name, setName] = useState(userProfile?.name || '');
@@ -172,19 +173,26 @@ export function EditProfileModal({ onClose }: EditProfileModalProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
               <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                  <Briefcase size={12} className="text-slate-400" /> อาชีพ / ความเชี่ยวชาญ
+                  <Briefcase size={12} className="text-slate-400" /> อาชีพ / บทบาทในชุมชน
                 </label>
-                <input
-                  type="text"
+                <select
                   value={occupation}
                   onChange={e => setOccupation(e.target.value)}
-                  placeholder="เช่น ช่างซ่อมไฟ, พยาบาล"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-[13.5px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 focus:bg-white transition-all"
-                />
+                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-[13.5px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 focus:bg-white transition-all appearance-none"
+                >
+                  <option value="ประชาชนทั่วไป">ประชาชนทั่วไป</option>
+                  <option value="เจ้าหน้าที่กู้ภัย / กู้ชีพ">เจ้าหน้าที่กู้ภัย / กู้ชีพ</option>
+                  <option value="แพทย์ / พยาบาล / บุคลากรทางการแพทย์">แพทย์ / พยาบาล / บุคลากรทางการแพทย์</option>
+                  <option value="ช่างซ่อม / ช่างเทคนิค">ช่างซ่อม / ช่างเทคนิค</option>
+                  <option value="เจ้าของร้านค้า / ธุรกิจ">เจ้าของร้านค้า / ธุรกิจ</option>
+                  <option value="เจ้าของที่พัก / โรงแรม">เจ้าของที่พัก / โรงแรม</option>
+                  <option value="ผู้นำชุมชน / กรรมการชุมชน">ผู้นำชุมชน / กรรมการชุมชน</option>
+                </select>
               </div>
+              
               <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                   <Heart size={12} className="text-slate-400" /> สถานะความสัมพันธ์
@@ -270,6 +278,34 @@ export function EditProfileModal({ onClose }: EditProfileModalProps) {
               </div>
             </div>
           </div>
+
+          {/* Identity Verification Status & Trigger */}
+          {onOpenVerification && (
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col gap-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield size={16} className={userProfile?.isVerified ? "text-emerald-500" : "text-amber-500"} />
+                <h3 className="text-[13.5px] font-extrabold text-slate-800">
+                  {userProfile?.isVerified ? 'ยืนยันตัวตนเรียบร้อย' : 'การยืนยันตัวตนในพื้นที่'}
+                </h3>
+              </div>
+              <p className="text-[11.5px] text-slate-600 font-medium leading-relaxed">
+                {userProfile?.isVerified 
+                  ? 'คุณได้รับสิทธิ์การใช้งานชุมชนอย่างเต็มรูปแบบ สามารถทำการซื้อขายและแจ้งเหตุการณ์ได้ด้วยความน่าเชื่อถือสูงสุด'
+                  : 'ยืนยันตัวตนด้วยบัตรประชาชนเพื่อรับป้าย "สมาชิกที่ยืนยันแล้ว" เพิ่มความน่าเชื่อถือในการซื้อขาย และแจ้งข่าว'}
+              </p>
+              <button
+                type="button"
+                onClick={onOpenVerification}
+                className={`w-full py-2.5 rounded-xl font-bold text-[12.5px] transition-all flex items-center justify-center gap-1.5 ${
+                  userProfile?.isVerified 
+                    ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20'
+                }`}
+              >
+                {userProfile?.isVerified ? 'ตรวจสอบสถานะ' : 'เริ่มยืนยันตัวตน'}
+              </button>
+            </div>
+          )}
 
           {/* Submit */}
           <div className="flex gap-2.5 pt-4 border-t border-slate-100 sticky bottom-0 bg-white pb-2">

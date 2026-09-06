@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Heart, MessageCircle, Share2, Send, MapPin, MoreHorizontal, Check } from 'lucide-react';
-import { Post } from '../../types';
+import { Post, PostComment } from '../../types';
 import { useCommunity } from '../../context/CommunityContext';
+import { db } from '../../lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 interface PostDetailCommentsModalProps {
   post: Post;
@@ -12,8 +14,35 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
   const { toggleLikePost, addComment, deletePost, showToast, userProfile, openMediaViewer } = useCommunity();
   const [commentInput, setCommentInput] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [comments, setComments] = useState<PostComment[]>(post.commentList || []);
 
-  const comments = post.commentList || [];
+  useEffect(() => {
+    const q = query(collection(db, 'posts', post.id, 'comments'), orderBy('createdAt', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedComments: PostComment[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedComments.push({
+          id: doc.id,
+          author: {
+            name: data.authorName || 'สมาชิกชุมชน',
+            avatar: data.authorAvatar || 'https://ui-avatars.com/api/?name=U&background=random',
+          },
+          authorUid: data.authorUid,
+          content: data.content,
+          time: data.createdAt?.seconds 
+            ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) 
+            : 'เมื่อสักครู่',
+          createdAt: data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now()
+        });
+      });
+      setComments(fetchedComments);
+    }, (error) => {
+      console.warn('Firestore subscription warning (comments):', error);
+    });
+
+    return () => unsubscribe();
+  }, [post.id]);
 
   const handleSendComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,24 +188,24 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
               </div>
             ) : (
               comments.map(c => (
-                <div key={c.id} className="flex gap-2.5 bg-white p-3 rounded-2xl border border-slate-150 shadow-sm">
+                <div key={c.id} className="flex gap-2.5 px-1 mb-2">
                   <img
                     src={c.author?.avatar}
                     alt={c.author?.name}
-                    className="w-8 h-8 rounded-xl object-cover shrink-0 ring-1 ring-slate-100"
+                    className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between gap-1 mb-0.5">
-                      <span className="font-extrabold text-[12.5px] text-slate-900 truncate">
+                    <div className="bg-slate-100/80 px-3.5 py-2 rounded-[18px] inline-block max-w-[95%]">
+                      <span className="font-extrabold text-[13px] text-slate-900 block mb-0.5 truncate">
                         {c.author?.name}
                       </span>
-                      <span className="text-[10.5px] font-semibold text-slate-400 shrink-0">
-                        {c.time}
-                      </span>
+                      <p className="text-[13px] text-slate-800 leading-snug font-normal break-words">
+                        {c.content}
+                      </p>
                     </div>
-                    <p className="text-[13px] text-slate-700 leading-snug font-normal">
-                      {c.content}
-                    </p>
+                    <div className="text-[11px] font-semibold text-slate-400 mt-1 ml-3">
+                      {c.time}
+                    </div>
                   </div>
                 </div>
               ))

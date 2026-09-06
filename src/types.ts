@@ -62,6 +62,8 @@ export interface PostComment {
   author: {
     name: string;
     avatar: string;
+    isVerified?: boolean;
+    reputationScore?: number;
   };
   authorUid?: string;
   content: string;
@@ -87,6 +89,8 @@ export interface Post {
   author: {
     name: string;
     avatar: string;
+    isVerified?: boolean;
+    reputationScore?: number;
   };
   authorUid?: string;
   content: string;
@@ -202,6 +206,8 @@ export interface UserProfileData {
   villageOrCondo?: string;
   bio: string;
   avatar: string;
+    isVerified?: boolean;
+    reputationScore?: number;
   occupation?: string; // อาชีพ / ความเชี่ยวชาญ
   emergencyContactName?: string; // ชื่อผู้ติดต่อฉุกเฉิน
   emergencyContactPhone?: string; // เบอร์ผู้ติดต่อฉุกเฉิน
@@ -275,6 +281,7 @@ export interface ChatRoom {
   participantDetails: Record<string, { name: string; avatar: string }>;
   lastMessage: string;
   lastMessageTime: number;
+  lastMessageSenderId?: string;
   updatedAt: number;
 }
 

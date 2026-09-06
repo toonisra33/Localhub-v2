@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { soundManager } from "../lib/sounds";
+import { AppNotifications } from "../lib/notifications";
+import { subscribeToChats } from "../lib/chat";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { 
   Alert, 
   Post, 
@@ -685,6 +688,39 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       unsubEvents();
     };
   }, []);
+  
+  // Global notification listener for chats
+  const previousLastMessageTimes = useRef<Record<string, number>>({});
+  
+  useEffect(() => {
+    if (!userProfile?.id || userProfile.id === 'user_default') return;
+    
+    // Request permission for push notifications
+    AppNotifications.requestPermission();
+    
+    const unsub = subscribeToChats(userProfile.id, (chats) => {
+      chats.forEach(chat => {
+        const prevTime = previousLastMessageTimes.current[chat.id];
+        
+        // If this is a new message and we are not the sender
+        if (prevTime && chat.lastMessageTime > prevTime && chat.lastMessageSenderId && chat.lastMessageSenderId !== userProfile.id) {
+           soundManager.playChatSound();
+           
+           // Find the sender details
+           const senderDetails = chat.participantDetails[chat.lastMessageSenderId];
+           const senderName = senderDetails?.name || 'มีผู้ใช้งาน';
+           
+           AppNotifications.send(`ข้อความใหม่จาก ${senderName}`, {
+             body: chat.lastMessage,
+             tag: `chat_${chat.id}`,
+           });
+        }
+        previousLastMessageTimes.current[chat.id] = chat.lastMessageTime;
+      });
+    });
+    
+    return () => unsub();
+  }, [userProfile?.id]);
 
   // Persistence helpers for localStorage caching
   useEffect(() => {
@@ -731,6 +767,8 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   // Auto-request GPS or Prompt after login
   useEffect(() => {
+    // Disabled auto GPS prompt for now as it causes a distracting popup in the preview.
+    /*
     if (isLoggedIn) {
       const checkAndPromptGPS = async () => {
         if (navigator.permissions) {
@@ -754,6 +792,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       };
       checkAndPromptGPS();
     }
+    */
   }, [isLoggedIn]);
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -784,6 +823,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       reportedBy: userProfile?.name
     };
     setAlerts(prev => [newAlert, ...prev]);
+    soundManager.playAlertSound();
     showToast('📢 รายงานเหตุการณ์เรียบร้อยแล้ว');
   };
 
@@ -1143,7 +1183,6 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       setIsAuthModalOpen(false);
       
       try {
-        localStorage.setItem('locallink_user_role', profileData.role || 'user');
         localStorage.setItem('locallink_profile', JSON.stringify(profileData));
       } catch {}
 
@@ -1188,7 +1227,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (data: { name: string; phone: string; email?: string; password?: string; address: string; villageOrCondo?: string; avatar?: string; bio?: string }): Promise<boolean> => {
+  const register = async (data: { name: string; phone: string; email?: string; password?: string; address: string; villageOrCondo?: string; avatar?: string; bio?: string; occupation?: string }): Promise<boolean> => {
     if (!data.email || !data.password) {
       showToast('กรุณากรอกอีเมลและรหัสผ่าน', 'error');
       return false;
@@ -1218,6 +1257,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         address: data.address.trim(),
         villageOrCondo: data.villageOrCondo?.trim() || location.village || 'ชุมชนท้องถิ่น',
         bio: data.bio?.trim() || `สมาชิกใหม่แห่งชุมชน ${location.district}`,
+        occupation: data.occupation || 'ประชาชนทั่วไป',
         role: assignedRole,
         isVerified: false,
         reputationScore: isAdmin ? 100 : 50,
@@ -1244,6 +1284,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         address: data.address.trim(),
         villageOrCondo: data.villageOrCondo?.trim() || location.village || "ชุมชนท้องถิ่น",
         bio: data.bio?.trim() || `สมาชิกใหม่แห่งชุมชน ${location.district}`,
+        occupation: data.occupation || 'ประชาชนทั่วไป',
         role: assignedRole,
         isVerified: false,
         isGoogleUser: false,
@@ -1279,7 +1320,6 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-      localStorage.setItem('locallink_user_role', 'user');
       localStorage.setItem('locallink_is_logged_in', 'false');
       localStorage.removeItem('locallink_profile');
     } catch {}

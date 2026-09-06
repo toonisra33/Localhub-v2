@@ -40,6 +40,7 @@ export const sendMessage = async (roomId: string, senderId: string, text: string
   await updateDoc(roomRef, {
     lastMessage: text,
     lastMessageTime: timestamp,
+    lastMessageSenderId: senderId,
     updatedAt: timestamp
   });
 };

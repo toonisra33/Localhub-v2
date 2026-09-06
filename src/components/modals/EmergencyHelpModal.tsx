@@ -46,19 +46,31 @@ export function EmergencyHelpModal({ onClose }: EmergencyHelpModalProps) {
         <div className="p-4 overflow-y-auto space-y-3.5 flex-1 bg-slate-50/50">
           
           <div className="bg-gradient-to-r from-rose-500 to-pink-600 rounded-2xl p-4 text-white shadow-md">
-            <h3 className="font-extrabold text-[15px] mb-1">ต้องการอาสาสมัครช่วยเหลือด่วน?</h3>
+            <h3 className="font-extrabold text-[15px] mb-1">ต้องการความช่วยเหลือฉุกเฉิน?</h3>
             <p className="text-[12px] text-rose-100 mb-3">
-              คุณสามารถโพสต์ลงกระดานชุมชน หรือกดโทรสายด่วนหน่วยงานที่เกี่ยวข้องได้ทันที
+              คุณสามารถแจ้งเหตุถึงเจ้าหน้าที่ส่วนกลางพร้อมพิกัด GPS หรือขอความช่วยเหลือจากเพื่อนบ้านได้ทันที
             </p>
-            <button
-              onClick={() => {
-                onClose();
-                showToast('กำลังเปิดกระดานชุมชนเพื่อขอความช่วยเหลือ');
-              }}
-              className="bg-white text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl text-[12px] font-bold shadow-sm transition-all"
-            >
-              เขียนโพสต์ขอความช่วยเหลือ
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  onClose();
+                  showToast('🚨 ส่งพิกัดและแจ้งเตือนภัยไปยังส่วนกลางและอาสาสมัครในพื้นที่เรียบร้อยแล้ว!', 'error');
+                }}
+                className="w-full bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl text-[12px] font-bold shadow-sm transition-all flex items-center justify-center gap-2"
+              >
+                <ShieldAlert size={14} className="text-rose-500" />
+                แจ้งเหตุตรงถึงเจ้าหน้าที่ส่วนกลาง (ส่ง GPS)
+              </button>
+              <button
+                onClick={() => {
+                  onClose();
+                  showToast('กำลังเปิดกระดานชุมชนเพื่อขอความช่วยเหลือ');
+                }}
+                className="w-full bg-white text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl text-[12px] font-bold shadow-sm transition-all"
+              >
+                เขียนโพสต์ขอความช่วยเหลือเพื่อนบ้าน
+              </button>
+            </div>
           </div>
 
           <h4 className="text-[13px] font-extrabold text-slate-800 px-1 pt-1">สายด่วนฉุกเฉิน 24 ชั่วโมง</h4>

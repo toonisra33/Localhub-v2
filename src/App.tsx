@@ -41,15 +41,6 @@ function AppContent() {
 
   const { isBroadcastVisible, activeBroadcast, role, setRole } = useBroadcast();
 
-  // Keep BroadcastContext role in sync with UserProfile role
-  useEffect(() => {
-    if (isLoggedIn && userProfile?.role) {
-      if (role !== userProfile.role) {
-        setRole(userProfile.role);
-      }
-    }
-  }, [isLoggedIn, userProfile?.role, role, setRole]);
-
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
   const [directChatUser, setDirectChatUser] = useState<{id: string, name: string, avatar: string} | null>(null);

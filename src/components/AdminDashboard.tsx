@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { db } from "../lib/firebase";
+import { collection, getCountFromServer } from "firebase/firestore";
 import { 
   Users, 
   TrendingUp, 
@@ -143,16 +145,62 @@ export function AdminDashboard() {
   } = useBroadcast();
 
   const [timeRange, setTimeRange] = useState<'7d' | '30d'>('7d');
-  const [activeView, setActiveView] = useState<'overview' | 'database' | 'store_assets' | 'users' | 'features' | 'incidents' | 'logs' | 'verification'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'database' | 'users' | 'features' | 'incidents' | 'logs' | 'verification'>('overview');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
+  const [realUserCount, setRealUserCount] = useState<number>(0);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchUserCount = async () => {
+      try {
+        const coll = collection(db, 'users');
+        const snapshot = await getCountFromServer(coll);
+        const count = snapshot.data().count;
+        setRealUserCount(count);
+        // Automatically switch to real-time mode and hide demo data once we reach 100 users
+        if (count >= 100) {
+          setIsDemoMode(false);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch user count for dashboard", err);
+      }
+    };
+    fetchUserCount();
+  }, []);
+
   // Dynamic calculated totals
-  const totalUsersCount = 4892;
-  const verifiedRate = 86.4;
-  const totalAlertsCount = alerts.length + 145;
-  const totalPostsCount = posts.length + 620;
-  const totalProductsCount = products.length + 338;
+  const totalUsersCount = isDemoMode ? 4892 : realUserCount;
+  const verifiedRate = isDemoMode ? 86.4 : 0; // Can be calculated from real data later if needed
+  const totalAlertsCount = isDemoMode ? alerts.length + 145 : alerts.length;
+  const totalPostsCount = isDemoMode ? posts.length + 620 : posts.length;
+  const totalProductsCount = isDemoMode ? products.length + 338 : products.length;
+
+  const activeRegistrationData = isDemoMode ? REGISTRATION_TREND_DATA[timeRange] : [
+    { date: 'วันนี้', newUsers: realUserCount, activeUsers: realUserCount, engagement: realUserCount }
+  ];
+
+  const activeFeatureUsageData = isDemoMode ? FEATURE_USAGE_DATA : [
+    { name: 'เรดาร์รอบตัว (Around Me)', users: Math.floor(realUserCount * 0.8), percentage: 80, color: '#10b981' },
+    { name: 'ฟีดชุมชน (Community Feed)', users: Math.floor(realUserCount * 0.6), percentage: 60, color: '#0ea5e9' },
+    { name: 'เตือนภัยฉุกเฉิน (Alerts)', users: alerts.length, percentage: 50, color: '#f43f5e' },
+    { name: 'ตลาดนัดท้องถิ่น (Market)', users: products.length, percentage: 40, color: '#f59e0b' },
+  ];
+
+  const activeUserRolesData = isDemoMode ? USER_ROLES_DATA : [
+    { name: 'ผู้ใช้งาน', value: realUserCount > 0 ? realUserCount : 1, color: '#10b981' }
+  ];
+
+  const activeIncidentData = isDemoMode ? INCIDENT_CATEGORIES_DATA : [
+    { category: 'รายงานในระบบ', count: alerts.length, resolved: 0, color: '#0ea5e9' }
+  ];
+
+  const activeDistrictData = isDemoMode ? DISTRICT_DISTRIBUTION_DATA : [
+    { district: 'ผู้ใช้งานจริง', users: realUserCount, share: '100%' }
+  ];
+
+  const activeAuditLogs = isDemoMode ? AUDIT_LOGS : [];
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -193,6 +241,15 @@ export function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
+            {realUserCount < 100 && (
+              <button 
+                onClick={() => setIsDemoMode(!isDemoMode)}
+                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all border ${isDemoMode ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'}`}
+                title="สลับโหมดข้อมูล"
+              >
+                {isDemoMode ? '✨ Demo' : '🟢 Real'}
+              </button>
+            )}
             <button
               onClick={handleRefresh}
               className={`p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700/60 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`}
@@ -268,7 +325,6 @@ export function AdminDashboard() {
           {[
             { id: 'overview', label: '📊 ภาพรวมสถิติ', icon: TrendingUp },
             { id: 'database', label: '🗄️ ฐานข้อมูลคลาวด์', icon: Database },
-            { id: 'store_assets', label: '🎨 รูปภาพ Play Store', icon: Smartphone },
             { id: 'verification', label: '🛡️ คำขอยืนยันตัวตน', icon: ShieldCheck },
             { id: 'users', label: '👥 ประชากรผู้ใช้', icon: Users },
             { id: 'features', label: '⚡ ฟีเจอร์ยอดนิยม', icon: Activity },
@@ -410,7 +466,7 @@ export function AdminDashboard() {
 
               <div className="h-52 w-full pt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={REGISTRATION_TREND_DATA[timeRange]}>
+                  <AreaChart data={activeRegistrationData}>
                     <defs>
                       <linearGradient id="activeUsersGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
@@ -442,7 +498,7 @@ export function AdminDashboard() {
               </div>
 
               <div className="space-y-2.5">
-                {FEATURE_USAGE_DATA.map((feat, idx) => (
+                {activeFeatureUsageData.map((feat, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between text-[12px]">
                       <span className="font-bold text-slate-700">{feat.name}</span>
@@ -475,7 +531,7 @@ export function AdminDashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={USER_ROLES_DATA}
+                      data={activeUserRolesData}
                       cx="50%"
                       cy="50%"
                       innerRadius={46}
@@ -483,7 +539,7 @@ export function AdminDashboard() {
                       paddingAngle={4}
                       dataKey="value"
                     >
-                      {USER_ROLES_DATA.map((entry, index) => (
+                      {activeUserRolesData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -495,7 +551,7 @@ export function AdminDashboard() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                {USER_ROLES_DATA.map((item, idx) => (
+                {activeUserRolesData.map((item, idx) => (
                   <div key={idx} className="p-2.5 bg-slate-50 rounded-2xl flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                     <div className="min-w-0">
@@ -512,7 +568,7 @@ export function AdminDashboard() {
               <h3 className="text-[14.5px] font-extrabold text-slate-900">การกระจายตัวตามเขต/พื้นที่</h3>
               
               <div className="space-y-2.5">
-                {DISTRICT_DISTRIBUTION_DATA.map((dist, idx) => (
+                {activeDistrictData.map((dist, idx) => (
                   <div key={idx} className="p-3 bg-slate-50 rounded-2xl flex items-center justify-between border border-slate-100">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl bg-emerald-100/70 text-emerald-700 flex items-center justify-center font-bold text-[12px]">
@@ -642,7 +698,7 @@ export function AdminDashboard() {
 
               <div className="h-56 w-full pt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={FEATURE_USAGE_DATA} layout="vertical" margin={{ left: 10, right: 20 }}>
+                  <BarChart data={activeFeatureUsageData} layout="vertical" margin={{ left: 10, right: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                     <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#475569' }} width={120} axisLine={false} tickLine={false} />
@@ -650,7 +706,7 @@ export function AdminDashboard() {
                       contentStyle={{ borderRadius: '16px', border: '1px solid #e2e8f0', fontSize: '12px' }}
                     />
                     <Bar dataKey="users" fill="#10b981" radius={[0, 8, 8, 0]}>
-                      {FEATURE_USAGE_DATA.map((entry, index) => (
+                      {activeFeatureUsageData.map((entry, index) => (
                         <Cell key={`bar-${index}`} fill={entry.color} />
                       ))}
                     </Bar>
@@ -765,7 +821,7 @@ export function AdminDashboard() {
               </div>
 
               <div className="space-y-3 pt-1">
-                {INCIDENT_CATEGORIES_DATA.map((inc, idx) => (
+                {activeIncidentData.map((inc, idx) => (
                   <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5">
                     <div className="flex items-center justify-between text-[12.5px]">
                       <span className="font-extrabold text-slate-900">{inc.category}</span>
@@ -841,7 +897,7 @@ export function AdminDashboard() {
               </div>
 
               <div className="space-y-2.5">
-                {AUDIT_LOGS.map((log) => (
+                {activeAuditLogs.map((log) => (
                   <div key={log.id} className="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-100 transition-colors flex items-start gap-3">
                     <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5">
                       {log.type === 'alert' ? '🚨' : log.type === 'market' ? '🛍️' : log.type === 'broadcast' ? '📢' : '👤'}
@@ -991,252 +1047,6 @@ export function AdminDashboard() {
                   ))}
                 </div>
               )}
-            </div>
-
-          </div>
-        )}
-
-        {/* VIEW 6: GOOGLE PLAY STORE LISTING ASSETS */}
-        {activeView === 'store_assets' && (
-          <div className="space-y-5 animate-in fade-in duration-200">
-            
-            {/* Header info banner */}
-            <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 text-white p-5 rounded-3xl border border-slate-800 shadow-md">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
-                  <Smartphone size={20} />
-                </div>
-                <div>
-                  <h3 className="text-[16px] font-extrabold text-white leading-tight">
-                    ชุดภาพกราฟิก Google Play Store (Store Listing Assets)
-                  </h3>
-                  <p className="text-[11.5px] text-slate-300 font-medium">
-                    กราฟิกมาตรฐานตามข้อกำหนดของ Google Play Console พร้อมสำหรับส่งขึ้นสโตร์
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 flex-wrap">
-                <span className="inline-flex items-center gap-1 bg-slate-800/90 text-emerald-400 px-2.5 py-1 rounded-xl border border-slate-700">
-                  <CheckCircle2 size={12} /> ขนาดและสัดส่วนตรงตามเกณฑ์
-                </span>
-                <span className="inline-flex items-center gap-1 bg-slate-800/90 text-sky-400 px-2.5 py-1 rounded-xl border border-slate-700">
-                  <ShieldCheck size={12} /> สไตล์ภาพโมเดิร์น & ชัดเจน
-                </span>
-              </div>
-            </div>
-
-            {/* 1. App Icon Asset */}
-            <div className="bg-white p-4.5 rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Award size={16} />
-                  </div>
-                  <div>
-                    <h4 className="text-[14.5px] font-extrabold text-slate-900">1. ไอคอนแอพ (App Icon)</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">ข้อกำหนด: 512 x 512 px (อัตราส่วน 1:1, 32-bit PNG/JPG)</p>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold rounded-full">
-                  1:1 Ratio
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-900/95 p-4 rounded-2xl border border-slate-800">
-                <div className="relative group shrink-0">
-                  <img 
-                    src={playStoreIcon} 
-                    alt="Play Store App Icon" 
-                    className="w-28 h-28 rounded-[24px] object-cover shadow-xl ring-2 ring-emerald-500/40"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-black/40 rounded-[24px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-bold">
-                    ไอคอนหลัก
-                  </div>
-                </div>
-
-                <div className="flex-1 space-y-2 text-slate-300 text-[11.5px] w-full">
-                  <div className="font-extrabold text-white text-[13px] flex items-center gap-1.5">
-                    <span>LocalHub Community Pin Icon</span>
-                  </div>
-                  <p className="text-slate-400 leading-relaxed text-[11px]">
-                    ดีไซน์หมุดแผนที่เรดาร์ผสมผสานโครงข่ายการเชื่อมต่อชุมชน สีเขียวมรกตและสีฟ้าอมเขียว (Emerald & Teal Gradient) บนพื้นหลัง Dark Obsidian สะท้อนความเป็นผู้นำด้านเทคโนโลยีชุมชน
-                  </p>
-                  <div className="pt-1 flex items-center gap-2">
-                    <a 
-                      href={playStoreIcon} 
-                      download="localhub_app_icon_512x512.jpg" 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 transition-all shadow-xs"
-                    >
-                      <Download size={13} />
-                      บันทึกภาพไอคอน
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. Feature Graphic Banner Asset */}
-            <div className="bg-white p-4.5 rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-                    <ImageIcon size={16} />
-                  </div>
-                  <div>
-                    <h4 className="text-[14.5px] font-extrabold text-slate-900">2. ภาพปกหน้าร้าน (Feature Graphic Banner)</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">ข้อกำหนด: 1024 x 500 px (อัตราส่วน 16:9, หน้าแบนเนอร์หลัก Play Store)</p>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 bg-teal-100 text-teal-800 text-[10.5px] font-extrabold rounded-full">
-                  16:9 Banner
-                </span>
-              </div>
-
-              <div className="bg-slate-900/95 p-3.5 rounded-2xl border border-slate-800 space-y-3">
-                <div className="relative overflow-hidden rounded-xl border border-slate-700/60 shadow-lg">
-                  <img 
-                    src={featureGraphic} 
-                    alt="Play Store Feature Graphic Banner" 
-                    className="w-full h-auto object-cover max-h-[220px]"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11.5px]">
-                  <p className="text-slate-400 text-[11px] leading-relaxed">
-                    ภาพปกโปรโมตด้านบนสุดของ Play Store แสดงบรรยากาศชุมชน แผนที่ และชีวิตประจำวันของลูกบ้าน
-                  </p>
-                  <a 
-                    href={featureGraphic} 
-                    download="localhub_feature_graphic_1024x500.jpg" 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0"
-                  >
-                    <Download size={13} />
-                    บันทึกภาพแบนเนอร์ปก
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Screenshots Mockup Asset */}
-            <div className="bg-white p-4.5 rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
-                    <Smartphone size={16} />
-                  </div>
-                  <div>
-                    <h4 className="text-[14.5px] font-extrabold text-slate-900">3. สกรีนช็อตนำเสนอแอพ (Screenshots Showcase)</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">ข้อกำหนด: 1080 x 1920+ px (อัตราส่วน 9:16 แนวตั้ง สำหรับมือถือ)</p>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 bg-sky-100 text-sky-800 text-[10.5px] font-extrabold rounded-full">
-                  9:16 Vertical
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-900/95 p-4 rounded-2xl border border-slate-800">
-                <div className="w-44 shrink-0 overflow-hidden rounded-2xl border-2 border-slate-700 shadow-2xl">
-                  <img 
-                    src={storeScreenshot} 
-                    alt="Play Store Screenshot Mockup" 
-                    className="w-full h-auto object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-
-                <div className="flex-1 space-y-3 text-slate-300 text-[11.5px]">
-                  <div className="font-extrabold text-white text-[13px]">
-                    ตัวอย่างพรีวิวหน้าจอการใช้งานจริง
-                  </div>
-                  <ul className="space-y-1.5 text-slate-400 text-[11px]">
-                    <li className="flex items-center gap-1.5">
-                      <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-                      <span>เรดาร์แผนที่สำรวจสิ่งรอบตัว (Around Me Radar)</span>
-                    </li>
-                    <li className="flex items-center gap-1.5">
-                      <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-                      <span>ตลาดซื้อขายสินค้าและบริการของเพื่อนบ้าน</span>
-                    </li>
-                    <li className="flex items-center gap-1.5">
-                      <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-                      <span>ระบบแจ้งเตือนเหตุฉุกเฉินและบรอดแคสจากผู้นำชุมชน</span>
-                    </li>
-                  </ul>
-
-                  <div className="pt-2">
-                    <a 
-                      href={storeScreenshot} 
-                      download="localhub_playstore_screenshot.jpg" 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 transition-all shadow-xs inline-flex"
-                    >
-                      <Download size={13} />
-                      บันทึกภาพสกรีนช็อต
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 4. Privacy Policy URL for Play Console */}
-            <div className="bg-white p-4.5 rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                    <ShieldCheck size={16} />
-                  </div>
-                  <div>
-                    <h4 className="text-[14.5px] font-extrabold text-slate-900">4. นโยบายความเป็นส่วนตัว (Privacy Policy URL)</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">ข้อกำหนดสำคัญ: ต้องระบุ URL สาธารณะใน Google Play Console (เนื้อหาของแอป)</p>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-[10.5px] font-extrabold rounded-full">
-                  Public URL
-                </span>
-              </div>
-
-              <div className="bg-slate-900/95 p-4 rounded-2xl border border-slate-800 space-y-3 text-slate-300">
-                <p className="text-slate-400 text-[11.5px] leading-relaxed">
-                  หน้าเว็บนโยบายความเป็นส่วนตัวอย่างเป็นทางการของ LocalHub ครอบคลุมการขอสิทธิ์พิกัด GPS (ACCESS_FINE_LOCATION), รูปภาพ, การจัดเก็บข้อมูลบน Firebase และนโยบายการขอลบข้อมูลตามกฎระเบียบของ Google Play Store
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <input 
-                    type="text" 
-                    readOnly 
-                    value={`${window.location.origin}/privacy.html`} 
-                    className="w-full bg-transparent text-[11.5px] text-emerald-400 font-mono outline-none truncate px-1"
-                  />
-                  <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/privacy.html`);
-                        alert('คัดลอก Privacy Policy URL เรียบร้อยแล้ว!');
-                      }}
-                      className="flex-1 sm:flex-none px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-xs"
-                    >
-                      <Copy size={13} />
-                      คัดลอก URL
-                    </button>
-                    <a
-                      href="/privacy.html"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all border border-slate-700"
-                    >
-                      <ExternalLink size={13} />
-                      เปิดหน้าเว็บ
-                    </a>
-                  </div>
-                </div>
-              </div>
             </div>
 
           </div>

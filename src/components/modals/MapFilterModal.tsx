@@ -12,6 +12,7 @@ export function MapFilterModal({ onClose, selectedCategory, onSelectCategory }: 
   const { showToast } = useCommunity();
   const [onlyOpenNow, setOnlyOpenNow] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [radius, setRadius] = useState(5); // Default 5km radius
 
   const categories = [
     { id: 'all', label: 'ทั้งหมด' },
@@ -77,7 +78,29 @@ export function MapFilterModal({ onClose, selectedCategory, onSelectCategory }: 
           </div>
 
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1.5 pb-2 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-bold text-slate-800">ขอบเขตพื้นที่รัศมี (Geofencing)</span>
+                <span className="text-[12px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                  {radius} กม.
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="50"
+                step="1"
+                value={radius}
+                onChange={e => setRadius(parseInt(e.target.value))}
+                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 mt-2"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 font-medium px-1">
+                <span>ใกล้สุด (1 กม.)</span>
+                <span>กว้างสุด (50 กม.)</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
               <span className="text-[13px] font-bold text-slate-800">เฉพาะร้านที่เปิดทำการตอนนี้</span>
               <input
                 type="checkbox"

@@ -41,7 +41,9 @@ import { RealEstateModal } from './modals/RealEstateModal';
 import { EmergencyHelpModal } from './modals/EmergencyHelpModal';
 import { LocationPickerModal } from './modals/LocationPickerModal';
 import { NotificationCenterModal } from './modals/NotificationCenterModal';
+import { LeaderboardModal } from './modals/LeaderboardModal';
 import { LocalHubLogo } from './LocalHubLogo';
+import { AiMorningBrief } from './AiMorningBrief';
 
 export function HomeFeed() {
   const { role, setOpenAdminModal } = useBroadcast();
@@ -68,6 +70,7 @@ export function HomeFeed() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
   
   React.useEffect(() => {
     const handleOpenNotif = () => setShowNotificationsModal(true);
@@ -132,6 +135,13 @@ export function HomeFeed() {
       color: 'bg-pink-500/10 text-pink-600', 
       border: 'border-pink-200/50', 
       onClick: () => setShowHelpModal(true) 
+    },
+    { 
+      icon: ShieldCheck, 
+      label: 'คนดีชุมชน', 
+      color: 'bg-amber-500/10 text-amber-600', 
+      border: 'border-amber-200/50', 
+      onClick: () => setShowLeaderboardModal(true) 
     },
   ];
 
@@ -291,66 +301,7 @@ export function HomeFeed() {
       )}
 
       {/* Morning Brief - Frosted Modern Card */}
-      <div className={`px-5 relative z-20 ${role === 'admin' ? 'mt-0' : '-mt-6'}`}>
-        <div className="bg-white/95 backdrop-blur-xl rounded-[28px] p-5 shadow-[0_10px_35px_-10px_rgba(0,0,0,0.07)] border border-slate-200/70">
-          <div className="flex items-center justify-between mb-3.5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20 text-lg">
-                ☀️
-              </div>
-              <div>
-                <h2 className="font-extrabold text-slate-900 text-[15.5px] tracking-tight">สรุปประจำวันรอบตัวคุณ</h2>
-                <p className="text-[11.5px] font-medium text-slate-500">อัปเดตสถานการณ์ล่าสุดในพื้นที่</p>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-              สดวันนี้
-            </span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2.5 text-[12.5px] font-medium">
-            <div 
-              onClick={() => showToast('☀️ สภาพอากาศวันนี้: แดดดี สลับมีเมฆ ลมพัดสบาย')}
-              className="flex items-center gap-2.5 text-slate-700 bg-slate-50/90 hover:bg-slate-100/80 transition-colors p-2.5 rounded-2xl border border-slate-150/70 cursor-pointer"
-            >
-              <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 font-bold">
-                <Cloud size={16} />
-              </div>
-              <span className="truncate font-semibold">{mockMorningBrief.weather}</span>
-            </div>
-
-            <div 
-              onClick={() => { setAlertFilter('road'); showToast('แสดงเฉพาะเหตุการณ์ปิดถนน/ซ่อมผิวจราจร'); }}
-              className="flex items-center gap-2.5 text-slate-700 bg-slate-50/90 hover:bg-slate-100/80 transition-colors p-2.5 rounded-2xl border border-slate-150/70 cursor-pointer"
-            >
-              <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 font-bold">
-                <AlertTriangle size={16} />
-              </div>
-              <span className="truncate font-semibold">ปิดถนน {mockMorningBrief.roadClosures} จุด</span>
-            </div>
-
-            <div 
-              onClick={() => setShowEventsModal(true)}
-              className="flex items-center gap-2.5 text-slate-700 bg-slate-50/90 hover:bg-slate-100/80 transition-colors p-2.5 rounded-2xl border border-slate-150/70 cursor-pointer"
-            >
-              <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 font-bold">
-                <Calendar size={16} />
-              </div>
-              <span className="truncate font-semibold">กิจกรรม {mockMorningBrief.events} งาน</span>
-            </div>
-
-            <div 
-              onClick={() => setActiveTab('market')}
-              className="flex items-center gap-2.5 text-slate-700 bg-slate-50/90 hover:bg-slate-100/80 transition-colors p-2.5 rounded-2xl border border-slate-150/70 cursor-pointer"
-            >
-              <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 font-bold">
-                <Store size={16} />
-              </div>
-              <span className="truncate font-semibold">ร้านใหม่ {mockMorningBrief.newShops} ร้าน</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AiMorningBrief />
 
       {/* Quick Menus (หมวดหมู่ด่วน) */}
       <div className="px-5 mt-7">
@@ -481,6 +432,7 @@ export function HomeFeed() {
       {showRealEstateModal && <RealEstateModal onClose={() => setShowRealEstateModal(false)} />}
       {showHelpModal && <EmergencyHelpModal onClose={() => setShowHelpModal(false)} />}
       {showLocationModal && <LocationPickerModal onClose={() => setShowLocationModal(false)} />}
+      {showLeaderboardModal && <LeaderboardModal onClose={() => setShowLeaderboardModal(false)} />}
       {showNotificationsModal && <NotificationCenterModal onClose={() => setShowNotificationsModal(false)} />}
 
     </div>

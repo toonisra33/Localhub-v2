@@ -112,8 +112,16 @@ export const PostCard: React.FC<PostCardProps> = ({
             className="w-10 h-10 rounded-2xl object-cover ring-2 ring-slate-100 shrink-0" 
           />
           <div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="font-extrabold text-slate-900 text-[14px] leading-tight">{post.author?.name}</h3>
+              {post.author?.isVerified && (
+                <ShieldCheck size={14} className="text-emerald-500 shrink-0" title="ยืนยันตัวตนแล้ว" />
+              )}
+              {post.author?.reputationScore !== undefined && post.author.reputationScore > 50 && (
+                <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-0.5" title="คะแนนความน่าเชื่อถือ">
+                  ⭐ {post.author.reputationScore}
+                </span>
+              )}
               {post.category && (
                 <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
                   {post.category}
