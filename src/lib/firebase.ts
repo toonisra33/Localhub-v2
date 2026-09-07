@@ -240,7 +240,7 @@ export async function signInWithGoogleAuth(locationString?: string) {
     const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
     // Use redirect for normal web and Android apps (TWA) to prevent external browser bounce
-    await signInWithRedirect(auth, googleProvider);
+    await signInWithPopup(auth, googleProvider);
     // Code below will not execute immediately because the page redirects
     return { user: auth.currentUser, role: 'user' }; 
   } catch (error) {

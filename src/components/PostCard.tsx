@@ -14,7 +14,7 @@ import {
   Store, 
   Coffee, 
   Trees, 
-  Building2 
+  Building2, ShieldCheck 
 } from 'lucide-react';
 import { Post } from '../types';
 import { useCommunity } from '../context/CommunityContext';
@@ -78,7 +78,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       case 'cafe': return { icon: Coffee, label: 'คาเฟ่/เครื่องดื่ม', color: 'bg-orange-100 text-orange-800 border-orange-200' };
       case 'shop': return { icon: Store, label: 'ร้านค้า/ตลาด', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
       case 'landmark': return { icon: Trees, label: 'ท่องเที่ยว/พักผ่อน', color: 'bg-teal-100 text-teal-800 border-teal-200' };
-      case 'building': return { icon: Building2, label: 'ที่พัก/ชุมชน', color: 'bg-sky-100 text-sky-800 border-sky-200' };
+      case 'building': return { icon: Building2, ShieldCheck, label: 'ที่พัก/ชุมชน', color: 'bg-sky-100 text-sky-800 border-sky-200' };
       default: return { icon: MapPin, label: 'เช็คอินสถานที่', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' };
     }
   };

@@ -894,7 +894,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
         try {
           const userRef = doc(db, 'users', firebaseUser.uid);
           const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
+if (userSnap.exists()) {
             const data = userSnap.data();
             setUserProfile(prev => ({
               ...prev,
@@ -910,6 +910,31 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
               role: data.role || 'user',
               isVerified: data.isVerified || false,
               reputationScore: data.reputationScore || 50
+            }));
+          } else {
+            // New Google User - create document
+            const newUserData = {
+              uid: firebaseUser.uid,
+              displayName: firebaseUser.displayName || 'สมาชิก',
+              email: firebaseUser.email || '',
+              photoURL: firebaseUser.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
+              role: 'user',
+              isVerified: false,
+              reputationScore: 50,
+              joinedDate: new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+            };
+            await setDoc(userRef, newUserData);
+            setUserProfile(prev => ({
+              ...prev,
+              id: firebaseUser.uid,
+              uid: firebaseUser.uid,
+              name: newUserData.displayName,
+              email: newUserData.email,
+              avatar: newUserData.photoURL,
+              role: 'user',
+              isVerified: false,
+              reputationScore: 50,
+              isGoogleUser: true
             }));
           }
         } catch (e) {

@@ -206,8 +206,6 @@ export interface UserProfileData {
   villageOrCondo?: string;
   bio: string;
   avatar: string;
-    isVerified?: boolean;
-    reputationScore?: number;
   occupation?: string; // อาชีพ / ความเชี่ยวชาญ
   emergencyContactName?: string; // ชื่อผู้ติดต่อฉุกเฉิน
   emergencyContactPhone?: string; // เบอร์ผู้ติดต่อฉุกเฉิน

@@ -16,6 +16,7 @@ import { AdminBroadcastModal } from './components/AdminBroadcastModal';
 import { BroadcastProvider, useBroadcast } from './context/BroadcastContext';
 import { CommunityProvider, useCommunity } from './context/CommunityContext';
 import { ToastContainer } from './components/modals/ToastContainer';
+import { AppNotifications } from './lib/notifications';
 import { AuthModal } from './components/modals/AuthModal';
 import { PublicProfileModal } from './components/modals/PublicProfileModal';
 import { LocationPermissionModal } from './components/modals/LocationPermissionModal';
@@ -44,7 +45,13 @@ function AppContent() {
 
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
+
   const [directChatUser, setDirectChatUser] = useState<{id: string, name: string, avatar: string} | null>(null);
+
+  useEffect(() => {
+    AppNotifications.requestPermission();
+  }, []);
+
 
   const renderContent = () => {
     // Access Control check

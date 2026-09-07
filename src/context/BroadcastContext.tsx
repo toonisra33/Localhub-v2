@@ -24,7 +24,7 @@ interface BroadcastContextType {
     contactNumber?: string;
     actionText?: string;
     actionUrl?: string;
-  }) => void;
+  }) => Promise<void>;
   cancelBroadcast: () => void;
   resetDeviceTimerForDemo: () => void;
   openAdminModal: boolean;
@@ -64,7 +64,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!db) return;
     const unsub = onSnapshot(doc(db, 'broadcasts', 'active'), (snapshot) => {
-      if (snapshot.exists()) {
+      console.log('Broadcast snapshot:', snapshot.data()); if (snapshot.exists()) {
         const data = snapshot.data() as AdminBroadcast;
         const todayStr = getLocalDateStr();
         if (data.broadcastDateStr === todayStr && data.isActive) {
@@ -149,20 +149,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [updateTimer]);
 
-  const sendBroadcast = (data: {
-    title: string;
-    message: string;
-    category: BroadcastCategory;
-    severity: BroadcastSeverity;
-    targetArea?: string;
-    mediaType?: 'image' | 'video';
-    mediaUrl?: string;
-    mediaFileName?: string;
-    videoDurationSeconds?: number;
-    contactNumber?: string;
-    actionText?: string;
-    actionUrl?: string;
-  }) => {
+  const sendBroadcast = async (data: { title: string; message: string; category: BroadcastCategory; severity: BroadcastSeverity; targetArea?: string; mediaType?: 'image' | 'video'; mediaUrl?: string; mediaFileName?: string; videoDurationSeconds?: number; contactNumber?: string; actionText?: string; actionUrl?: string; }) => {
     const now = Date.now();
     const todayStr = getLocalDateStr(new Date(now));
     const newBroadcast: AdminBroadcast = {
@@ -189,7 +176,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
 
     // Store in Firestore
     try {
-      saveEntityToFirestore('broadcasts', 'active', newBroadcast);
+      saveEntityToFirestore('broadcasts', 'active', newBroadcast).then(() => console.log('Successfully saved broadcast')).catch(e => console.error('Failed to save broadcast', e));
       // Reset device first seen timestamp for this device so it gets fresh 15 mins
       localStorage.setItem(`${DEVICE_VIEW_PREFIX}${newBroadcast.id}`, now.toString());
     } catch (e) {

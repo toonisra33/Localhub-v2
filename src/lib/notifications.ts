@@ -15,7 +15,7 @@ export class AppNotifications {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     
     try {
-      if (document.hidden || !document.hasFocus()) {
+      if (true) { // Always notify for emergencies
         const notification = new Notification(title, {
           icon: '/icon-192.png',
           badge: '/icon-192.png',

@@ -219,7 +219,46 @@ export function AdminBroadcastModal() {
   };
 
   // Handle local media file upload (image or video <= 10 mins)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  // Helper to compress image before converting to base64
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Max dimension 800px to keep base64 under 1MB
+          const MAX_SIZE = 800;
+          if (width > height && width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          } else if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Compress to JPEG with 0.7 quality
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(dataUrl);
+        };
+        img.onerror = (e) => reject(e);
+      };
+      reader.onerror = (e) => reject(e);
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setMediaError(null);
     const file = e.target.files?.[0];
     if (!file) return;
@@ -248,32 +287,28 @@ export function AdminBroadcastModal() {
         }
         
         // Valid video
-        const reader = new FileReader();
-        reader.onload = (loadEv) => {
-          setSelectedMediaType('video');
-          setMediaUrl(loadEv.target?.result as string);
-          setMediaFileName(file.name);
-          setVideoDuration(duration);
-        };
-        reader.readAsDataURL(file);
+        // For prototype, we cannot save large videos to Firestore directly.
+        setMediaError('ระบบจำกัดการอัปโหลดวิดีโอในโหมดทดสอบ กรุณาใช้ไฟล์รูปภาพแทน');
+        return;
       };
 
       videoElement.onerror = () => {
         setMediaError('ไม่สามารถอ่านข้อมูลวิดีโอได้ โปรดลองใช้ไฟล์อื่น');
       };
     } else if (isImage) {
-      const reader = new FileReader();
-      reader.onload = (loadEv) => {
+      try {
+        const compressedBase64 = await compressImage(file);
         setSelectedMediaType('image');
-        setMediaUrl(loadEv.target?.result as string);
+        setMediaUrl(compressedBase64);
         setMediaFileName(file.name);
         setVideoDuration(0);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        setMediaError('ไม่สามารถประมวลผลรูปภาพได้');
+      }
     }
   };
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !message.trim()) return;
 
@@ -282,7 +317,8 @@ export function AdminBroadcastModal() {
       return;
     }
 
-    sendBroadcast({
+    try {
+      await sendBroadcast({
       title: title.trim(),
       message: message.trim(),
       category,
@@ -297,11 +333,14 @@ export function AdminBroadcastModal() {
       actionUrl: (enableLink && actionUrl.trim()) ? actionUrl.trim() : undefined,
     });
 
-    setStatusFeedback('ส่งบรอดแคสสำเร็จ! ข้อความจะล็อกบนหน้าจอด้านบนสุดทุกเครื่อง 15 นาที');
-    setTimeout(() => {
-      setStatusFeedback(null);
-      setOpenAdminModal(false);
-    }, 1500);
+      setStatusFeedback('ส่งบรอดแคสสำเร็จ! ข้อความจะล็อกบนหน้าจอด้านบนสุดทุกเครื่อง 15 นาที');
+      setTimeout(() => {
+        setStatusFeedback(null);
+        setOpenAdminModal(false);
+      }, 1500);
+    } catch (error) {
+      showToast('เกิดข้อผิดพลาด ไม่สามารถส่งบรอดแคสต์ได้ (อาจไม่มีสิทธิ์หรือระบบขัดข้อง)', 'error');
+    }
   };
 
   const handleCancel = () => {
