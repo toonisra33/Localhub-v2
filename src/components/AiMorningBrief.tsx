@@ -4,7 +4,38 @@ import { useCommunity } from '../context/CommunityContext';
 import { mockMorningBrief } from '../data';
 
 export function AiMorningBrief() {
-  const { showToast } = useCommunity();
+  const { showToast, location } = useCommunity();
+  const [realWeather, setRealWeather] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (location?.latitude && location?.longitude) {
+      const fetchWeather = async () => {
+        try {
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,weather_code`);
+          if (res.ok) {
+            const data = await res.json();
+            const temp = Math.round(data.current.temperature_2m);
+            const code = data.current.weather_code;
+            
+            let desc = "มีเมฆบางส่วน";
+            if (code === 0) desc = "ท้องฟ้าแจ่มใส";
+            else if (code >= 1 && code <= 3) desc = "มีเมฆบางส่วนถึงครึ้ม";
+            else if (code >= 45 && code <= 48) desc = "มีหมอก";
+            else if (code >= 51 && code <= 67) desc = "มีฝนตก";
+            else if (code >= 80 && code <= 82) desc = "มีฝนตกหนัก";
+            else if (code >= 95) desc = "พายุฝนฟ้าคะนอง";
+
+            setRealWeather(`${desc} อุณหภูมิ ${temp}°C`);
+          }
+        } catch (e) {
+          console.error("Failed to fetch weather", e);
+        }
+      };
+      fetchWeather();
+    }
+  }, [location?.latitude, location?.longitude]);
+
+  const displayWeather = realWeather || mockMorningBrief.weather;
 
   return (
     <div className="mx-5 -mt-5 mb-6 relative z-20">
@@ -33,7 +64,7 @@ export function AiMorningBrief() {
 
           {/* Smart Summary Text */}
           <p className="text-[12.5px] text-slate-600 font-medium leading-relaxed mb-4 p-3 bg-slate-50 rounded-2xl border border-slate-100/50">
-            สวัสดีตอนเช้าครับ 🌤️ วันนี้อากาศ <span className="font-bold text-sky-600">{mockMorningBrief.weather}</span> 
+            สวัสดีตอนเช้าครับ 🌤️ วันนี้อากาศ <span className="font-bold text-sky-600">{displayWeather}</span> 
             มีประกาศจากแอดมิน <span className="font-bold text-rose-600">{mockMorningBrief.announcements} รายการ</span> 
             และมีการปิดถนน <span className="font-bold text-amber-600">{mockMorningBrief.roadClosures} จุด</span> ในพื้นที่ ควรเผื่อเวลาเดินทางนะครับ
           </p>
