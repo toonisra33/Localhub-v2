@@ -61,7 +61,7 @@ import {
   setDoc, 
   collection,
   onSnapshot, 
-  query,
+  query, where,
   orderBy,
   limit,
   serverTimestamp 
@@ -142,7 +142,8 @@ interface CommunityContextType {
   authModalMode: 'login' | 'register';
   openAuthModal: (mode?: 'login' | 'register') => void;
   closeAuthModal: () => void;
-  requireAuth: (actionCallback: () => void, promptMessage?: string) => boolean;
+  requireAuth: (actionCallback: () => void,
+promptMessage?: string) => boolean;
 
   // Database status
   isFirestoreConnected: boolean;
@@ -304,31 +305,160 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     setContactAdminInitialType(undefined);
   };
 
-  const submitContactRequest = (data: Omit<AdminContactRequest, 'id' | 'createdAt' | 'timeStr' | 'status'>) => {
+  
+  
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  const removeToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
+
+  const openModal = (modalId: string) => setActiveModal(modalId);
+  const closeModal = () => setActiveModal(null);
+
+  const openMediaViewer = (url: string, type: 'image' | 'video', title?: string, subtitle?: string) => {
+    setActiveMedia({ url, type, title, subtitle });
+  };
+  const closeMediaViewer = () => setActiveMedia(null);
+
+  const openLocationPermissionModal = () => setIsLocationPermissionModalOpen(true);
+  const closeLocationPermissionModal = () => setIsLocationPermissionModalOpen(false);
+  
+  const requestRealLocation = async (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setIsLocatingGps(true);
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setLocation(prev => ({
+              ...prev,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            }));
+            setLocationPermissionStatus('granted');
+            setIsLocatingGps(false);
+            closeLocationPermissionModal();
+            resolve(true);
+          },
+          (error) => {
+            console.error('GPS Error:', error);
+            setLocationPermissionStatus('denied');
+            setIsLocatingGps(false);
+            resolve(false);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      } else {
+        setLocationPermissionStatus('denied');
+        setIsLocatingGps(false);
+        resolve(false);
+      }
+    });
+  };
+
+  const addAlert = (alert: Omit<Alert, 'id' | 'time' | 'confirmations' | 'rejections' | 'status'>) => {
+    const newAlert: Alert = {
+      ...alert,
+      id: `alert_${Date.now()}`,
+      time: 'เมื่อสักครู่',
+      confirmations: 0,
+      rejections: 0,
+      status: 'unconfirmed'
+    };
+    setAlerts(prev => [newAlert, ...prev]);
+    showToast('แจ้งเตือนเหตุการณ์เรียบร้อยแล้ว แอดมินจะทำการตรวจสอบต่อไป', 'success');
+  };
+
+  const voteAlert = (alertId: string, voteType: 'up' | 'down') => {
+    setAlerts(prev => prev.map(a => {
+      if (a.id !== alertId) return a;
+      const isUp = voteType === 'up';
+      return {
+        ...a,
+        confirmations: isUp ? a.confirmations + 1 : a.confirmations,
+        rejections: !isUp ? a.rejections + 1 : a.rejections,
+        userVoted: voteType
+      };
+    }));
+  };
+
+  const addPost = async (postData: Omit<Post, 'id' | 'createdAt' | 'likes' | 'comments' | 'authorAvatar'>) => {
+    const newPost: Post = {
+      ...postData,
+      id: `post_${Date.now()}`,
+      createdAt: Date.now(),
+      likes: 0,
+      comments: 0
+    };
+    setPosts(prev => [newPost, ...prev]);
+  };
+
+  const toggleLikePost = async (postId: string) => {
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const isLiked = p.isLikedByMe;
+      return {
+        ...p,
+        likes: isLiked ? p.likes - 1 : p.likes + 1,
+        isLikedByMe: !isLiked
+      };
+    }));
+  };
+
+  const addComment = async (postId: string, text: string) => {
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      return { ...p, comments: p.comments + 1 };
+    }));
+  };
+
+  const deletePost = async (postId: string) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+  };
+
+  const deleteContactRequest = async (id: string) => {
+    setContactRequests(prev => prev.filter(req => req.id !== id));
+  };
+
+const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'createdAt' | 'timeStr' | 'status'>) => {
+    const id = `req_${Date.now()}`;
     const newRequest: AdminContactRequest = {
       ...data,
-      id: `req_${Date.now()}`,
+      id,
+      senderUid: userProfile.id,
       createdAt: Date.now(),
       timeStr: 'เมื่อสักครู่',
       status: 'pending'
     };
-
+    
+    // Optimistic UI update
     setContactRequests(prev => [newRequest, ...prev]);
-
-    const newNotification: AppNotification = {
-      id: `n_contact_${Date.now()}`,
-      title: '📨 ส่งเรื่องถึงแอดมินเรียบร้อยแล้ว',
-      message: `แอดมินได้รับเรื่อง "${data.title}" แล้ว อยู่ระหว่างการตรวจสอบข้อมูลเพื่อดำเนินการ`,
-      time: 'เมื่อสักครู่',
-      read: false,
-      type: 'broadcast'
-    };
-    setNotifications(prev => [newNotification, ...prev]);
-
-    showToast('📨 ส่งข้อความถึงแอดมินเรียบร้อยแล้ว! แอดมินจะตรวจสอบและดำเนินการให้โดยเร็ว', 'success');
+    
+    try {
+      await saveEntityToFirestore('contact_requests', id, newRequest);
+      
+      const newNotification: AppNotification = {
+        id: `n_contact_${Date.now()}`,
+        title: '📨 ส่งเรื่องถึงแอดมินเรียบร้อยแล้ว',
+        message: `แอดมินได้รับเรื่อง "${data.title}" แล้ว อยู่ระหว่างการตรวจสอบข้อมูลเพื่อดำเนินการ`,
+        time: 'เมื่อสักครู่',
+        read: false,
+        type: 'broadcast'
+      };
+      setNotifications(prev => [newNotification, ...prev]);
+      showToast('📨 ส่งข้อความถึงแอดมินเรียบร้อยแล้ว! แอดมินจะตรวจสอบและดำเนินการให้โดยเร็ว', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('เกิดข้อผิดพลาดในการส่งเรื่อง', 'error');
+    }
   };
 
-  const updateContactRequestStatus = (id: string, status: ContactRequestStatus, adminNote?: string) => {
+  
+  const updateContactRequestStatus = async (id: string, status: ContactRequestStatus, adminNote?: string) => {
     setContactRequests(prev => prev.map(req => {
       if (req.id !== id) return req;
       return {
@@ -337,659 +467,15 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         adminNote: adminNote !== undefined ? adminNote : req.adminNote
       };
     }));
-    showToast('อัปเดตสถานะเรื่องติดต่อเรียบร้อยแล้ว', 'info');
-  };
-
-  const deleteContactRequest = (id: string) => {
-    setContactRequests(prev => prev.filter(req => req.id !== id));
-    showToast('ลบรายการคำขอติดต่อเรียบร้อยแล้ว', 'info');
-  };
-
-  const openMediaViewer = (media: { url: string; type?: 'image' | 'video'; title?: string; subtitle?: string }) => {
-    setActiveMedia({
-      url: media.url,
-      type: media.type || (media.url.includes('.mp4') || media.url.includes('.webm') ? 'video' : 'image'),
-      title: media.title,
-      subtitle: media.subtitle
-    });
-  };
-
-  const closeMediaViewer = () => {
-    setActiveMedia(null);
-  };
-
-  const openLocationPermissionModal = () => setIsLocationPermissionModalOpen(true);
-  const closeLocationPermissionModal = () => setIsLocationPermissionModalOpen(false);
-
-  // Real GPS Location Request handler
-  const requestRealLocation = async (): Promise<boolean> => {
-    if (!navigator.geolocation) {
-      showToast('อุปกรณ์หรือเบราว์เซอร์ของคุณไม่รองรับการตรวจจับพิกัด GPS', 'info');
-      setLocationPermissionStatus('denied');
-      return false;
-    }
-
-    setIsLocatingGps(true);
-
-    return new Promise((resolve) => {
-      const handleLocationSuccess = async (position: GeolocationPosition) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const accuracy = Math.round(position.coords.accuracy || 25);
-
-        setLocationPermissionStatus('granted');
-        setIsLocatingGps(false);
-
-        let matchedDistrict = 'จตุจักร';
-        let matchedSubdistrict = 'ลาดยาว';
-        let matchedProvince = 'กรุงเทพมหานคร';
-        let matchedVillage = `พิกัด GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-          
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`, {
-            signal: controller.signal,
-            headers: { 
-              'Accept-Language': 'th,en' 
-            }
-          });
-          clearTimeout(timeoutId);
-
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.address) {
-              const addr = data.address;
-              matchedProvince = addr.province || addr.state || addr.city || 'ระบุไม่ได้';
-              matchedDistrict = addr.city_district || addr.district || addr.suburb || addr.town || addr.county || 'ระบุไม่ได้';
-              matchedSubdistrict = addr.subdistrict || addr.neighbourhood || addr.quarter || addr.village || 'ระบุไม่ได้';
-              matchedVillage = addr.road || addr.residential || `ใกล้เคียง (${accuracy} ม.)`;
-            } else {
-              matchedProvince = 'พิกัด GPS';
-              matchedDistrict = lat.toFixed(4);
-              matchedSubdistrict = lng.toFixed(4);
-            }
-          } else {
-             matchedProvince = 'พิกัด GPS';
-             matchedDistrict = lat.toFixed(4);
-             matchedSubdistrict = lng.toFixed(4);
-          }
-        } catch {
-           matchedProvince = 'พิกัด GPS';
-           matchedDistrict = lat.toFixed(4);
-           matchedSubdistrict = lng.toFixed(4);
-        }
-
-        const realLoc: Location = {
-          province: matchedProvince,
-          district: matchedDistrict,
-          subdistrict: matchedSubdistrict,
-          village: matchedVillage,
-          distance: 0,
-          latitude: lat,
-          longitude: lng,
-          accuracy: accuracy,
-          isGps: true,
-          timestamp: Date.now()
-        };
-
-        setLocation(realLoc);
-        showToast(`🎯 ระบุพิกัด GPS จริงสำเร็จ: ${matchedDistrict}, ${matchedProvince} (ความแม่นยำ ±${accuracy}ม.)`, 'success');
-        resolve(true);
-      };
-
-      const handleFirstAttemptFail = () => {
-        navigator.geolocation.getCurrentPosition(
-          handleLocationSuccess,
-          (error) => {
-            setIsLocatingGps(false);
-            let errMsg = 'ไม่สามารถระบุพิกัดตำแหน่งจริงได้ กำลังใช้ตำแหน่งชุมชนที่บันทึกไว้';
-            if (error && error.code === error.PERMISSION_DENIED) {
-              setLocationPermissionStatus('denied');
-              errMsg = 'คุณได้ปฏิเสธการขอเข้าถึงตำแหน่ง (Location Permission Denied)';
-            }
-            showToast(errMsg, 'info');
-            resolve(false);
-          },
-          {
-            enableHighAccuracy: false,
-            timeout: 6000,
-            maximumAge: 60000
-          }
-        );
-      };
-
-      navigator.geolocation.getCurrentPosition(
-        handleLocationSuccess,
-        handleFirstAttemptFail,
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 30000
-        }
-      );
-    });
-  };
-
-  // 1. Initial Connection Test & Real-time Firestore Listeners
-  useEffect(() => {
-    testConnection().then(connected => {
-      setIsFirestoreConnected(connected);
-    });
-
     
-
-    // Subscribe to User Sessions Log in real-time
-    const sessionsQuery = query(collection(db, 'user_sessions'), limit(20));
-    const unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
-      if (!snapshot.empty) {
-        const logs: UserSessionLog[] = snapshot.docs.map(docSnap => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            userId: data.userId || 'anonymous',
-            userName: data.userName || 'สมาชิก',
-            userEmail: data.userEmail || '',
-            loginMethod: data.loginMethod || 'google',
-            ipOrLocation: data.ipOrLocation || 'กรุงเทพมหานคร',
-            userAgent: data.userAgent || 'Web Browser',
-            timestamp: data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now(),
-            timeStr: data.createdAt?.seconds 
-              ? new Date(data.createdAt.seconds * 1000).toLocaleString('th-TH')
-              : 'เมื่อสักครู่'
-          };
-        });
-        setUserSessions(logs);
-      }
-    }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'user_sessions');
-    });
-
-    return () => {
-
-      unsubscribeSessions();
-    };
-  }, []);
-
-  // Listen for Firebase Auth state changes
-  useEffect(() => {
-    // Check if coming back from Google Redirect Login
-    checkAuthRedirectResult().then((isSuccess) => {
-      // If we successfully returned and processed a redirect, ensure the auth modal is closed
-      if (isSuccess) {
-         sessionStorage.removeItem('locallink_pending_loc');
-         setIsAuthModalOpen(false);
-      }
-    });
-
-    // Subscriptions to Firestore collections
-    const unsubPosts = onSnapshot(
-      query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(100)),
-      (snapshot) => {
-        const fetchedPosts: Post[] = [];
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data();
-          // Filter out dummy avatars
-          let avatarUrl = data.author?.avatar || data.authorAvatar || 'https://ui-avatars.com/api/?name=U&background=random';
-          if (avatarUrl.includes('images.unsplash.com')) {
-            avatarUrl = 'https://ui-avatars.com/api/?name=U&background=random';
-          }
-          let authorName = data.author?.name || data.authorName || 'สมาชิกชุมชน';
-          
-          fetchedPosts.push({
-            ...data,
-            id: docSnap.id,
-            author: {
-              name: authorName,
-              avatar: avatarUrl
-            },
-            authorUid: data.authorUid || data.author?.uid,
-            isLiked: auth.currentUser?.uid ? (data.likedBy || []).includes(auth.currentUser.uid) : false,
-            time: data.createdAt?.seconds 
-              ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-              : data.time || 'เมื่อสักครู่',
-          } as Post);
-        });
-        setPosts(fetchedPosts);
-      },
-      (error) => console.warn('Firestore subscription warning (posts):', error)
-    );
-
-    const unsubProducts = onSnapshot(
-      query(collection(db, 'products'), orderBy('createdAt', 'desc'), limit(100)),
-      (snapshot) => {
-        const fetchedProds: Product[] = [];
-        snapshot.forEach(doc => fetchedProds.push(doc.data() as Product));
-        setProducts(fetchedProds);
-      },
-      (error) => console.warn('Firestore subscription warning (products):', error)
-    );
-
-    const unsubEvents = onSnapshot(
-      query(collection(db, 'events'), limit(50)),
-      (snapshot) => {
-        const fetchedEvents: LocalEvent[] = [];
-        snapshot.forEach(doc => fetchedEvents.push(doc.data() as LocalEvent));
-        setEvents(fetchedEvents);
-      },
-      (error) => console.warn('Firestore subscription warning (events):', error)
-    );
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        setIsLoggedIn(true);
-        // Force modal closed if it was left open (e.g. returning from popup)
-        setIsAuthModalOpen(false);
-        const isAdmin = isAuthorizedAdminEmail(firebaseUser.email);
-        const role = isAdmin ? 'admin' : 'user';
-
-        // Listen or fetch profile from Firestore
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        try {
-          const userDoc = await getDoc(userRef);
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUserProfile(prev => ({
-              ...prev,
-              id: firebaseUser.uid,
-              uid: firebaseUser.uid,
-              name: data.displayName || firebaseUser.displayName || prev.name,
-              email: firebaseUser.email || prev.email,
-              avatar: data.photoURL || firebaseUser.photoURL || prev.avatar,
-              phone: data.phone || prev.phone,
-              address: data.address || prev.address,
-              villageOrCondo: data.villageOrCondo || prev.villageOrCondo,
-              bio: data.bio || prev.bio,
-              isVerified: false,
-              role: (data.role || role) as 'admin' | 'user',
-              isGoogleUser: true
-            }));
-          } else {
-            const newName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || userProfile?.name || 'User';
-            const newAvatar = firebaseUser.photoURL || userProfile?.avatar || 'https://ui-avatars.com/api/?name=U&background=random';
-            
-            // Create the document if it doesn't exist
-            try {
-              await setDoc(userRef, {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email || '',
-                displayName: newName,
-                name: newName,
-                photoURL: newAvatar,
-                avatar: newAvatar,
-                role: role,
-                isVerified: false,
-                isGoogleUser: true,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-              });
-            } catch (err) {
-              console.warn("Could not create user document in onAuthStateChanged", err);
-            }
-
-            setUserProfile(prev => ({
-              ...prev,
-              id: firebaseUser.uid,
-              uid: firebaseUser.uid,
-              name: newName,
-              email: firebaseUser.email || prev.email,
-              avatar: newAvatar,
-              isVerified: false,
-              role: role as 'admin' | 'user',
-              isGoogleUser: true
-            }));
-          }
-        } catch (e: any) {
-          if (e && e.message && e.message.includes('offline')) {
-            console.warn('Firebase: Operating in offline mode. Using local user data.');
-          } else {
-            console.error('Error fetching Firestore user profile:', e);
-          }
-          // Fallback if offline
-          setUserProfile(prev => ({
-            ...prev,
-            id: firebaseUser.uid,
-            uid: firebaseUser.uid,
-            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || prev.name,
-            email: firebaseUser.email || prev.email,
-            avatar: firebaseUser.photoURL || prev.avatar,
-            isVerified: false,
-            role: role as 'admin' | 'user',
-            isGoogleUser: true
-          }));
-        }
-      } else {
-        // User is signed out
-        setIsLoggedIn(false);
-        setUserProfile({
-          id: 'user_default',
-          name: 'ผู้เยี่ยมชม',
-          phone: '',
-          email: '',
-          address: '',
-          villageOrCondo: '',
-          bio: '',
-          avatar: 'https://ui-avatars.com/api/?name=U&background=random',
-          isVerified: false,
-          joinedDate: '',
-          reputationScore: 0,
-          role: 'user',
-          isGoogleUser: false
-        });
-        try { localStorage.setItem('locallink_is_logged_in', 'false'); } catch {}
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      unsubPosts();
-      unsubProducts();
-      unsubEvents();
-    };
-  }, []);
-  
-  // Global notification listener for chats
-  const previousLastMessageTimes = useRef<Record<string, number>>({});
-  
-  useEffect(() => {
-    if (!userProfile?.id || userProfile.id === 'user_default') return;
-    
-    // Request permission for push notifications
-    AppNotifications.requestPermission();
-    
-    const unsub = subscribeToChats(userProfile.id, (chats) => {
-      chats.forEach(chat => {
-        const prevTime = previousLastMessageTimes.current[chat.id];
-        
-        // If this is a new message and we are not the sender
-        if (prevTime && chat.lastMessageTime > prevTime && chat.lastMessageSenderId && chat.lastMessageSenderId !== userProfile.id) {
-           soundManager.playChatSound();
-           
-           // Find the sender details
-           const senderDetails = chat.participantDetails[chat.lastMessageSenderId];
-           const senderName = senderDetails?.name || 'มีผู้ใช้งาน';
-           
-           AppNotifications.send(`ข้อความใหม่จาก ${senderName}`, {
-             body: chat.lastMessage,
-             tag: `chat_${chat.id}`,
-           });
-        }
-        previousLastMessageTimes.current[chat.id] = chat.lastMessageTime;
-      });
-    });
-    
-    return () => unsub();
-  }, [userProfile?.id]);
-
-  // Persistence helpers for localStorage caching
-  useEffect(() => {
-    try { localStorage.setItem('locallink_is_logged_in', JSON.stringify(isLoggedIn)); } catch {}
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    try { localStorage.setItem('locallink_alerts', JSON.stringify(alerts)); } catch {}
-  }, [alerts]);
-
-  // Disable local storage for posts, products, events as we use Firestore now
-  // useEffect(() => {
-  //   try { localStorage.setItem('locallink_posts', JSON.stringify(posts)); } catch {}
-  // }, [posts]);
-
-  // useEffect(() => {
-  //   try { localStorage.setItem('locallink_products', JSON.stringify(products)); } catch {}
-  // }, [products]);
-
-  // useEffect(() => {
-  //   try { localStorage.setItem('locallink_events', JSON.stringify(events)); } catch {}
-  // }, [events]);
-
-  useEffect(() => {
-    try { localStorage.setItem('locallink_notifications', JSON.stringify(notifications)); } catch {}
-  }, [notifications]);
-
-  useEffect(() => {
-    try { localStorage.setItem('locallink_contact_requests', JSON.stringify(contactRequests)); } catch {}
-  }, [contactRequests]);
-
-  useEffect(() => {
-    try { localStorage.setItem('locallink_profile', JSON.stringify(userProfile)); } catch {}
-  }, [userProfile]);
-
-  useEffect(() => {
-    try { localStorage.setItem('locallink_verification_requests', JSON.stringify(verificationRequests)); } catch {}
-  }, [verificationRequests]);
-
-  useEffect(() => {
-    try { localStorage.setItem('locallink_user_location', JSON.stringify(location)); } catch {}
-  }, [location]);
-
-
-  // Auto-request GPS or Prompt after login
-  useEffect(() => {
-    // Disabled auto GPS prompt for now as it causes a distracting popup in the preview.
-    /*
-    if (isLoggedIn) {
-      const checkAndPromptGPS = async () => {
-        if (navigator.permissions) {
-          try {
-            const result = await navigator.permissions.query({ name: 'geolocation' });
-            if (result.state === 'granted') {
-              // Silently update location if already granted
-              requestRealLocation();
-            } else if (result.state === 'prompt') {
-              // Prompt once per session if not granted
-              const hasPrompted = localStorage.getItem('locallink_gps_prompt_shown');
-              if (!hasPrompted) {
-                localStorage.setItem('locallink_gps_prompt_shown', 'true');
-                openLocationPermissionModal();
-              }
-            }
-          } catch (e) {
-            console.warn("Permissions API error", e);
-          }
-        }
-      };
-      checkAndPromptGPS();
-    }
-    */
-  }, [isLoggedIn]);
-
-  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-    const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 3200);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
-
-  const openModal = (modalName: string) => setActiveModal(modalName);
-  const closeModal = () => setActiveModal(null);
-
-  // Alerts Actions
-  const addAlert = (alertData: Omit<Alert, 'id' | 'time' | 'confirmations' | 'rejections' | 'status'>) => {
-    const newAlert: Alert = {
-      ...alertData,
-      id: `alert_${Date.now()}`,
-      time: 'เมื่อสักครู่',
-      status: 'unconfirmed',
-      confirmations: 1,
-      rejections: 0,
-      userVoted: 'up',
-      reportedBy: userProfile?.name
-    };
-    setAlerts(prev => [newAlert, ...prev]);
-    soundManager.playAlertSound();
-    showToast('📢 รายงานเหตุการณ์เรียบร้อยแล้ว');
-  };
-
-  const voteAlert = (alertId: string, voteType: 'up' | 'down') => {
-    setAlerts(prev => prev.map(alert => {
-      if (alert.id !== alertId) return alert;
-
-      let newConfirmations = alert.confirmations;
-      let newRejections = alert.rejections;
-      let newVoted: 'up' | 'down' | undefined = voteType;
-
-      if (alert.userVoted === voteType) {
-        newVoted = undefined;
-        if (voteType === 'up') newConfirmations = Math.max(0, newConfirmations - 1);
-        if (voteType === 'down') newRejections = Math.max(0, newRejections - 1);
-        showToast('ยกเลิกการยืนยันแล้ว', 'info');
-      } else {
-        if (alert.userVoted === 'up') newConfirmations = Math.max(0, newConfirmations - 1);
-        if (alert.userVoted === 'down') newRejections = Math.max(0, newRejections - 1);
-
-        if (voteType === 'up') {
-          newConfirmations += 1;
-          showToast('✅ คุณได้ร่วมยืนยันเหตุการณ์นี้แล้ว');
-        } else {
-          newRejections += 1;
-          showToast('คุณได้รายงานว่าไม่พบเหตุการณ์นี้', 'info');
-        }
-      }
-
-      let newStatus = alert.status;
-      if (newConfirmations >= 5 && alert.status === 'unconfirmed') {
-        newStatus = 'members';
-      }
-
-      return {
-        ...alert,
-        confirmations: newConfirmations,
-        rejections: newRejections,
-        userVoted: newVoted,
-        status: newStatus
-      };
-    }));
-  };
-
-  // Posts Actions (Firestore Persistence Enabled)
-  const addPost = async (
-    content: string, 
-    category: string = 'ทั่วไป', 
-    images?: string[], 
-    customLocation?: Location,
-    checkIn?: CheckInLocation,
-    videoUrl?: string
-  ): Promise<void> => {
-    const postId = `post_${Date.now()}`;
-    const newPost: Post = {
-      id: postId,
-      author: {
-        name: userProfile?.name,
-        avatar: userProfile.avatar
-      },
-      authorUid: auth.currentUser?.uid || userProfile.id,
-      content,
-      category,
-      images,
-      videoUrl,
-      location: customLocation ? { ...customLocation, distance: 0.1 } : { ...location, distance: 0.1 },
-      checkIn: checkIn ? { ...checkIn } : undefined,
-      time: 'เมื่อสักครู่',
-      likes: 0,
-      comments: 0,
-      isLiked: false,
-      likedBy: [],
-      commentList: [],
-      createdAt: Date.now()
-    };
-
-    // Optimistic UI update
-    setPosts(prev => [newPost, ...prev]);
-
-    // Save to Firestore
     try {
-      await savePostToFirestore(newPost);
-      showToast(checkIn ? `📍 เช็คอินที่ ${checkIn.placeName} และบันทึกลงฐานข้อมูลแล้ว` : '✨ แชร์เรื่องราวและบันทึกลงระบบฐานข้อมูลแล้ว');
-    } catch (e) {
-      console.warn('Saved locally, Firestore sync will retry:', e);
-      showToast('✨ แชร์เรื่องราวเรียบร้อยแล้ว');
+      await saveEntityToFirestore('contact_requests', id, { status, adminNote, updatedAt: Date.now() });
+    } catch (err) {
+      console.error(err);
+      showToast('เกิดข้อผิดพลาดในการอัปเดตสถานะ', 'error');
     }
   };
 
-  const toggleLikePost = async (postId: string): Promise<void> => {
-    const currentUid = auth.currentUser?.uid || userProfile.id;
-    let isNowLiked = false;
-
-    setPosts(prev => prev.map(post => {
-      if (post.id !== postId) return post;
-      const isLiked = !post.isLiked;
-      isNowLiked = isLiked;
-      const currentLikedBy = post.likedBy || [];
-      const updatedLikedBy = isLiked
-        ? (currentLikedBy.includes(currentUid) ? currentLikedBy : [...currentLikedBy, currentUid])
-        : currentLikedBy.filter(id => id !== currentUid);
-
-      return {
-        ...post,
-        isLiked,
-        likedBy: updatedLikedBy,
-        likes: isLiked ? post.likes + 1 : Math.max(0, post.likes - 1)
-      };
-    }));
-
-    // Update in Firestore
-    try {
-      await togglePostLikeInFirestore(postId, currentUid, !isNowLiked);
-    } catch (e) {
-      console.error('Firestore Like Error:', e);
-    }
-  };
-
-  const addComment = async (postId: string, content: string): Promise<void> => {
-    if (!content.trim()) return;
-    const commentId = `c_${Date.now()}`;
-    const newComment = {
-      id: commentId,
-      author: {
-        name: userProfile?.name,
-        avatar: userProfile.avatar
-      },
-      authorUid: auth.currentUser?.uid || userProfile.id,
-      content,
-      time: 'เมื่อสักครู่',
-      createdAt: Date.now()
-    };
-
-    setPosts(prev => prev.map(post => {
-      if (post.id !== postId) return post;
-      const existingComments = post.commentList || [];
-      return {
-        ...post,
-        comments: post.comments + 1,
-        commentList: [...existingComments, newComment]
-      };
-    }));
-
-    // Save to Firestore
-    try {
-      await addCommentToFirestore(postId, newComment);
-      showToast('💬 ส่งความคิดเห็นและบันทึกลงฐานข้อมูลแล้ว');
-    } catch (e) {
-      console.error('Firestore Comment Error:', e);
-      showToast('💬 ส่งความคิดเห็นแล้ว');
-    }
-  };
-
-  const deletePost = async (postId: string): Promise<void> => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
-    try {
-      await deletePostFromFirestore(postId);
-      showToast('ลบโพสต์ออกจากฐานข้อมูลเรียบร้อยแล้ว', 'info');
-    } catch (e) {
-      console.error('Firestore Delete Error:', e);
-      showToast('ลบโพสต์เรียบร้อยแล้ว', 'info');
-    }
-  };
-
-  // Products Actions
-  // Add Product (Firestore Sync)
   const addProduct = async (prodData: Omit<Product, 'id' | 'seller' | 'distance'>) => {
     const newProd: Product = {
       ...prodData,
@@ -1328,7 +814,146 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     showToast('ออกจากระบบเรียบร้อยแล้ว เข้าสู่โหมดผู้เยี่ยมชม', 'info');
   };
 
-  const requireAuth = (actionCallback: () => void, promptMessage?: string): boolean => {
+  
+  useEffect(() => {
+    try { localStorage.setItem('locallink_contact_requests', JSON.stringify(contactRequests)); } catch {}
+  }, [contactRequests]);
+
+  useEffect(() => {
+    try { localStorage.setItem('locallink_profile', JSON.stringify(userProfile)); } catch {}
+  }, [userProfile]);
+
+  useEffect(() => {
+    try { localStorage.setItem('locallink_verification_requests', JSON.stringify(verificationRequests)); } catch {}
+  }, [verificationRequests]);
+
+  useEffect(() => {
+    const unsubPosts = onSnapshot(
+      query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(100)),
+      (snapshot) => {
+        const fetchedPosts = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          let avatarUrl = data.author?.avatar || data.authorAvatar || 'https://ui-avatars.com/api/?name=U&background=random';
+          if (avatarUrl.includes('images.unsplash.com')) {
+            avatarUrl = 'https://ui-avatars.com/api/?name=U&background=random';
+          }
+          fetchedPosts.push(data);
+        });
+        setPosts(fetchedPosts);
+      },
+      (error) => console.warn('Firestore subscription warning (posts):', error)
+    );
+
+    const unsubProducts = onSnapshot(
+      query(collection(db, 'products'), orderBy('createdAt', 'desc'), limit(100)),
+      (snapshot) => {
+        const fetchedProds = [];
+        snapshot.forEach(doc => fetchedProds.push(doc.data()));
+        setProducts(fetchedProds);
+      },
+      (error) => console.warn('Firestore subscription warning (products):', error)
+    );
+
+    const unsubEvents = onSnapshot(
+      query(collection(db, 'events'), limit(50)),
+      (snapshot) => {
+        const fetchedEvents = [];
+        snapshot.forEach(doc => fetchedEvents.push(doc.data()));
+        setEvents(fetchedEvents);
+      },
+      (error) => console.warn('Firestore subscription warning (events):', error)
+    );
+    
+    
+
+    const sessionsQuery = query(collection(db, 'user_sessions'), limit(20));
+    const unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const logs = snapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            userId: data.userId || 'anonymous',
+            userName: data.userName || 'สมาชิก',
+            userEmail: data.userEmail || '',
+            loginMethod: data.loginMethod || 'google',
+            ipOrLocation: data.ipOrLocation || 'กรุงเทพมหานคร',
+            createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now()
+          };
+        });
+        setUserSessions(logs);
+      }
+    });
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setIsLoggedIn(true);
+        setIsFirestoreConnected(true);
+        // Fetch user profile from Firestore
+        try {
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setUserProfile(prev => ({
+              ...prev,
+              id: firebaseUser.uid,
+              uid: firebaseUser.uid,
+              name: data.displayName || firebaseUser.displayName || 'สมาชิก',
+              email: data.email || firebaseUser.email || '',
+              avatar: data.photoURL || firebaseUser.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
+              phone: data.phone || '',
+              address: data.address || '',
+              villageOrCondo: data.villageOrCondo || '',
+              bio: data.bio || '',
+              role: data.role || 'user',
+              isVerified: data.isVerified || false,
+              reputationScore: data.reputationScore || 50
+            }));
+          }
+        } catch (e) {
+          console.error("Failed to fetch user profile on auth state change", e);
+        }
+      } else {
+        setIsLoggedIn(false);
+      }
+    });
+
+    return () => {
+      unsubPosts();
+      unsubProducts();
+      unsubEvents();
+            unsubscribeSessions();
+      unsubscribeAuth();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !userProfile?.id) {
+      setContactRequests([]);
+      return;
+    }
+    
+    let q;
+    if (userProfile.role === 'admin') {
+      q = query(collection(db, 'contact_requests'), orderBy('createdAt', 'desc'), limit(100));
+    } else {
+      q = query(collection(db, 'contact_requests'), where('senderUid', '==', userProfile.id), limit(50));
+    }
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const fetchedReqs = [];
+      snapshot.forEach(doc => fetchedReqs.push(doc.data()));
+      if (userProfile.role !== 'admin') { fetchedReqs.sort((a,b) => b.createdAt - a.createdAt); }
+      setContactRequests(fetchedReqs);
+    }, (error) => {
+      console.warn('Firestore subscription warning (contact_requests):', error);
+    });
+
+    return () => unsub();
+  }, [isLoggedIn, userProfile?.role, userProfile?.id]);
+const requireAuth = (actionCallback: () => void, promptMessage?: string): boolean => {
     if (isLoggedIn) {
       actionCallback();
       return true;
