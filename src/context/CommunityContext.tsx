@@ -38,6 +38,7 @@ import {
   savePostToFirestore,
   togglePostLikeInFirestore,
   addCommentToFirestore,
+  createNotificationInFirestore,
   deletePostFromFirestore,
   syncUserProfileToFirestore,
   logUserSession,
@@ -59,6 +60,8 @@ import {
   doc, 
   getDoc, 
   setDoc, 
+  updateDoc, 
+  deleteDoc,
   collection,
   onSnapshot, 
   query, where,
@@ -728,7 +731,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
         photoURL: data.avatar || 'https://ui-avatars.com/api/?name=U&background=random'
       });
       
-      await sendEmailVerification(user);
+      try { await sendEmailVerification(user); } catch (e) { console.warn('Email verification skipped', e); }
       
       const isAdmin = isAuthorizedAdminEmail(data.email);
       const assignedRole = isAdmin ? 'admin' : 'user';
@@ -863,6 +866,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
       (error) => console.warn('Firestore subscription warning (products):', error)
     );
 
+    
     const unsubEvents = onSnapshot(
       query(collection(db, 'events'), limit(50)),
       (snapshot) => {
@@ -872,29 +876,9 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
       },
       (error) => console.warn('Firestore subscription warning (events):', error)
     );
-    
-    
-
-    const sessionsQuery = query(collection(db, 'user_sessions'), limit(20));
-    const unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
-      if (!snapshot.empty) {
-        const logs = snapshot.docs.map(docSnap => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            userId: data.userId || 'anonymous',
-            userName: data.userName || 'สมาชิก',
-            userEmail: data.userEmail || '',
-            loginMethod: data.loginMethod || 'google',
-            ipOrLocation: data.ipOrLocation || 'กรุงเทพมหานคร',
-            createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now()
-          };
-        });
-        setUserSessions(logs);
-      }
-    });
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+
       if (firebaseUser) {
         setIsLoggedIn(true);
         setIsFirestoreConnected(true);
@@ -920,30 +904,34 @@ if (userSnap.exists()) {
               reputationScore: data.reputationScore || 50
             }));
           } else {
-            // New Google User - create document
-            const newUserData = {
-              uid: firebaseUser.uid,
-              displayName: firebaseUser.displayName || 'สมาชิก',
-              email: firebaseUser.email || '',
-              photoURL: firebaseUser.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
-              role: 'user',
-              isVerified: false,
-              reputationScore: 50,
-              joinedDate: new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
-            };
-            await setDoc(userRef, newUserData);
-            setUserProfile(prev => ({
-              ...prev,
-              id: firebaseUser.uid,
-              uid: firebaseUser.uid,
-              name: newUserData.displayName,
-              email: newUserData.email,
-              avatar: newUserData.photoURL,
-              role: 'user',
-              isVerified: false,
-              reputationScore: 50,
-              isGoogleUser: true
-            }));
+            // New Google User - create document (only if Google, to prevent race condition with email registration)
+            const isGoogleUser = firebaseUser.providerData.some(p => p.providerId === 'google.com');
+            
+            if (isGoogleUser) {
+              const newUserData = {
+                uid: firebaseUser.uid,
+                displayName: firebaseUser.displayName || 'สมาชิก',
+                email: firebaseUser.email || '',
+                photoURL: firebaseUser.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
+                role: 'user',
+                isVerified: false,
+                reputationScore: 50,
+                joinedDate: new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+              };
+              await setDoc(userRef, newUserData);
+              setUserProfile(prev => ({
+                ...prev,
+                id: firebaseUser.uid,
+                uid: firebaseUser.uid,
+                name: newUserData.displayName,
+                email: newUserData.email,
+                avatar: newUserData.photoURL,
+                role: 'user',
+                isVerified: false,
+                reputationScore: 50,
+                isGoogleUser: true
+              }));
+            }
           }
         } catch (e) {
           console.error("Failed to fetch user profile on auth state change", e);
@@ -957,10 +945,38 @@ if (userSnap.exists()) {
       unsubPosts();
       unsubProducts();
       unsubEvents();
-            unsubscribeSessions();
-      unsubscribeAuth();
+                  unsubscribeAuth();
     };
   }, []);
+
+useEffect(() => {
+    if (!isLoggedIn || userProfile?.role !== 'admin') {
+      setUserSessions([]);
+      return;
+    }
+    const sessionsQuery = query(collection(db, 'user_sessions'), limit(100));
+    const unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const logs = snapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            userId: data.userId || 'anonymous',
+            userName: data.userName || 'สมาชิก',
+            userEmail: data.userEmail || '',
+            loginMethod: data.loginMethod || 'google',
+            ipOrLocation: data.ipOrLocation || 'กรุงเทพมหานคร',
+            createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now()
+          };
+        });
+        logs.sort((a,b) => b.createdAt - a.createdAt);
+        setUserSessions(logs);
+      }
+    }, (error) => {
+      console.warn('Firestore subscription warning (sessions):', error);
+    });
+    return () => unsubscribeSessions();
+  }, [isLoggedIn, userProfile?.role]);
 
   useEffect(() => {
     if (!isLoggedIn || !userProfile?.id) {
@@ -986,7 +1002,47 @@ if (userSnap.exists()) {
 
     return () => unsub();
   }, [isLoggedIn, userProfile?.role, userProfile?.id]);
-const requireAuth = (actionCallback: () => void, promptMessage?: string): boolean => {
+useEffect(() => {
+    if (!isLoggedIn || !userProfile?.id) {
+      setNotifications([]);
+      return;
+    }
+    
+    const q = query(collection(db, 'notifications'), where('recipientUid', '==', userProfile.id), orderBy('createdAt', 'desc'), limit(50));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const fetchedNotifs = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        fetchedNotifs.push({
+          id: doc.id,
+          ...data,
+          time: data.createdAt?.toMillis ? new Date(data.createdAt.toMillis()).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : 'เมื่อสักครู่',
+        });
+      });
+      
+      // Play sound for new notifications that just arrived
+      setNotifications(prev => {
+        if (prev.length > 0 && fetchedNotifs.length > 0) {
+          const newNotifs = fetchedNotifs.filter(n => !prev.find(p => p.id === n.id));
+          if (newNotifs.some(n => !n.read)) {
+            soundManager.playAlertSound();
+            AppNotifications.send(`การแจ้งเตือนใหม่`, {
+              body: newNotifs[0].message,
+              requireInteraction: false,
+            });
+          }
+        }
+        return fetchedNotifs;
+      });
+      
+    }, (error) => {
+      console.warn('Firestore subscription warning (notifications):', error);
+    });
+
+    return () => unsub();
+  }, [isLoggedIn, userProfile?.id]);
+
+  const requireAuth = (actionCallback: () => void, promptMessage?: string): boolean => {
     if (isLoggedIn) {
       actionCallback();
       return true;

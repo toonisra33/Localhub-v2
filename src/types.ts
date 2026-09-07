@@ -189,11 +189,15 @@ export interface RealEstateItem {
 
 export interface AppNotification {
   id: string;
+  recipientUid?: string;
+  senderUid?: string;
   title: string;
   message: string;
   time: string;
   read: boolean;
-  type: 'alert' | 'broadcast' | 'community' | 'market';
+  type: 'alert' | 'broadcast' | 'community' | 'market' | 'social';
+  link?: string;
+  createdAt?: any;
 }
 
 export interface UserProfileData {
