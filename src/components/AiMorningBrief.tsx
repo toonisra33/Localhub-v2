@@ -28,7 +28,7 @@ export function AiMorningBrief() {
             setRealWeather(`${desc} อุณหภูมิ ${temp}°C`);
           }
         } catch (e) {
-          console.error("Failed to fetch weather", e);
+          // Fallback to mock data silently if the fetch fails due to CORS or network issues
         }
       };
       fetchWeather();

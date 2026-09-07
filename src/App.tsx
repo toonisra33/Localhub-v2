@@ -4,6 +4,7 @@ import { Navigation } from './components/Navigation';
 import { HomeFeed } from './components/HomeFeed';
 import { AroundMeMap } from './components/AroundMeMap';
 import { CommunityFeed } from './components/CommunityFeed';
+import { GlobalNewsFeed } from './components/GlobalNewsFeed';
 import { LocalMarket } from './components/LocalMarket';
 import { UserProfile } from './components/UserProfile';
 import { ChatView } from './components/chat/ChatView';
@@ -56,6 +57,7 @@ function AppContent() {
     switch (activeTab) {
       case 'home': return <HomeFeed />;
       case 'map': return <AroundMeMap />;
+      case 'global_news': return <GlobalNewsFeed />;
       case 'community': return <CommunityFeed />;
       case 'market': return <LocalMarket />;
       case 'me': return <UserProfile />;

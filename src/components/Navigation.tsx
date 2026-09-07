@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, MapPin, Users, Store, User, BarChart3, MessageCircle } from 'lucide-react';
+import { Home, MapPin, Users, Store, User, BarChart3, MessageCircle, Globe } from 'lucide-react';
 import { Tab } from '../types';
 import { useBroadcast } from '../context/BroadcastContext';
 import { useCommunity } from '../context/CommunityContext';
@@ -13,12 +13,12 @@ interface NavigationProps {
 export function Navigation({ activeTab, setActiveTab }: NavigationProps) {
   const { role } = useBroadcast();
   const { isLoggedIn, userProfile } = useCommunity();
-
   const isAdmin = isLoggedIn && role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
 
   const navItems = [
     { id: 'home', icon: Home, label: 'หน้าหลัก' },
     { id: 'map', icon: MapPin, label: 'รอบตัว' },
+    { id: 'global_news', icon: Globe, label: 'ศูนย์ข่าว' },
     { id: 'community', icon: Users, label: 'ฟีดชุมชน' },
     ...(isAdmin ? [{ id: 'admin_dashboard', icon: BarChart3, label: 'แดชบอร์ด' }] : []),
     { id: 'me', icon: User, label: 'ฉัน' },

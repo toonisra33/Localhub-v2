@@ -1,4 +1,4 @@
-export type Tab = 'home' | 'map' | 'community' | 'market' | 'chats' | 'me' | 'admin_dashboard';
+export type Tab = 'home' | 'map' | 'community' | 'global_news' | 'market' | 'chats' | 'me' | 'admin_dashboard';
 
 export type UserRole = 'admin' | 'user';
 
