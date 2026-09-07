@@ -72,11 +72,16 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
           
           // If this is a newly received broadcast that we haven't seen yet, play the alert sound
           if (previousBroadcastIdRef.current !== data.id) {
-             soundManager.playAlertSound();
-             AppNotifications.send(`⚠️ แจ้งเตือนฉุกเฉิน: ${data.title}`, {
-               body: data.message,
-               requireInteraction: true,
-             });
+             const storageKey = `${DEVICE_VIEW_PREFIX}${data.id}`;
+             const hasSeenBefore = !!localStorage.getItem(storageKey);
+             
+             if (!hasSeenBefore) {
+               soundManager.playAlertSound();
+               AppNotifications.send(`⚠️ แจ้งเตือนฉุกเฉิน: ${data.title}`, {
+                 body: data.message,
+                 requireInteraction: true,
+               });
+             }
              previousBroadcastIdRef.current = data.id;
           }
           return;
@@ -152,33 +157,36 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
   const sendBroadcast = async (data: { title: string; message: string; category: BroadcastCategory; severity: BroadcastSeverity; targetArea?: string; mediaType?: 'image' | 'video'; mediaUrl?: string; mediaFileName?: string; videoDurationSeconds?: number; contactNumber?: string; actionText?: string; actionUrl?: string; }) => {
     const now = Date.now();
     const todayStr = getLocalDateStr(new Date(now));
-    const newBroadcast: AdminBroadcast = {
-      id: `bc_${now}`,
-      title: data.title,
-      message: data.message,
-      category: data.category,
-      severity: data.severity,
-      targetArea: data.targetArea,
-      broadcastAt: now,
-      broadcastDateStr: todayStr,
-      adminName: 'ศูนย์บัญชาการชุมชน (แอดมิน)',
-      adminRole: 'ผู้ดูแลระบบส่วนกลาง',
-      mediaType: data.mediaType,
-      mediaUrl: data.mediaUrl,
-      mediaFileName: data.mediaFileName,
-      videoDurationSeconds: data.videoDurationSeconds,
-      contactNumber: data.contactNumber,
-      actionText: data.actionText,
-      actionUrl: data.actionUrl,
-      pinned: true,
-      isActive: true,
-    };
+    // Firestore does not accept undefined values, so we filter them out
+    const cleanData = Object.fromEntries(
+      Object.entries({
+        id: `bc_${now}`,
+        title: data.title,
+        message: data.message,
+        category: data.category,
+        severity: data.severity,
+        targetArea: data.targetArea,
+        broadcastAt: now,
+        broadcastDateStr: todayStr,
+        adminName: 'ศูนย์บัญชาการชุมชน (แอดมิน)',
+        adminRole: 'ผู้ดูแลระบบส่วนกลาง',
+        mediaType: data.mediaType,
+        mediaUrl: data.mediaUrl,
+        mediaFileName: data.mediaFileName,
+        videoDurationSeconds: data.videoDurationSeconds,
+        contactNumber: data.contactNumber,
+        actionText: data.actionText,
+        actionUrl: data.actionUrl,
+        pinned: true,
+        isActive: true,
+      }).filter(([_, v]) => v !== undefined)
+    ) as unknown as AdminBroadcast;
 
     // Store in Firestore
     try {
-      saveEntityToFirestore('broadcasts', 'active', newBroadcast).then(() => console.log('Successfully saved broadcast')).catch(e => console.error('Failed to save broadcast', e));
+      saveEntityToFirestore('broadcasts', 'active', cleanData).then(() => console.log('Successfully saved broadcast')).catch(e => console.error('Failed to save broadcast', e));
       // Reset device first seen timestamp for this device so it gets fresh 15 mins
-      localStorage.setItem(`${DEVICE_VIEW_PREFIX}${newBroadcast.id}`, now.toString());
+      localStorage.setItem(`${DEVICE_VIEW_PREFIX}${cleanData.id}`, now.toString());
     } catch (e) {
       console.error('Failed to save broadcast', e);
     }

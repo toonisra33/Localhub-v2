@@ -815,6 +815,14 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
   };
 
   
+
+  useEffect(() => {
+    // Check for Google Auth redirect result
+    checkAuthRedirectResult().catch(err => {
+      console.error('Error checking auth redirect result:', err);
+    });
+  }, []);
+
   useEffect(() => {
     try { localStorage.setItem('locallink_contact_requests', JSON.stringify(contactRequests)); } catch {}
   }, [contactRequests]);
