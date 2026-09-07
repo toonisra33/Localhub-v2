@@ -1,4 +1,6 @@
+import { compressImage } from '../../lib/imageUtils';
 import React, { useState, useRef } from 'react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { X, ShoppingBag, Camera, MapPin, Tag, Upload, Image as ImageIcon } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { SafeImage, getCategoryFallback } from '../SafeImage';
@@ -16,36 +18,67 @@ export function AddProductModal({ onClose }: AddProductModalProps) {
   const [locationName, setLocationName] = useState(`ต.${location.subdistrict}`);
   const [imageUrl, setImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAiAssist = async () => {
+    const keywords = title || description;
+    if (!keywords.trim()) {
+      showToast('กรุณาพิมพ์ชื่อสินค้าหรือรายละเอียดสั้นๆ ก่อนให้ AI ช่วยเขียน', 'info');
+      return;
+    }
+    setIsGeneratingAi(true);
+    try {
+      const response = await fetch('/api/generate-caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords, type: 'product' })
+      });
+      const data = await response.json();
+      if (data.caption) {
+        setDescription(data.caption);
+        showToast('✨ AI ช่วยเขียนข้อความโฆษณาให้แล้ว!', 'success');
+      } else if (data.error) {
+        showToast(data.error, 'error');
+      }
+    } catch (error) {
+      showToast('ไม่สามารถเชื่อมต่อ AI ได้', 'error');
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
 
   const categories = [
     'ของมือสอง', 'อาหาร/เครื่องดื่ม', 'สินค้าเกษตร', 'บริการซ่อม', 'อสังหาฯ/ที่พัก', 'เสื้อผ้า/แฟชั่น'
   ];
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+      showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP)', 'error');
       return;
     }
 
-    setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        setImageUrl(result);
-        showToast('📸 แนบรูปสินค้าสำเร็จ');
-      }
-      setIsUploading(false);
-    };
-    reader.onerror = () => {
-      showToast('เกิดข้อผิดพลาดในการโหลดรูปภาพ', 'error');
-      setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('ขนาดไฟล์ภาพต้องไม่เกิน 10 MB', 'error');
+      return;
+    }
+
+    try {
+      showToast('กำลังประมวลผลรูปภาพ...', 'info');
+      const compressedDataUrl = await compressImage(file);
+      setImageUrl(compressedDataUrl);
+      
+      showToast('รูปภาพสินค้าพร้อมใช้งานแล้ว', 'success');
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      showToast('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ', 'error');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const handlePickCategoryPreset = () => {
@@ -230,7 +263,7 @@ export function AddProductModal({ onClose }: AddProductModalProps) {
               <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}
                   disabled={isUploading}
                   className="w-full py-3.5 border-2 border-dashed border-slate-200 hover:border-emerald-400 rounded-2xl bg-slate-50 hover:bg-emerald-50/30 text-slate-700 hover:text-emerald-700 flex items-center justify-center gap-2 text-[13px] font-bold transition-all shadow-sm"
                 >

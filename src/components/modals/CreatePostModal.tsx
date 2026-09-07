@@ -1,4 +1,6 @@
+import { compressImage } from '../../lib/imageUtils';
 import React, { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { 
   X, 
   Image as ImageIcon, 
@@ -34,7 +36,35 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
   const [images, setImages] = useState<string[]>([]);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isAttaching, setIsAttaching] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAiAssist = async () => {
+    if (!content.trim()) {
+      showToast('กรุณาพิมพ์หัวข้อหรือคำสั้นๆ ก่อนให้ AI ช่วยเขียน', 'info');
+      return;
+    }
+    setIsGeneratingAi(true);
+    try {
+      const response = await fetch('/api/generate-caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords: content, type: 'post' })
+      });
+      const data = await response.json();
+      if (data.caption) {
+        setContent(data.caption);
+        showToast('✨ AI ช่วยเขียนข้อความให้แล้ว!', 'success');
+      } else if (data.error) {
+        showToast(data.error, 'error');
+      }
+    } catch (error) {
+      showToast('ไม่สามารถเชื่อมต่อ AI ได้', 'error');
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
   const videoInputRef = React.useRef<HTMLInputElement>(null);
 
   // Check-in state
@@ -45,7 +75,7 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
     'ข่าวสารชุมชน', 'ซื้อ-ขาย/บริการ', 'แจ้งเหตุฉุกเฉิน', 'ตามหาของ/สัตว์เลี้ยง', 'ร้านอร่อยชุมชน', 'ประกาศทั่วไป', 'ขอความช่วยเหลือ', 'พูดคุยแลกเปลี่ยน'
   ];
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
@@ -58,74 +88,38 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
     const filesArray = Array.from(files).slice(0, remainingSlots) as File[];
     setIsAttaching(true);
 
-    let processedCount = 0;
     const newImages: string[] = [];
 
-    filesArray.forEach(file => {
+    for (const file of filesArray) {
       if (!file.type.startsWith('image/')) {
-        processedCount++;
-        return;
+        continue;
       }
 
       if (file.size > 8 * 1024 * 1024) {
         showToast(`ไฟล์ ${file.name} มีขนาดใหญ่เกิน 8 MB`, 'error');
-        processedCount++;
-        return;
+        continue;
       }
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          newImages.push(result);
-        }
-        processedCount++;
-        
-        if (processedCount === filesArray.length) {
-          setImages(prev => [...prev, ...newImages]);
-          setIsAttaching(false);
-          showToast(`🖼️ แนบรูปภาพประกอบแล้ว ${newImages.length} รูป`, 'success');
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-    
-    if (filesArray.length === 0) {
-      setIsAttaching(false);
+      try {
+        const compressedDataUrl = await compressImage(file);
+        newImages.push(compressedDataUrl);
+      } catch (err) {
+        console.error('Error compressing image:', err);
+      }
+    }
+
+    if (newImages.length > 0) {
+      setImages(prev => [...prev, ...newImages]);
+      showToast(`📸 เพิ่มรูปภาพ ${newImages.length} รูปเรียบร้อยแล้ว`, 'success');
     }
     
-    // Clear input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    setIsAttaching(false);
+    e.target.value = '';
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('video/')) {
-      showToast('กรุณาเลือกไฟล์วิดีโอเท่านั้น (MP4, WEBM, MOV)', 'error');
-      return;
-    }
-
-    if (file.size > 25 * 1024 * 1024) {
-      showToast('ขนาดไฟล์วิดีโอต้องไม่เกิน 25 MB', 'error');
-      return;
-    }
-
-    setIsAttaching(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        setVideoUrl(result);
-        showToast('🎬 แนบไฟล์วิดีโอประกอบโพสต์เรียบร้อยแล้ว', 'success');
-      }
-      setIsAttaching(false);
-    };
-    reader.readAsDataURL(file);
-
+    // Prevent base64 video upload due to 1MB Firestore limit in prototype
+    showToast('ระบบจำกัดการอัปโหลดวิดีโอในโหมดทดสอบ กรุณาใช้ไฟล์รูปภาพแทน', 'error');
     if (videoInputRef.current) {
       videoInputRef.current.value = '';
     }
@@ -397,7 +391,7 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}
                   disabled={isAttaching || images.length >= 10}
                   className="py-2.5 px-3 border border-dashed border-slate-300 hover:border-emerald-400 rounded-2xl bg-slate-50 hover:bg-emerald-50/50 text-slate-700 hover:text-emerald-700 flex items-center justify-center gap-1.5 text-[12px] font-bold transition-all"
                 >

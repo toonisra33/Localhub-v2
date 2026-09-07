@@ -264,14 +264,22 @@ export async function syncUserProfileToFirestore(userId: string, profileData: Pa
   const path = `users/${userId}`;
   try {
     const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, {
-      ...profileData,
-      displayName: profileData?.name,
-      photoURL: profileData.avatar,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+    
+    const dataToUpdate: any = { ...profileData, updatedAt: serverTimestamp() };
+    if (profileData.name !== undefined) dataToUpdate.displayName = profileData.name;
+    if (profileData.avatar !== undefined) dataToUpdate.photoURL = profileData.avatar;
+    
+    // Remove undefined values
+    Object.keys(dataToUpdate).forEach(key => {
+      if (dataToUpdate[key] === undefined) {
+        delete dataToUpdate[key];
+      }
+    });
+
+    await setDoc(userRef, dataToUpdate, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
+    throw error;
   }
 }
 

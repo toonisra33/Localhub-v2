@@ -1,3 +1,4 @@
+import { compressImage } from '../../lib/imageUtils';
 import React, { useState, useRef } from 'react';
 import { 
   X, 
@@ -106,7 +107,7 @@ export function AuthModal() {
   if (!isAuthModalOpen) return null;
 
   // Handle custom photo upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -115,21 +116,23 @@ export function AuthModal() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('ขนาดไฟล์ภาพต้องไม่เกิน 5 MB', 'error');
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('ขนาดไฟล์ภาพต้องไม่เกิน 10 MB', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        setSelectedAvatar(result);
-        setIsCustomUploaded(true);
-        showToast('📸 อัปโหลดรูปโปรไฟล์ของคุณเรียบร้อยแล้ว', 'success');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      showToast('กำลังประมวลผลรูปภาพ...', 'info');
+      const compressedDataUrl = await compressImage(file);
+      setSelectedAvatar(compressedDataUrl);
+      setIsCustomUploaded(true);
+      showToast('📸 อัปโหลดรูปโปรไฟล์ของคุณเรียบร้อยแล้ว', 'success');
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      showToast('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ', 'error');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -316,7 +319,7 @@ export function AuthModal() {
                     />
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}
                       className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white transition-transform active:scale-95"
                       title="เปลี่ยนรูปภาพ"
                     >
@@ -328,7 +331,7 @@ export function AuthModal() {
                   <div className="flex-1 min-w-0">
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}
                       className="w-full py-2 px-3 bg-white hover:bg-slate-100 text-slate-800 rounded-xl text-[12px] font-extrabold border border-slate-300 shadow-sm flex items-center justify-center gap-1.5 transition-all"
                     >
                       <Upload size={14} className="text-emerald-600" />

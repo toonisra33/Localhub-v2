@@ -43,6 +43,7 @@ import { LocationPickerModal } from './modals/LocationPickerModal';
 import { NotificationCenterModal } from './modals/NotificationCenterModal';
 import { LeaderboardModal } from './modals/LeaderboardModal';
 import { LocalHubLogo } from './LocalHubLogo';
+import { GlobalSearch } from './GlobalSearch';
 import { AiMorningBrief } from './AiMorningBrief';
 
 export function HomeFeed() {
@@ -216,8 +217,12 @@ export function HomeFeed() {
               </button>
             )}
           </div>
+        
         </div>
 
+        
+
+        <div className="mb-4"><GlobalSearch /></div>
         {/* Location Selector */}
         <div className="flex items-center gap-2">
           <div onClick={() => setShowLocationModal(true)} className="flex-1 cursor-pointer group flex justify-between items-center bg-slate-800/40 hover:bg-slate-800/70 p-2.5 rounded-2xl border border-slate-800/80 transition-all">

@@ -24,6 +24,7 @@ interface BroadcastContextType {
     contactNumber?: string;
     actionText?: string;
     actionUrl?: string;
+    checkIn?: any;
   }) => Promise<void>;
   cancelBroadcast: () => void;
   resetDeviceTimerForDemo: () => void;
@@ -154,7 +155,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [updateTimer]);
 
-  const sendBroadcast = async (data: { title: string; message: string; category: BroadcastCategory; severity: BroadcastSeverity; targetArea?: string; mediaType?: 'image' | 'video'; mediaUrl?: string; mediaFileName?: string; videoDurationSeconds?: number; contactNumber?: string; actionText?: string; actionUrl?: string; }) => {
+  const sendBroadcast = async (data: { title: string; message: string; category: BroadcastCategory; severity: BroadcastSeverity; targetArea?: string; mediaType?: 'image' | 'video'; mediaUrl?: string; mediaFileName?: string; videoDurationSeconds?: number; contactNumber?: string; actionText?: string; actionUrl?: string; checkIn?: any; }) => {
     const now = Date.now();
     const todayStr = getLocalDateStr(new Date(now));
     // Firestore does not accept undefined values, so we filter them out
@@ -177,6 +178,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
         contactNumber: data.contactNumber,
         actionText: data.actionText,
         actionUrl: data.actionUrl,
+        checkIn: data.checkIn,
         pinned: true,
         isActive: true,
       }).filter(([_, v]) => v !== undefined)

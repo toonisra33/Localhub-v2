@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCommunity } from '../../context/CommunityContext';
 import { ChatRoom, UserProfileData } from '../../types';
-import { subscribeToChats, subscribeToFriends, getUserDetails, subscribeToPendingRequests, acceptFriendRequest, rejectFriendRequest } from '../../lib/chat';
+import { subscribeToChats, subscribeToFriends, getUserDetails, subscribeToPendingRequests, acceptFriendRequest, rejectFriendRequest, subscribeToGroups, initializeGroups } from '../../lib/chat';
 import { Check, X as XIcon } from 'lucide-react';
 import { MessageCircle, Users, Bot, Sparkles, X } from 'lucide-react';
 import { ChatRoomModal } from './ChatRoomModal';
@@ -14,7 +14,8 @@ interface ChatViewProps {
 
 export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
   const { isLoggedIn, userProfile } = useCommunity();
-  const [activeTab, setActiveTab] = useState<'chats' | 'friends'>('chats');
+  const [activeTab, setActiveTab] = useState<'chats' | 'friends' | 'groups'>('chats');
+  const [groups, setGroups] = useState<ChatRoom[]>([]);
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [friendIds, setFriendIds] = useState<string[]>([]);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
@@ -26,7 +27,14 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
   const [viewProfileId, setViewProfileId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLoggedIn) {
+      initializeGroups();
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
     if (!isLoggedIn || !userProfile?.id) return;
+    const unsubGroups = subscribeToGroups(setGroups);
     
     const unsubChats = subscribeToChats(userProfile.id, (newChats) => {
       setChats(newChats);
@@ -58,6 +66,7 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
       unsubChats();
       unsubFriends();
       unsubPending();
+      if (unsubGroups) unsubGroups();
     };
   }, [isLoggedIn, userProfile?.id]);
 
@@ -107,6 +116,15 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
           >
             <Users size={16} />
             เพื่อน ({friendIds.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('groups')}
+            className={`flex-1 py-1.5 rounded-lg text-[13px] font-bold transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'groups' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Users size={16} />
+            กลุ่ม
           </button>
         </div>
       </div>
@@ -169,6 +187,38 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
                   </div>
                 );
               })
+            )}
+          </div>
+        )}
+
+        
+        {activeTab === 'groups' && (
+          <div className="space-y-3">
+            {groups.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 text-sm">ไม่พบกลุ่มสนทนาสาธารณะ</div>
+            ) : (
+              groups.map(group => (
+                <div 
+                  key={group.id}
+                  onClick={() => {
+                    setSelectedChatRoom(group.id);
+                    setSelectedChatUser({
+                      id: 'group',
+                      name: group.groupName || 'กลุ่มสาธารณะ',
+                      avatar: group.groupAvatar || 'https://via.placeholder.com/150'
+                    });
+                  }}
+                  className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-2xl hover:border-emerald-200 hover:shadow-sm transition-all cursor-pointer"
+                >
+                  <img src={group.groupAvatar || 'https://via.placeholder.com/150'} alt={group.groupName} className="w-12 h-12 rounded-full object-cover shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="text-[15px] font-extrabold text-slate-900 truncate">{group.groupName}</h4>
+                    </div>
+                    <p className="text-[13px] text-slate-500 truncate">{group.lastMessage || 'เริ่มพูดคุยเลย!'}</p>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         )}

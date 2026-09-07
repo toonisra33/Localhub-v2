@@ -19,6 +19,7 @@ import { useCommunity } from '../context/CommunityContext';
 import { CreatePostModal } from './modals/CreatePostModal';
 import { PostDetailCommentsModal } from './modals/PostDetailCommentsModal';
 import { LocalHubLogo } from './LocalHubLogo';
+import { AISummaryWidget } from './AISummaryWidget';
 import { Megaphone } from 'lucide-react';
 import { PostCard } from './PostCard';
 import { Info } from 'lucide-react';

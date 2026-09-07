@@ -545,13 +545,16 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
   const updateUserProfile = async (data: Partial<UserProfileData>): Promise<void> => {
     setUserProfile(prev => ({ ...prev, ...data }));
     
-    if (auth.currentUser?.uid) {
+    const targetUid = auth.currentUser?.uid || userProfile?.uid || userProfile?.id;
+    if (targetUid && targetUid !== 'user_default') {
       try {
-        await syncUserProfileToFirestore(auth.currentUser.uid, data);
+        await syncUserProfileToFirestore(targetUid, data);
         showToast('💾 บันทึกและซิงค์ข้อมูลส่วนตัวลงฐานข้อมูลเรียบร้อยแล้ว', 'success');
         return;
       } catch (e) {
         console.error('Sync profile error:', e);
+        showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูลลงฐานข้อมูล (ขนาดอาจใหญ่เกินไป)', 'error');
+        return;
       }
     }
     showToast('บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว');
@@ -901,7 +904,12 @@ if (userSnap.exists()) {
               bio: data.bio || '',
               role: data.role || 'user',
               isVerified: data.isVerified || false,
-              reputationScore: data.reputationScore || 50
+              reputationScore: data.reputationScore || 50,
+              occupation: data.occupation || '',
+              birthDate: data.birthDate || '',
+              relationshipStatus: data.relationshipStatus || '',
+              emergencyContactName: data.emergencyContactName || '',
+              emergencyContactPhone: data.emergencyContactPhone || ''
             }));
           } else {
             // New Google User - create document (only if Google, to prevent race condition with email registration)

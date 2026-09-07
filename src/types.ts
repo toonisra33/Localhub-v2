@@ -25,6 +25,7 @@ export interface AdminBroadcast {
   actionUrl?: string;
   pinned: boolean;
   isActive: boolean;
+  checkIn?: CheckInLocation;
 }
 
 export interface Location {
@@ -269,6 +270,7 @@ export interface AdminContactRequest {
 
 export interface Message {
   id: string;
+  imageUrl?: string;
   roomId: string;
   senderId: string;
   text: string;
@@ -279,6 +281,9 @@ export interface Message {
 
 export interface ChatRoom {
   id: string;
+  isGroup?: boolean;
+  groupName?: string;
+  groupAvatar?: string;
   participants: string[];
   participantDetails: Record<string, { name: string; avatar: string }>;
   lastMessage: string;

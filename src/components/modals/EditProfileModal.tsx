@@ -1,3 +1,4 @@
+import { compressImage } from '../../lib/imageUtils';
 import React, { useState, useRef } from 'react';
 import { X, User, Camera, Check, Upload, Briefcase, HeartPulse, Calendar, Home, Heart, Shield } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
@@ -12,6 +13,7 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
   
   const [name, setName] = useState(userProfile?.name || '');
   const [phone, setPhone] = useState(userProfile.phone || '');
+  const [email, setEmail] = useState(userProfile.email || '');
   const [address, setAddress] = useState(userProfile.address || '');
   const [villageOrCondo, setVillageOrCondo] = useState(userProfile.villageOrCondo || '');
   const [bio, setBio] = useState(userProfile.bio || '');
@@ -24,7 +26,7 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -33,25 +35,33 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('ขนาดไฟล์ภาพต้องไม่เกิน 5 MB', 'error');
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('ขนาดไฟล์ภาพต้องไม่เกิน 10 MB', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        setAvatar(result);
-        showToast('📸 อัปโหลดรูปโปรไฟล์เรียบร้อยแล้ว', 'success');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      showToast('กำลังประมวลผลรูปภาพ...', 'info');
+      const compressedDataUrl = await compressImage(file);
+      setAvatar(compressedDataUrl);
+      
+      showToast('📸 อัปโหลดรูปโปรไฟล์เรียบร้อยแล้ว', 'success');
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      showToast('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ', 'error');
+    } finally {
+      e.target.value = '';
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateUserProfile({
+    setIsSaving(true);
+    try {
+      await updateUserProfile({
+      email,
       name: name.trim(),
       phone: phone.trim(),
       address: address.trim(),
@@ -64,8 +74,13 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
       emergencyContactName: emergencyContactName.trim(),
       emergencyContactPhone: emergencyContactPhone.trim()
     });
-    showToast('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว', 'success');
-    onClose();
+      // The toast is already handled inside updateUserProfile
+      onClose();
+    } catch (err) {
+      showToast('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองอีกครั้ง', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -113,7 +128,7 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
                 />
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}
                   className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white transition-transform active:scale-95"
                   title="อัปโหลดรูปภาพใหม่"
                 >
@@ -123,7 +138,7 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
               <div className="flex-1 min-w-0">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}
                   className="w-full py-1.5 px-3 bg-white hover:bg-slate-100 text-slate-800 rounded-xl text-[11.5px] font-extrabold border border-slate-300 shadow-sm flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Upload size={13} className="text-emerald-600" />
@@ -149,7 +164,7 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1">เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span></label>
                 <input
@@ -175,7 +190,18 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
 
             <div className="space-y-3">
               <div>
+                <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <span className="text-slate-400">@</span> อีเมล
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-[13.5px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 focus:bg-white transition-all"
+                />
+              </div>
+              <label className="block text-[12px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                   <Briefcase size={12} className="text-slate-400" /> อาชีพ / บทบาทในชุมชน
                 </label>
                 <select
@@ -318,10 +344,11 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[13.5px] shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              disabled={isSaving}
+              className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[13.5px] shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-70"
             >
               <Check size={16} />
-              บันทึกข้อมูล
+              {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
             </button>
           </div>
         </form>

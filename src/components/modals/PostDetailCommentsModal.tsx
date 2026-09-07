@@ -37,8 +37,7 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
         });
       });
       setComments(fetchedComments);
-    }, (error) => {
-      console.warn('Firestore subscription warning (comments):', error);
+    }, (error) => { console.warn("Firestore comments error:", error); 
     });
 
     return () => unsubscribe();

@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useBroadcast } from '../context/BroadcastContext';
 import { useCommunity } from '../context/CommunityContext';
-import { BroadcastCategory, BroadcastSeverity, AdminContactRequest } from '../types';
+import { BroadcastCategory, BroadcastSeverity, AdminContactRequest, CheckInLocation } from '../types';
+import { CheckInPickerModal } from './modals/CheckInPickerModal';
+import { MapPin, Compass, Edit3 } from 'lucide-react';
 import { 
   Radio, 
   X, 
@@ -54,7 +56,8 @@ export function AdminBroadcastModal() {
     openMediaViewer, 
     showToast,
     isLoggedIn,
-    userProfile
+    userProfile,
+    location
   } = useCommunity();
 
   const isRealAdmin = isLoggedIn && role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
@@ -131,24 +134,27 @@ export function AdminBroadcastModal() {
     },
   ];
 
-  const [title, setTitle] = useState(presets[0].title);
-  const [message, setMessage] = useState(presets[0].message);
-  const [category, setCategory] = useState<BroadcastCategory>(presets[0].category);
-  const [severity, setSeverity] = useState<BroadcastSeverity>(presets[0].severity);
-  const [targetArea, setTargetArea] = useState(presets[0].targetArea);
-  const [contactNumber, setContactNumber] = useState(presets[0].contactNumber);
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [category, setCategory] = useState<BroadcastCategory>('announcement');
+  const [severity, setSeverity] = useState<BroadcastSeverity>('info');
+  const [targetArea, setTargetArea] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
 
   // Media attachments state
-  const [selectedMediaType, setSelectedMediaType] = useState<'none' | 'image' | 'video'>('image');
-  const [mediaUrl, setMediaUrl] = useState<string>(presets[0].mediaUrl || '');
-  const [mediaFileName, setMediaFileName] = useState<string>(presets[0].mediaFileName || '');
-  const [videoDuration, setVideoDuration] = useState<number>(presets[0].videoDurationSeconds || 0);
+  const [selectedMediaType, setSelectedMediaType] = useState<'none' | 'image' | 'video'>('none');
+  const [mediaUrl, setMediaUrl] = useState<string>('');
+  const [mediaFileName, setMediaFileName] = useState<string>('');
+  const [videoDuration, setVideoDuration] = useState<number>(0);
   const [mediaError, setMediaError] = useState<string | null>(null);
 
   // Link attachment state (Optional)
-  const [enableLink, setEnableLink] = useState<boolean>(true);
-  const [actionText, setActionText] = useState<string>(presets[0].actionText || '');
-  const [actionUrl, setActionUrl] = useState<string>(presets[0].actionUrl || '');
+  const [enableLink, setEnableLink] = useState<boolean>(false);
+  const [actionText, setActionText] = useState<string>('');
+  const [actionUrl, setActionUrl] = useState<string>('');
+
+  const [checkIn, setCheckIn] = useState<CheckInLocation | null>(null);
+  const [showCheckInPicker, setShowCheckInPicker] = useState<boolean>(false);
 
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -352,6 +358,17 @@ export function AdminBroadcastModal() {
   };
 
   return (
+    <>
+    {showCheckInPicker && (
+      <CheckInPickerModal
+        initialCheckIn={checkIn}
+        userLocation={location}
+        onSelectCheckIn={(newCheckIn) => {
+          setCheckIn(newCheckIn);
+        }}
+        onClose={() => setShowCheckInPicker(false)}
+      />
+    )}
     <div className="fixed inset-0 bg-gray-950/75 backdrop-blur-sm z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-xl h-[92vh] sm:h-auto sm:max-h-[88vh] sm:rounded-3xl flex flex-col shadow-2xl rounded-t-[32px] overflow-hidden border border-gray-100">
         
@@ -1064,6 +1081,83 @@ export function AdminBroadcastModal() {
               </div>
             </div>
 
+            {/* Check-in Location Area */}
+            <div className="bg-slate-50 border border-slate-200 rounded-[24px] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-[13px] font-bold text-slate-800 flex items-center gap-1.5">
+                    <MapPin size={15} className="text-emerald-500" />
+                    ปักหมุดสถานที่บนแผนที่
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">ระบุตำแหน่งสถานที่เกิดเหตุหรือสถานที่แจ้งข่าว</p>
+                </div>
+                {!checkIn && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCheckInPicker(true)}
+                    className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg transition-colors"
+                  >
+                    <Compass size={12} />
+                    <span>ค้นหาและปักหมุด</span>
+                  </button>
+                )}
+              </div>
+
+              {checkIn ? (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                    <MapPin size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-bold text-emerald-900 truncate">
+                      {checkIn.placeName}
+                    </div>
+                    {checkIn.address && (
+                      <div className="text-[11px] text-emerald-700 mt-0.5 truncate max-w-[200px]">
+                        {checkIn.address}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowCheckInPicker(true)}
+                        className="p-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
+                        title="แก้ไขหรือย้ายหมุด"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCheckIn(null)}
+                        className="p-1.5 rounded-lg bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="ยกเลิกเช็คอิน"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowCheckInPicker(true)}
+                  className="w-full p-2.5 bg-white hover:bg-emerald-50/50 border border-slate-200 hover:border-emerald-300 rounded-2xl flex items-center justify-between text-slate-700 transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 group-hover:text-emerald-600 group-hover:border-emerald-200 flex items-center justify-center transition-colors">
+                      <MapPin size={14} />
+                    </div>
+                    <div className="text-[12.5px] font-bold text-slate-700 group-hover:text-emerald-900">
+                      📍 ปักหมุดเช็คอินสถานที่
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-emerald-600 bg-slate-100 group-hover:bg-emerald-100 px-2.5 py-1 rounded-lg">
+                    เลือกตำแหน่ง
+                  </span>
+                </button>
+              )}
+            </div>
+
             {/* Broadcast System Rules Notice */}
             <div className="bg-slate-100 border border-slate-200 p-3.5 rounded-2xl text-[12px] text-slate-700 space-y-1">
               <div className="font-bold flex items-center gap-1.5 text-slate-900">
@@ -1094,5 +1188,6 @@ export function AdminBroadcastModal() {
         </div>
       </div>
     </div>
+    </>
   );
 }

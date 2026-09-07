@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Bot, Sparkles, Loader2 } from 'lucide-react';
+import { compressImage } from '../../lib/imageUtils';
+import { X, Send, Bot, Sparkles, Loader2, Image as ImageIcon } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { Message } from '../../types';
 import { subscribeToMessages, sendMessage, getOrCreateChatRoom } from '../../lib/chat';
@@ -15,10 +16,10 @@ interface ChatRoomModalProps {
 }
 
 export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUserId, otherUserName, otherUserAvatar }: ChatRoomModalProps) {
-  const { userProfile } = useCommunity();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [roomId, setRoomId] = useState<string | null>(initialRoomId);
+  const { userProfile, showToast } = useCommunity();
   const [isAiThinking, setIsAiThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -61,6 +62,30 @@ export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUse
   }, [isOpen, roomId, otherUserId, userProfile]);
 
   if (!isOpen) return null;
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !roomId || !userProfile?.id) return;
+    if (!file.type.startsWith('image/')) {
+      showToast?.('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+      return;
+    }
+    try {
+      setIsUploading(true);
+      const compressedUrl = await compressImage(file);
+      await sendMessage(roomId, userProfile.id, '', compressedUrl);
+    } catch (err) {
+      console.error(err);
+      showToast?.('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ', 'error');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -165,7 +190,10 @@ export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUse
                 <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-[14px] ${
                   isMe ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-sm'
                 }`}>
-                  {msg.text}
+                  {msg.imageUrl && (
+                    <img src={msg.imageUrl} alt="chat" className="rounded-xl max-w-full mb-2 object-cover" />
+                  )}
+                  {msg.text && <div>{msg.text}</div>}
                 </div>
               </div>
             );
@@ -190,6 +218,21 @@ export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUse
       {/* Input */}
       <div className="bg-white border-t border-slate-200 p-3 pb-safe">
         <form onSubmit={handleSend} className="flex items-center gap-2">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImageUpload} 
+            accept="image/*" 
+            className="hidden" 
+          />
+          <button 
+            type="button" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 disabled:opacity-50 shrink-0"
+          >
+            {isUploading ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
+          </button>
           <input
             type="text"
             value={inputText}

@@ -1,3 +1,4 @@
+import { compressImage } from '../../lib/imageUtils';
 import React, { useState } from 'react';
 import { X, ShieldCheck, CheckCircle2, Camera, Upload, AlertCircle, Sparkles } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
@@ -27,12 +28,21 @@ export function IdVerificationModal({ onClose }: IdVerificationModalProps) {
     }, 1200);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const url = URL.createObjectURL(file);
-      setImagePreview(url);
+      if (!file.type.startsWith('image/')) {
+        showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+        return;
+      }
+      try {
+        const base64 = await compressImage(file);
+        setImagePreview(base64);
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ', 'error');
+      }
     }
+    e.target.value = '';
   };
 
   return (

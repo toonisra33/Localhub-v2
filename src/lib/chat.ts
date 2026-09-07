@@ -24,7 +24,7 @@ export const getOrCreateChatRoom = async (userId1: string, userId2: string, user
   return roomId;
 };
 
-export const sendMessage = async (roomId: string, senderId: string, text: string) => {
+export const sendMessage = async (roomId: string, senderId: string, text: string, imageUrl?: string) => {
   const messagesRef = collection(db, 'chats', roomId, 'messages');
   const timestamp = Date.now();
   
@@ -32,13 +32,14 @@ export const sendMessage = async (roomId: string, senderId: string, text: string
     roomId,
     senderId,
     text,
+    imageUrl: imageUrl || null,
     createdAt: timestamp,
     readBy: [senderId]
   });
 
   const roomRef = doc(db, 'chats', roomId);
   await updateDoc(roomRef, {
-    lastMessage: text,
+    lastMessage: text || (imageUrl ? "[ส่งรูปภาพ]" : ""), // fallback text if empty
     lastMessageTime: timestamp,
     lastMessageSenderId: senderId,
     updatedAt: timestamp
@@ -50,7 +51,7 @@ export const subscribeToChats = (userId: string, callback: (chats: ChatRoom[]) =
   return onSnapshot(q, (snapshot) => {
     const chats = snapshot.docs.map(doc => doc.data() as ChatRoom);
     callback(chats);
-  });
+  }, (error) => { console.warn("Firestore listener error in chat.ts:", error); });
 };
 
 export const subscribeToMessages = (roomId: string, callback: (messages: Message[]) => void) => {
@@ -58,7 +59,7 @@ export const subscribeToMessages = (roomId: string, callback: (messages: Message
   return onSnapshot(q, (snapshot) => {
     const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
     callback(messages);
-  });
+  }, (error) => { console.warn("Firestore listener error in chat.ts:", error); });
 };
 
 export const addFriend = async (userId1: string, userId2: string) => {
@@ -80,7 +81,7 @@ export const subscribeToFriends = (userId: string, callback: (friends: string[])
       return data.users.find(u => u !== userId) as string;
     });
     callback(friends);
-  });
+  }, (error) => { console.warn("Firestore listener error in chat.ts:", error); });
 };
 
 export const getUserDetails = async (userId: string): Promise<UserProfileData | null> => {
@@ -140,7 +141,7 @@ export const subscribeToPendingRequests = (userId: string, callback: (requesterI
       .filter(f => f.requesterId !== userId) // Only requests sent to me
       .map(f => f.requesterId!);
     callback(requesters);
-  });
+  }, (error) => { console.warn("Firestore listener error in chat.ts:", error); });
 };
 
 export const subscribeToFriendshipStatus = (userId1: string, userId2: string, callback: (status: { status: 'none' | 'pending' | 'accepted', requesterId?: string }) => void) => {
@@ -153,5 +154,39 @@ export const subscribeToFriendshipStatus = (userId1: string, userId2: string, ca
     } else {
       callback({ status: 'none' });
     }
-  });
+  }, (error) => { console.warn("Firestore listener error in chat.ts:", error); });
+};
+
+export const subscribeToGroups = (callback: (groups: ChatRoom[]) => void) => {
+  const q = query(collection(db, 'chats'), where('isGroup', '==', true), orderBy('updatedAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const groups = snapshot.docs.map(doc => doc.data() as ChatRoom);
+    callback(groups);
+  }, (error) => { console.warn("Firestore listener error in chat.ts:", error); });
+};
+
+export const initializeGroups = async () => {
+  const defaultGroups = [
+    { id: 'group_general', name: 'พูดคุยเรื่องทั่วไป', icon: 'https://ui-avatars.com/api/?name=พ&background=10b981&color=fff' },
+    { id: 'group_market', name: 'ซื้อขาย-แลกเปลี่ยน', icon: 'https://ui-avatars.com/api/?name=ซ&background=f59e0b&color=fff' },
+    { id: 'group_pets', name: 'คนรักสัตว์', icon: 'https://ui-avatars.com/api/?name=ส&background=ec4899&color=fff' }
+  ];
+  
+  for (const group of defaultGroups) {
+    const roomRef = doc(db, 'chats', group.id);
+    const snap = await getDoc(roomRef);
+    if (!snap.exists()) {
+      await setDoc(roomRef, {
+        id: group.id,
+        isGroup: true,
+        groupName: group.name,
+        groupAvatar: group.icon,
+        participants: [],
+        participantDetails: {},
+        lastMessage: 'ยินดีต้อนรับสู่กลุ่ม!',
+        lastMessageTime: Date.now(),
+        updatedAt: Date.now()
+      });
+    }
+  }
 };

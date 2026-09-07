@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { 
+import { Calendar, 
   Settings, 
   FileText, 
   Store, 
@@ -357,6 +357,12 @@ export function UserProfile() {
             )}
             
             <div className="grid grid-cols-2 gap-2 mt-1">
+              {userProfile.email && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs col-span-2">
+                  <span className="text-slate-400 font-bold shrink-0">@</span>
+                  <span className="truncate">{userProfile.email}</span>
+                </div>
+              )}
               {userProfile.phone && (
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
                   <Phone size={12} className="text-slate-400 shrink-0" />
@@ -367,6 +373,12 @@ export function UserProfile() {
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
                   <Briefcase size={12} className="text-slate-400 shrink-0" />
                   <span className="truncate">{userProfile.occupation}</span>
+                </div>
+              )}
+              {userProfile.birthDate && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
+                  <Calendar size={12} className="text-slate-400 shrink-0" />
+                  <span className="truncate">เกิด: {new Date(userProfile.birthDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                 </div>
               )}
               {userProfile.relationshipStatus && (

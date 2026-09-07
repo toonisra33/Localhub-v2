@@ -32,10 +32,36 @@ export function AdminBroadcastBanner() {
     role, 
     setOpenAdminModal 
   } = useBroadcast();
-  const { openMediaViewer, isLoggedIn, userProfile } = useCommunity();
+  const { openMediaViewer, isLoggedIn, userProfile, jumpToMapLocation } = useCommunity();
   
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(() => {
+    if (!activeBroadcast) return false;
+    const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
+    return localStorage.getItem(key) !== 'true';
+  });
+
   const isLeaving = deviceRemainingSeconds <= 1;
+
+  // Sync fullscreen state if broadcast changes
+  React.useEffect(() => {
+    if (activeBroadcast) {
+      const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
+      const isMinimized = localStorage.getItem(key) === 'true';
+      setIsFullScreen(!isMinimized);
+      if (!isMinimized) {
+        setIsExpanded(true); // Auto expand when in full screen
+      }
+    }
+  }, [activeBroadcast]);
+
+  const handleMinimize = () => {
+    if (!activeBroadcast) return;
+    setIsFullScreen(false);
+    setIsExpanded(false);
+    const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
+    localStorage.setItem(key, 'true');
+  };
   const isRealAdmin = isLoggedIn && role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
 
   // If no broadcast or expired on this device, do not render
@@ -126,16 +152,16 @@ export function AdminBroadcastBanner() {
   const timeString = broadcastDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none transition-all duration-700 ease-in-out">
-      <div className="max-w-md mx-auto pointer-events-auto">
+    <div className={`fixed z-[100] transition-all duration-700 ease-in-out ${isFullScreen ? 'inset-0 bg-slate-950/80 backdrop-blur-sm pointer-events-auto flex items-center justify-center p-4' : 'top-0 left-0 right-0 pointer-events-none'}`}>
+      <div className={`pointer-events-auto transition-all duration-700 w-full ${isFullScreen ? 'max-w-lg' : 'max-w-md mx-auto'}`}>
         <div 
           className={`transition-all duration-700 ease-in-out transform ${
             isLeaving 
-              ? 'opacity-0 -translate-y-full max-h-0 pointer-events-none' 
-              : 'opacity-100 translate-y-0 max-h-[850px] animate-in slide-in-from-top-full duration-500 shadow-[0_16px_40px_rgba(0,0,0,0.35)]'
+              ? (isFullScreen ? 'opacity-0 scale-95' : 'opacity-0 -translate-y-full max-h-0')
+              : 'opacity-100 translate-y-0 scale-100 animate-in fade-in duration-500 shadow-[0_16px_40px_rgba(0,0,0,0.35)]'
           }`}
         >
-          <div className={`${theme.wrapper} px-4 py-2.5 sm:px-5 transition-all relative overflow-hidden rounded-b-[28px] backdrop-blur-xl`}>
+          <div className={`${theme.wrapper} ${isFullScreen ? 'px-5 py-5 sm:px-6 rounded-[32px]' : 'px-4 py-2.5 sm:px-5 rounded-b-[28px]'} transition-all relative overflow-hidden backdrop-blur-xl`}>
             
             {/* Subtle background ambient pulse for urgent or special marketing broadcasts */}
             {(activeBroadcast.severity === 'urgent' || activeBroadcast.category === 'marketing') && (
@@ -230,18 +256,29 @@ export function AdminBroadcastBanner() {
                   </button>
                 )}
 
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-semibold transition-colors flex items-center"
-                  aria-label="ขยายดูรายละเอียด"
-                >
-                  {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                </button>
+                {isFullScreen ? (
+                  <button
+                    onClick={handleMinimize}
+                    className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+                    aria-label="ย่อประกาศ"
+                  >
+                    <span>รับทราบ ย่อลง</span>
+                    <ChevronUp size={16} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="p-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-semibold transition-colors flex items-center"
+                    aria-label="ขยายดูรายละเอียด"
+                  >
+                    {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Expanded Media & Details Section */}
-            {isExpanded && (
+            {(isExpanded || isFullScreen) && (
               <div className={`mt-3 pt-3 border-t ${theme.borderAccent} text-[12px] space-y-3 animate-in fade-in duration-200`}>
                 
                 {/* Attached Media Player / Viewer */}
@@ -352,6 +389,26 @@ export function AdminBroadcastBanner() {
                       <Phone size={14} />
                       โทร: {activeBroadcast.contactNumber}
                     </a>
+                  )}
+
+                  {/* View on Map Button */}
+                  {activeBroadcast.checkIn && (
+                    <button
+                      onClick={() => {
+                        jumpToMapLocation(
+                          activeBroadcast.checkIn!.latitude, 
+                          activeBroadcast.checkIn!.longitude, 
+                          17, 
+                          activeBroadcast.checkIn!.placeName
+                        );
+                        // Optional: minimize broadcast when navigating to map
+                        // handleMinimize();
+                      }}
+                      className="inline-flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white font-bold px-3 py-2 rounded-xl shadow-sm transition-colors text-[12px]"
+                    >
+                      <MapPin size={14} />
+                      ดูตำแหน่งบนแผนที่
+                    </button>
                   )}
                   
                   <div className="text-[11px] text-white/75 italic ml-auto flex items-center gap-1">
