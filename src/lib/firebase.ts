@@ -289,15 +289,38 @@ export async function syncUserProfileToFirestore(userId: string, profileData: Pa
 /**
  * Save / Create Post in Firestore
  */
+const cleanData = (obj: any): any => {
+  if (obj === null || obj === undefined) return null;
+  if (Array.isArray(obj)) return obj.map(cleanData);
+  if (typeof obj !== 'object') return obj;
+  if (obj instanceof Date) return obj;
+  // Let Firestore Timestamp, FieldValue, etc. pass through
+  if (obj?.constructor?.name === 'FieldValue' || obj?.constructor?.name === 'Timestamp' || obj?._methodName) return obj;
+  
+  const cleaned: any = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      cleaned[key] = cleanData(obj[key]);
+    }
+  }
+  return cleaned;
+};
+
 export async function savePostToFirestore(post: Post): Promise<void> {
   const path = `posts/${post.id}`;
   try {
     const postRef = doc(db, 'posts', post.id);
-    await setDoc(postRef, {
+    const dataToSave = cleanData({
       id: post.id,
       authorUid: post.authorUid || auth.currentUser?.uid || 'anonymous',
-      authorName: post.author?.name || 'ไม่ระบุตัวตน',
-      authorAvatar: post.author?.avatar || '',
+      author: {
+        name: post.author?.name || 'ไม่ระบุตัวตน',
+        avatar: post.author?.avatar || '',
+        isVerified: post.author?.isVerified || false,
+        reputationScore: post.author?.reputationScore || 0
+      },
+      authorName: post.author?.name || 'ไม่ระบุตัวตน', // For backward compatibility
+      authorAvatar: post.author?.avatar || '', // For backward compatibility
       content: post.content,
       category: post.category || 'ทั่วไป',
       images: post.images || (post.image ? [post.image] : []),
@@ -310,6 +333,8 @@ export async function savePostToFirestore(post: Post): Promise<void> {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    
+    await setDoc(postRef, dataToSave);
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
     throw error;
@@ -340,15 +365,23 @@ export async function addCommentToFirestore(postId: string, comment: PostComment
   const path = `posts/${postId}/comments/${comment.id}`;
   try {
     const commentRef = doc(db, 'posts', postId, 'comments', comment.id);
-    await setDoc(commentRef, {
+    const dataToSave = cleanData({
       id: comment.id,
       postId: postId,
       authorUid: comment.authorUid || auth.currentUser?.uid || 'user_comment',
-      authorName: comment.author?.name || 'ไม่ระบุตัวตน',
-      authorAvatar: comment.author?.avatar || '',
+      author: {
+        name: comment.author?.name || 'ไม่ระบุตัวตน',
+        avatar: comment.author?.avatar || '',
+        isVerified: comment.author?.isVerified || false,
+        reputationScore: comment.author?.reputationScore || 0
+      },
+      authorName: comment.author?.name || 'ไม่ระบุตัวตน', // backward compatibility
+      authorAvatar: comment.author?.avatar || '', // backward compatibility
       content: comment.content,
       createdAt: serverTimestamp()
     });
+    
+    await setDoc(commentRef, dataToSave);
 
     // Increment comment count on parent post
     const postRef = doc(db, 'posts', postId);
@@ -381,7 +414,7 @@ export async function createNotificationInFirestore(
   const path = 'notifications';
   try {
     const notifRef = doc(collection(db, 'notifications'));
-    await setDoc(notifRef, {
+    const dataToSave = cleanData({
       id: notifRef.id,
       recipientUid,
       senderUid,
@@ -392,6 +425,8 @@ export async function createNotificationInFirestore(
       link: link || null,
       createdAt: serverTimestamp()
     });
+    
+    await setDoc(notifRef, dataToSave);
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
   }
@@ -414,7 +449,8 @@ export async function saveEntityToFirestore(collectionName: string, id: string, 
   const path = `${collectionName}/${id}`;
   try {
     const docRef = doc(db, collectionName, id);
-    await setDoc(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+    const dataToSave = cleanData({ ...data, updatedAt: serverTimestamp() });
+    await setDoc(docRef, dataToSave, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }

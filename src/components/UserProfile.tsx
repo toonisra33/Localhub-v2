@@ -32,7 +32,9 @@ import { Calendar,
   Server,
   Video as VideoIcon,
   Phone,
-  HeartPulse
+  HeartPulse,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useBroadcast } from '../context/BroadcastContext';
 import { useCommunity } from '../context/CommunityContext';
@@ -358,33 +360,58 @@ export function UserProfile() {
             
             <div className="grid grid-cols-2 gap-2 mt-1">
               {userProfile.email && (
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs col-span-2">
-                  <span className="text-slate-400 font-bold shrink-0">@</span>
-                  <span className="truncate">{userProfile.email}</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs col-span-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-slate-400 font-bold shrink-0">@</span>
+                    <span className="truncate">{userProfile.email}</span>
+                  </div>
+                  <div className="shrink-0 flex items-center" title={userProfile.privacySettings?.showEmail ? "สาธารณะ" : "ส่วนตัว"}>
+                    {userProfile.privacySettings?.showEmail ? <Eye size={12} className="text-emerald-500" /> : <EyeOff size={12} className="text-slate-300" />}
+                  </div>
                 </div>
               )}
               {userProfile.phone && (
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
-                  <Phone size={12} className="text-slate-400 shrink-0" />
-                  <span className="truncate">{userProfile.phone}</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Phone size={12} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{userProfile.phone}</span>
+                  </div>
+                  <div className="shrink-0 flex items-center" title={userProfile.privacySettings?.showPhone ? "สาธารณะ" : "ส่วนตัว"}>
+                    {userProfile.privacySettings?.showPhone ? <Eye size={12} className="text-emerald-500" /> : <EyeOff size={12} className="text-slate-300" />}
+                  </div>
                 </div>
               )}
               {userProfile.occupation && (
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
-                  <Briefcase size={12} className="text-slate-400 shrink-0" />
-                  <span className="truncate">{userProfile.occupation}</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Briefcase size={12} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{userProfile.occupation}</span>
+                  </div>
+                  <div className="shrink-0 flex items-center" title={userProfile.privacySettings?.showOccupation ? "สาธารณะ" : "ส่วนตัว"}>
+                    {userProfile.privacySettings?.showOccupation ? <Eye size={12} className="text-emerald-500" /> : <EyeOff size={12} className="text-slate-300" />}
+                  </div>
                 </div>
               )}
               {userProfile.birthDate && (
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
-                  <Calendar size={12} className="text-slate-400 shrink-0" />
-                  <span className="truncate">เกิด: {new Date(userProfile.birthDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 shadow-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Calendar size={12} className="text-slate-400 shrink-0" />
+                    <span className="truncate">เกิด: {new Date(userProfile.birthDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                  </div>
+                  <div className="shrink-0 flex items-center" title={userProfile.privacySettings?.showBirthDate ? "สาธารณะ" : "ส่วนตัว"}>
+                    {userProfile.privacySettings?.showBirthDate ? <Eye size={12} className="text-emerald-500" /> : <EyeOff size={12} className="text-slate-300" />}
+                  </div>
                 </div>
               )}
               {userProfile.relationshipStatus && (
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-pink-50 p-2 rounded-xl border border-pink-100 shadow-xs col-span-2 sm:col-span-1">
-                  <Heart size={12} className="text-pink-400 shrink-0" />
-                  <span className="truncate text-pink-700 font-medium">สถานะ: {userProfile.relationshipStatus}</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-600 bg-pink-50 p-2 rounded-xl border border-pink-100 shadow-xs col-span-2 sm:col-span-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Heart size={12} className="text-pink-400 shrink-0" />
+                    <span className="truncate text-pink-700 font-medium">สถานะ: {userProfile.relationshipStatus}</span>
+                  </div>
+                  <div className="shrink-0 flex items-center" title={userProfile.privacySettings?.showRelationshipStatus ? "สาธารณะ" : "ส่วนตัว"}>
+                    {userProfile.privacySettings?.showRelationshipStatus ? <Eye size={12} className="text-pink-500" /> : <EyeOff size={12} className="text-pink-300" />}
+                  </div>
                 </div>
               )}
               {userProfile.emergencyContactName && (

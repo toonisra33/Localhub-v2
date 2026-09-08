@@ -134,6 +134,41 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
               </h3>
               <p className="text-sm text-slate-500 mt-2 max-w-[250px] mx-auto">{profile.bio || 'ไม่มีคำอธิบาย'}</p>
               
+              <div className="mt-4 grid grid-cols-1 gap-2 text-left bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                {(() => {
+                  const s = profile.privacySettings || { showEmail: false, showPhone: false, showBirthDate: false, showRelationshipStatus: true, showOccupation: true };
+                  const hasVisibleData = (s.showPhone && profile.phone) || 
+                                         (s.showEmail && profile.email) || 
+                                         (s.showOccupation && profile.occupation) || 
+                                         (s.showRelationshipStatus && profile.relationshipStatus) || 
+                                         (s.showBirthDate && profile.birthDate);
+                  
+                  if (!hasVisibleData) {
+                    return <div className="text-[12px] text-center text-slate-400 italic py-2">ไม่มีข้อมูลส่วนตัวที่เปิดเผย</div>;
+                  }
+                  
+                  return (
+                    <>
+                      {s.showPhone && profile.phone && (
+                        <div className="text-[12px] flex items-center gap-2"><span className="font-bold text-slate-700 w-16">เบอร์ติดต่อ:</span> <span className="text-slate-600">{profile.phone}</span></div>
+                      )}
+                      {s.showEmail && profile.email && (
+                        <div className="text-[12px] flex items-center gap-2"><span className="font-bold text-slate-700 w-16">อีเมล:</span> <span className="text-slate-600">{profile.email}</span></div>
+                      )}
+                      {s.showOccupation && profile.occupation && (
+                        <div className="text-[12px] flex items-center gap-2"><span className="font-bold text-slate-700 w-16">อาชีพ:</span> <span className="text-slate-600">{profile.occupation}</span></div>
+                      )}
+                      {s.showRelationshipStatus && profile.relationshipStatus && (
+                        <div className="text-[12px] flex items-center gap-2"><span className="font-bold text-slate-700 w-16">สถานะ:</span> <span className="text-slate-600">{profile.relationshipStatus}</span></div>
+                      )}
+                      {s.showBirthDate && profile.birthDate && (
+                        <div className="text-[12px] flex items-center gap-2"><span className="font-bold text-slate-700 w-16">วันเกิด:</span> <span className="text-slate-600">{new Date(profile.birthDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</span></div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+              
               {userProfile?.id !== userId && (
                 <div className="flex gap-3 mt-6 justify-center">
                   <button 

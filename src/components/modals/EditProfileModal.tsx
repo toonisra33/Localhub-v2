@@ -23,6 +23,13 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
   const [relationshipStatus, setRelationshipStatus] = useState(userProfile.relationshipStatus || '');
   const [emergencyContactName, setEmergencyContactName] = useState(userProfile.emergencyContactName || '');
   const [emergencyContactPhone, setEmergencyContactPhone] = useState(userProfile.emergencyContactPhone || '');
+  const [privacySettings, setPrivacySettings] = useState(userProfile.privacySettings || {
+    showEmail: false,
+    showPhone: false,
+    showBirthDate: false,
+    showRelationshipStatus: true,
+    showOccupation: true
+  });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,7 +79,8 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
       birthDate,
       relationshipStatus,
       emergencyContactName: emergencyContactName.trim(),
-      emergencyContactPhone: emergencyContactPhone.trim()
+      emergencyContactPhone: emergencyContactPhone.trim(),
+      privacySettings
     });
       // The toast is already handled inside updateUserProfile
       onClose();
@@ -174,6 +182,13 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
                   onChange={e => setPhone(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-[13.5px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 focus:bg-white transition-all"
                 />
+                <div className="flex justify-between items-center mt-2 px-1">
+                  <span className="text-[11px] font-medium text-slate-500">แสดงสาธารณะ</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={privacySettings.showPhone} onChange={(e) => setPrivacySettings({...privacySettings, showPhone: e.target.checked})} />
+                    <div className="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
               </div>
               <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1 flex items-center gap-1">
@@ -185,12 +200,18 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
                   onChange={e => setBirthDate(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-[13.5px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 focus:bg-white transition-all"
                 />
+                <div className="flex justify-between items-center mt-2 px-1">
+                  <span className="text-[11px] font-medium text-slate-500">แสดงสาธารณะ</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={privacySettings.showBirthDate} onChange={(e) => setPrivacySettings({...privacySettings, showBirthDate: e.target.checked})} />
+                    <div className="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                   <span className="text-slate-400">@</span> อีเมล
                 </label>
@@ -200,8 +221,16 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
                   onChange={e => setEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-[13.5px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 focus:bg-white transition-all"
                 />
+                <div className="flex justify-between items-center mt-2 px-1">
+                  <span className="text-[11px] font-medium text-slate-500">แสดงสาธารณะ</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={privacySettings.showEmail} onChange={(e) => setPrivacySettings({...privacySettings, showEmail: e.target.checked})} />
+                    <div className="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
               </div>
-              <label className="block text-[12px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                   <Briefcase size={12} className="text-slate-400" /> อาชีพ / บทบาทในชุมชน
                 </label>
                 <select
@@ -217,6 +246,13 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
                   <option value="เจ้าของที่พัก / โรงแรม">เจ้าของที่พัก / โรงแรม</option>
                   <option value="ผู้นำชุมชน / กรรมการชุมชน">ผู้นำชุมชน / กรรมการชุมชน</option>
                 </select>
+                <div className="flex justify-between items-center mt-2 px-1">
+                  <span className="text-[11px] font-medium text-slate-500">แสดงสาธารณะ</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={privacySettings.showOccupation} onChange={(e) => setPrivacySettings({...privacySettings, showOccupation: e.target.checked})} />
+                    <div className="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
               </div>
               
               <div>
@@ -235,6 +271,13 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
                   <option value="หมั้นแล้ว">หมั้นแล้ว</option>
                   <option value="ซับซ้อน">ซับซ้อน</option>
                 </select>
+                <div className="flex justify-between items-center mt-2 px-1">
+                  <span className="text-[11px] font-medium text-slate-500">แสดงสาธารณะ</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={privacySettings.showRelationshipStatus} onChange={(e) => setPrivacySettings({...privacySettings, showRelationshipStatus: e.target.checked})} />
+                    <div className="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
               </div>
             </div>
 

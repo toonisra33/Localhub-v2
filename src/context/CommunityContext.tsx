@@ -890,14 +890,34 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
     const unsubPosts = onSnapshot(
       query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(100)),
       (snapshot) => {
-        const fetchedPosts = [];
+        const fetchedPosts: Post[] = [];
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
-          let avatarUrl = data.author?.avatar || data.authorAvatar || 'https://ui-avatars.com/api/?name=U&background=random';
+          let avatarUrl = data.author?.avatar || data.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.authorName || data.author?.name || 'U')}&background=random`;
           if (avatarUrl.includes('images.unsplash.com')) {
-            avatarUrl = 'https://ui-avatars.com/api/?name=U&background=random';
+            avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.authorName || data.author?.name || 'U')}&background=random`;
           }
-          fetchedPosts.push(data);
+          fetchedPosts.push({
+            id: docSnap.id,
+            authorUid: data.authorUid || data.author?.id,
+            author: data.author || {
+              name: data.authorName || 'ไม่ระบุตัวตน',
+              avatar: avatarUrl,
+              isVerified: data.authorIsVerified || false,
+              reputationScore: data.authorReputationScore || 0
+            },
+            time: data.createdAt?.toMillis ? new Date(data.createdAt.toMillis()).toLocaleString('th-TH') : (data.time || 'เมื่อสักครู่'),
+            createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now()),
+            content: data.content || '',
+            category: data.category || 'ทั่วไป',
+            images: data.images || (data.image ? [data.image] : []),
+            videoUrl: data.videoUrl || undefined,
+            location: data.location || { district: '', province: '', subdistrict: '' },
+            checkIn: data.checkIn || undefined,
+            likes: data.likes || 0,
+            comments: data.comments || 0,
+            likedBy: data.likedBy || [],
+          } as Post);
         });
         setPosts(fetchedPosts);
       },

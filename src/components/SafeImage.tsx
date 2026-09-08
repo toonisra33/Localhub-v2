@@ -102,6 +102,7 @@ export function SafeImage({
   const [currentSrc, setCurrentSrc] = useState<string>(src || getCategoryFallback(category));
   const [isError, setIsError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const imgRef = React.useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     if (src && src.trim()) {
@@ -113,7 +114,25 @@ export function SafeImage({
     }
   }, [src, category]);
 
+  useEffect(() => {
+    const checkImage = () => {
+      if (imgRef.current?.complete) {
+        if (imgRef.current.naturalWidth > 0) {
+          setIsLoaded(true);
+        }
+      }
+    };
+    
+    // Check immediately
+    checkImage();
+    
+    // Check again after a tiny delay in case the browser hasn't updated naturalWidth yet
+    const timeout = setTimeout(checkImage, 50);
+    return () => clearTimeout(timeout);
+  }, [currentSrc]);
+
   const handleError = () => {
+    setIsLoaded(false); // Reset loaded state while fallback is loading
     if (!isError) {
       // First attempt fallback to verified category CDN image
       setIsError(true);
@@ -142,6 +161,7 @@ export function SafeImage({
       )}
       <img
         {...props}
+        ref={imgRef}
         src={currentSrc}
         alt={alt}
         referrerPolicy="no-referrer"

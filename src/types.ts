@@ -201,6 +201,14 @@ export interface AppNotification {
   createdAt?: any;
 }
 
+export interface UserPrivacySettings {
+  showEmail?: boolean;
+  showPhone?: boolean;
+  showBirthDate?: boolean;
+  showRelationshipStatus?: boolean;
+  showOccupation?: boolean;
+}
+
 export interface UserProfileData {
   id?: string;
   uid?: string;
@@ -216,6 +224,7 @@ export interface UserProfileData {
   emergencyContactPhone?: string; // เบอร์ผู้ติดต่อฉุกเฉิน
   birthDate?: string; // วันเกิด
   relationshipStatus?: string; // สถานะความสัมพันธ์
+  privacySettings?: UserPrivacySettings; // การตั้งค่าความเป็นส่วนตัว
   isVerified: boolean;
   verificationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   joinedDate: string;
