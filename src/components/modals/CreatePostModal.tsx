@@ -173,7 +173,7 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
           <div className="flex items-center justify-between p-5 pb-3.5 border-b border-slate-150 bg-white z-10 shrink-0">
             <div className="flex items-center gap-2.5">
               <img
-                src={userProfile.avatar}
+                src={userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'U')}&background=random`}
                 alt={userProfile?.name}
                 className="w-10 h-10 rounded-2xl object-cover ring-2 ring-emerald-500/20"
               />

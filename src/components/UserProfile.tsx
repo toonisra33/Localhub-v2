@@ -887,7 +887,7 @@ export function UserProfile() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {nearbyUsers.map(user => (
                       <div key={user.id} className="p-3.5 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-slate-100 hover:border-slate-200 transition-colors flex items-start gap-3">
-                        <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-2xl object-cover shadow-sm shrink-0" />
+                        <img src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'U')}&background=random`} alt={user.name} className="w-12 h-12 rounded-2xl object-cover shadow-sm shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                             <h4 className="text-[13px] font-extrabold text-slate-900 truncate">{user.name}</h4>

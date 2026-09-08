@@ -97,7 +97,7 @@ export function LeaderboardModal({ onClose }: LeaderboardModalProps) {
                 {user.rank}
               </div>
 
-              <img src={user.avatar} alt={user.name} className="w-11 h-11 rounded-2xl object-cover shadow-sm shrink-0" />
+              <img src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'U')}&background=random`} alt={user.name} className="w-11 h-11 rounded-2xl object-cover shadow-sm shrink-0" />
               
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1 flex-wrap">

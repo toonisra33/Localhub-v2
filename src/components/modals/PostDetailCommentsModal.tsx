@@ -82,7 +82,7 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
             <div className="flex items-center gap-3">
               <img
-                src={post.author?.avatar}
+                src={post.author?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || 'U')}&background=random`}
                 alt={post.author?.name}
                 className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
               />
@@ -189,7 +189,7 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
               comments.map(c => (
                 <div key={c.id} className="flex gap-2.5 px-1 mb-2">
                   <img
-                    src={c.author?.avatar}
+                    src={c.author?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.author?.name || 'U')}&background=random`}
                     alt={c.author?.name}
                     className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5"
                   />
@@ -216,7 +216,7 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
         {/* Input Bar */}
         <form onSubmit={handleSendComment} className="p-3 border-t border-slate-150 bg-white flex items-center gap-2 shrink-0">
           <img
-            src={userProfile.avatar}
+            src={userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'U')}&background=random`}
             alt="Me"
             className="w-8 h-8 rounded-xl object-cover ring-1 ring-emerald-500/30 shrink-0"
           />

@@ -122,7 +122,7 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 <img
-                  src={avatar}
+                  src={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'U')}&background=random`}
                   alt="Selected avatar"
                   className="w-16 h-16 rounded-2xl object-cover ring-4 ring-emerald-500/20 shadow-md"
                 />

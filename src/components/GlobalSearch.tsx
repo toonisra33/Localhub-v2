@@ -112,7 +112,7 @@ export function GlobalSearch() {
                   onClick={() => { openPublicProfile(u.id); setIsOpen(false); }}
                   className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors"
                 >
-                  <img src={u.avatar} className="w-8 h-8 rounded-full object-cover bg-slate-100" />
+                  <img src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'U')}&background=random`} className="w-8 h-8 rounded-full object-cover bg-slate-100" />
                   <div className="text-[14px] font-bold text-slate-700">{u.name}</div>
                 </div>
               ))}
@@ -131,7 +131,7 @@ export function GlobalSearch() {
                   className="p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <img src={p.author.avatar} className="w-5 h-5 rounded-full object-cover bg-slate-100" />
+                    <img src={p.author?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.author?.name || 'U')}&background=random`} className="w-5 h-5 rounded-full object-cover bg-slate-100" />
                     <span className="text-[12px] font-bold text-slate-600">{p.author.name}</span>
                     {p.category && (
                       <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md">{p.category}</span>

@@ -180,7 +180,23 @@ promptMessage?: string) => boolean;
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
 export function CommunityProvider({ children }: { children: ReactNode }) {
-  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    try {
+      const saved = sessionStorage.getItem('locallink_active_tab');
+      return (saved as Tab) || 'home';
+    } catch {
+      return 'home';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('locallink_active_tab', activeTab);
+    } catch (e) {
+      console.error('Failed to save active tab', e);
+    }
+  }, [activeTab]);
+
   const [targetMapLocation, setTargetMapLocation] = useState<{ lat: number; lng: number; zoom?: number; placeName?: string } | null>(null);
   const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(true);
   const [userSessions, setUserSessions] = useState<UserSessionLog[]>([]);
@@ -841,9 +857,11 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
     try {
       localStorage.setItem('locallink_is_logged_in', 'false');
       localStorage.removeItem('locallink_profile');
+      sessionStorage.removeItem('locallink_active_tab');
     } catch {}
     
     setIsLoggedIn(false);
+    setActiveTab('home');
     showToast('ออกจากระบบเรียบร้อยแล้ว เข้าสู่โหมดผู้เยี่ยมชม', 'info');
   };
 
