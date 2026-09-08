@@ -11,28 +11,43 @@ export function AiChat({ onClose }: AiChatProps) {
   ]);
   const [input, setInput] = useState('');
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
     
     const userMsg = input.trim();
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setInput('');
     
-    setTimeout(() => {
-      let response = 'ขออภัยค่ะ ฉันยังไม่มีข้อมูลเกี่ยวกับเรื่องนี้ในขณะนี้';
+    // Add loading message
+    setMessages(prev => [...prev, { role: 'assistant', content: 'กำลังพิมพ์...' }]);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg }),
+      });
       
-      if (userMsg.includes('ตลาด')) {
-        response = 'วันนี้มีตลาดนัดที่ลานหน้าวัดพระศรีมหาธาตุค่ะ เริ่มตั้งร้านเวลา 15:00 น. และมีตลาดสดบางเขนที่เปิดตลอดวันค่ะ';
-      } else if (userMsg.includes('น้ำท่วม')) {
-        response = 'จากรายงานล่าสุด มีน้ำรอระบายที่ซอยพหลโยธิน 35 ระดับน้ำสูงประมาณ 10 ซม. รถเล็กยังพอผ่านได้ค่ะ ส่วนจุดอื่นๆ ในรัศมี 5 กม. สถานการณ์ปกติ';
-      } else if (userMsg.includes('ร้านอาหาร') || userMsg.includes('กินอะไรดี')) {
-        response = 'มีร้านอาหารเปิดใหม่ใกล้คุณ 2 ร้านค่ะ: \n1. ร้านผัดไทยกุ้งสด ห่างไป 800 เมตร\n2. คาเฟ่แมว เหมียวๆ ห่างไป 1.2 กม.\nต้องการให้ฉันบอกเส้นทางไหมคะ?';
-      } else if (userMsg.includes('กิจกรรม') || userMsg.includes('เด็ก')) {
-        response = 'วันเสาร์นี้มีกิจกรรม "ศิลปะสำหรับเด็ก" ที่ศูนย์เยาวชนจตุจักร เวลา 10:00 - 12:00 น. เข้าร่วมฟรีค่ะ';
-      }
+      const data = await res.json();
       
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-    }, 1000);
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        newMsgs[newMsgs.length - 1] = { 
+          role: 'assistant', 
+          content: data.reply || data.error || 'ขออภัยค่ะ ฉันยังไม่มีข้อมูลเกี่ยวกับเรื่องนี้ในขณะนี้'
+        };
+        return newMsgs;
+      });
+    } catch (error) {
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        newMsgs[newMsgs.length - 1] = { 
+          role: 'assistant', 
+          content: 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้งค่ะ' 
+        };
+        return newMsgs;
+      });
+    }
   };
 
   return (

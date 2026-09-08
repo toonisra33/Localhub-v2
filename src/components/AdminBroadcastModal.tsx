@@ -291,11 +291,22 @@ export function AdminBroadcastModal() {
           setMediaError(`❌ วิดีโอมีความยาว ${Math.floor(duration / 60)} นาที ${duration % 60} วินาที ซึ่งเกินกำหนด (จำกัดไม่เกิน 10 นาที)`);
           return;
         }
+        if (file.size > 800 * 1024) {
+          setMediaError(`❌ เนื่องจากข้อจำกัดของระบบชั่วคราว ไฟล์วิดีโอต้องมีขนาดไม่เกิน 800 KB`);
+          return;
+        }
         
-        // Valid video
-        // For prototype, we cannot save large videos to Firestore directly.
-        setMediaError('ระบบจำกัดการอัปโหลดวิดีโอในโหมดทดสอบ กรุณาใช้ไฟล์รูปภาพแทน');
-        return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setMediaType('video');
+          setMediaUrl(event.target?.result as string);
+          setMediaFileName(file.name);
+          setVideoDuration(duration);
+        };
+        reader.onerror = () => {
+          setMediaError('เกิดข้อผิดพลาดในการอ่านไฟล์วิดีโอ');
+        };
+        reader.readAsDataURL(file);
       };
 
       videoElement.onerror = () => {

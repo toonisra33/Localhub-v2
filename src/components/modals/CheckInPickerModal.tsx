@@ -311,7 +311,7 @@ export function CheckInPickerModal({
 
   // Submit confirmed check-in
   const handleConfirm = () => {
-    if (!placeName.trim()) {
+    if (!placeName || !placeName.trim()) {
       alert('กรุณากรอกหรือเลือกชื่อสถานที่');
       return;
     }
@@ -321,10 +321,10 @@ export function CheckInPickerModal({
       latitude: lat,
       longitude: lng,
       category,
-      subdistrict: subdistrict.trim() || undefined,
-      district: district.trim() || undefined,
-      province: province.trim() || undefined,
-      address: address.trim() || undefined,
+      subdistrict: subdistrict ? String(subdistrict).trim() : undefined,
+      district: district ? String(district).trim() : undefined,
+      province: province ? String(province).trim() : undefined,
+      address: address ? String(address).trim() : undefined,
       isGps: true
     };
 

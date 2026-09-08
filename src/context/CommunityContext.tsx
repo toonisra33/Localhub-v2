@@ -389,15 +389,39 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const addPost = async (postData: Omit<Post, 'id' | 'createdAt' | 'likes' | 'comments' | 'authorAvatar'>) => {
+  const addPost = async (content: string, category: string, images?: string[], customLocation?: Location, checkIn?: CheckInLocation, videoUrl?: string) => {
+    const id = `post_${Date.now()}`;
     const newPost: Post = {
-      ...postData,
-      id: `post_${Date.now()}`,
+      id,
+      author: {
+        name: userProfile.name,
+        avatar: userProfile.avatar,
+        role: userProfile.role,
+        badge: userProfile.badge
+      },
+      time: 'เมื่อสักครู่',
       createdAt: Date.now(),
+      content,
+      category,
+      images,
+      videoUrl,
+      location: customLocation || location,
+      checkIn,
       likes: 0,
       comments: 0
     };
+    
+    // Optimistic UI update
     setPosts(prev => [newPost, ...prev]);
+    
+    // Save to Firestore
+    try {
+      await saveEntityToFirestore('posts', id, newPost);
+      showToast('สร้างโพสต์เรียบร้อยแล้ว', 'success');
+    } catch (error) {
+      console.error('Error saving post:', error);
+      showToast('เกิดข้อผิดพลาดในการบันทึกโพสต์', 'error');
+    }
   };
 
   const toggleLikePost = async (postId: string) => {

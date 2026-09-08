@@ -118,8 +118,32 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Prevent base64 video upload due to 1MB Firestore limit in prototype
-    showToast('ระบบจำกัดการอัปโหลดวิดีโอในโหมดทดสอบ กรุณาใช้ไฟล์รูปภาพแทน', 'error');
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      showToast('กรุณาอัปโหลดไฟล์วิดีโอเท่านั้น', 'error');
+      return;
+    }
+
+    if (file.size > 800 * 1024) {
+      showToast(`เนื่องจากข้อจำกัดของระบบชั่วคราว ไฟล์วิดีโอต้องมีขนาดไม่เกิน 800 KB`, 'error');
+      return;
+    }
+
+    setIsAttaching(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setVideoUrl(event.target?.result as string);
+      showToast('🎥 แนบวิดีโอเรียบร้อยแล้ว', 'success');
+      setIsAttaching(false);
+    };
+    reader.onerror = () => {
+      showToast('เกิดข้อผิดพลาดในการอ่านไฟล์วิดีโอ', 'error');
+      setIsAttaching(false);
+    };
+    reader.readAsDataURL(file);
+
     if (videoInputRef.current) {
       videoInputRef.current.value = '';
     }
