@@ -6,7 +6,6 @@ import {
   Image as ImageIcon, 
   Video as VideoIcon,
   Send, 
-  Sparkles, 
   MapPin, 
   Tag, 
   Compass, 
@@ -36,35 +35,7 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
   const [images, setImages] = useState<string[]>([]);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isAttaching, setIsAttaching] = useState(false);
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleAiAssist = async () => {
-    if (!content.trim()) {
-      showToast('กรุณาพิมพ์หัวข้อหรือคำสั้นๆ ก่อนให้ AI ช่วยเขียน', 'info');
-      return;
-    }
-    setIsGeneratingAi(true);
-    try {
-      const response = await fetch('/api/generate-caption', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keywords: content, type: 'post' })
-      });
-      const data = await response.json();
-      if (data.caption) {
-        setContent(data.caption);
-        showToast('✨ AI ช่วยเขียนข้อความให้แล้ว!', 'success');
-      } else if (data.error) {
-        showToast(data.error, 'error');
-      }
-    } catch (error) {
-      showToast('ไม่สามารถเชื่อมต่อ AI ได้', 'error');
-    } finally {
-      setIsGeneratingAi(false);
-    }
-  };
-
   const videoInputRef = React.useRef<HTMLInputElement>(null);
 
   // Check-in state

@@ -8,11 +8,10 @@ import { ChatRoomModal } from './ChatRoomModal';
 import { PublicProfileModal } from '../modals/PublicProfileModal';
 
 interface ChatViewProps {
-  onOpenAiChat?: () => void;
   onClose?: () => void;
 }
 
-export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
+export function ChatView({ onClose }: ChatViewProps) {
   const { isLoggedIn, userProfile } = useCommunity();
   const [activeTab, setActiveTab] = useState<'chats' | 'friends' | 'groups'>('chats');
   const [groups, setGroups] = useState<ChatRoom[]>([]);
@@ -133,29 +132,6 @@ export function ChatView({ onOpenAiChat, onClose }: ChatViewProps) {
       <div className={`p-4 ${onClose ? 'overflow-y-auto flex-1' : ''}`}>
         {activeTab === 'chats' && (
           <div className="space-y-3">
-            {/* AI Assistant Chat Row */}
-            {onOpenAiChat && (
-              <div 
-                onClick={onOpenAiChat}
-                className="bg-gradient-to-r from-slate-900 to-indigo-950 p-3.5 rounded-2xl shadow-md flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer border border-slate-700/50"
-              >
-                <div className="w-12 h-12 rounded-full shrink-0 bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg border-2 border-slate-800 relative">
-                  <Bot size={24} className="text-white" />
-                  <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5">
-                    <Sparkles size={10} className="text-emerald-500" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-0.5">
-                    <h3 className="font-extrabold text-white text-sm truncate flex items-center gap-1.5">
-                      AI ประจำชุมชน
-                    </h3>
-                  </div>
-                  <p className="text-slate-300 text-xs truncate">พร้อมช่วยเหลือและให้ข้อมูลเสมอ</p>
-                </div>
-              </div>
-            )}
-
             {chats.length === 0 ? (
               <div className="text-center py-10">
                 <div className="bg-emerald-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">

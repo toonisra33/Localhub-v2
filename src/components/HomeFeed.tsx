@@ -305,7 +305,7 @@ export function HomeFeed() {
         </div>
       )}
 
-      {/* Morning Brief - Frosted Modern Card */}
+      {/* Ai Morning Brief */}
       <AiMorningBrief />
 
       {/* Quick Menus (หมวดหมู่ด่วน) */}

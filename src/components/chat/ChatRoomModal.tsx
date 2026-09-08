@@ -144,20 +144,13 @@ export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUse
             <h2 className="text-[15px] font-extrabold text-slate-900">{otherUserName}</h2>
           </div>
         </div>
-        <button 
-          onClick={handleAskAi}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold hover:bg-emerald-100 transition-colors border border-emerald-100"
-        >
-          <Bot size={14} />
-          ดึง AI เข้าร่วม
-        </button>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center py-10 text-slate-400 text-sm">
-            เริ่มสนทนากับ {otherUserName} หรือดึง AI เข้ามาช่วยให้ข้อมูล
+            เริ่มสนทนากับ {otherUserName}
           </div>
         ) : (
           messages.map(msg => {

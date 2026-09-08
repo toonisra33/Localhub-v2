@@ -10,7 +10,6 @@ import { UserProfile } from './components/UserProfile';
 import { ChatView } from './components/chat/ChatView';
 import { ChatRoomModal } from './components/chat/ChatRoomModal';
 import { AdminDashboard } from './components/AdminDashboard';
-import { AiChat } from './components/AiChat';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
 import { AdminBroadcastModal } from './components/AdminBroadcastModal';
 import { BroadcastProvider, useBroadcast } from './context/BroadcastContext';
@@ -22,7 +21,7 @@ import { PublicProfileModal } from './components/modals/PublicProfileModal';
 import { LocationPermissionModal } from './components/modals/LocationPermissionModal';
 import { MediaViewerModal } from './components/modals/MediaViewerModal';
 import { ContactAdminModal } from './components/modals/ContactAdminModal';
-import { Bot, Sparkles, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { isAuthorizedAdminEmail } from './lib/firebase';
 
 function AppContent() {
@@ -43,7 +42,6 @@ function AppContent() {
 
   const { isBroadcastVisible, activeBroadcast, role, setRole } = useBroadcast();
 
-  const [isAiOpen, setIsAiOpen] = useState(false);
   const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
 
   const [directChatUser, setDirectChatUser] = useState<{id: string, name: string, avatar: string} | null>(null);
@@ -91,16 +89,13 @@ function AppContent() {
         <button 
           onClick={() => setIsChatMenuOpen(true)}
           className="fixed bottom-24 right-5 w-14 h-14 bg-gradient-to-tr from-slate-900 via-slate-800 to-indigo-950 rounded-2xl flex items-center justify-center shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all text-white z-40 group border border-slate-700/60 modern-glow-emerald"
-          aria-label="ข้อความและ AI"
+          aria-label="ข้อความ"
         >
           <MessageCircle size={24} className="group-hover:-rotate-6 transition-transform text-slate-100" />
-          <div className="absolute -top-1.5 -right-1.5 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full p-1 shadow-md border-2 border-slate-900 animate-pulse">
-            <Sparkles size={11} className="text-white" />
-          </div>
           {/* Tooltip hint */}
           <span className="absolute right-full mr-3.5 bg-slate-900/95 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap shadow-lg border border-slate-800 hidden sm:flex items-center gap-1.5 pointer-events-none">
             <MessageCircle size={11} className="text-emerald-400" />
-            ข้อความ & AI
+            ข้อความ
           </span>
         </button>
       )}
@@ -108,18 +103,14 @@ function AppContent() {
       {/* Bottom Navigation */}
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Chat Overview Modal (Friends + AI) */}
+      {/* Chat Overview Modal (Friends) */}
       {isChatMenuOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 animate-in slide-in-from-bottom-4 duration-200">
           <ChatView 
             onClose={() => setIsChatMenuOpen(false)} 
-            onOpenAiChat={() => { setIsChatMenuOpen(false); setIsAiOpen(true); }} 
           />
         </div>
       )}
-
-      {/* AI Assistant Modal */}
-      {isAiOpen && <AiChat onClose={() => setIsAiOpen(false)} />}
       
       {/* Admin Broadcast Control Center Modal */}
       <AdminBroadcastModal />

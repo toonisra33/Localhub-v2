@@ -298,7 +298,7 @@ export function AdminBroadcastModal() {
         
         const reader = new FileReader();
         reader.onload = (event) => {
-          setMediaType('video');
+          setSelectedMediaType('video');
           setMediaUrl(event.target?.result as string);
           setMediaFileName(file.name);
           setVideoDuration(duration);

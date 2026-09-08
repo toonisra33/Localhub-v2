@@ -15,6 +15,7 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, 
+  initializeFirestore,
   doc, 
   getDoc, 
   getDocFromServer,
@@ -39,7 +40,9 @@ import { UserProfileData, Post, PostComment, UserSessionLog } from '../types';
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = getFirestore(app, (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") ? firebaseConfig.firestoreDatabaseId : undefined);
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") ? firebaseConfig.firestoreDatabaseId : undefined);
 
 //
 
@@ -309,6 +312,7 @@ export async function savePostToFirestore(post: Post): Promise<void> {
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
+    throw error;
   }
 }
 

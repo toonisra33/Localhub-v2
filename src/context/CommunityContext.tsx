@@ -396,17 +396,17 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       author: {
         name: userProfile.name,
         avatar: userProfile.avatar,
-        role: userProfile.role,
-        badge: userProfile.badge
+        isVerified: userProfile.isVerified,
+        reputationScore: userProfile.reputationScore
       },
       time: 'เมื่อสักครู่',
       createdAt: Date.now(),
       content,
       category,
-      images,
-      videoUrl,
-      location: customLocation || location,
-      checkIn,
+      images: images || [],
+      videoUrl: videoUrl || null,
+      location: customLocation || location || null,
+      checkIn: checkIn || null,
       likes: 0,
       comments: 0
     };
@@ -416,7 +416,10 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     
     // Save to Firestore
     try {
-      await saveEntityToFirestore('posts', id, newPost);
+      await savePostToFirestore({
+        ...newPost,
+        authorUid: auth.currentUser?.uid || userProfile.id || 'anonymous'
+      });
       showToast('สร้างโพสต์เรียบร้อยแล้ว', 'success');
     } catch (error) {
       console.error('Error saving post:', error);
