@@ -15,8 +15,8 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'LocalLink Community',
-          short_name: 'LocalLink',
+          name: 'LocalHub',
+          short_name: 'LocalHub',
           description: 'แอปพลิเคชันเชื่อมโยงคนในชุมชน แจ้งข่าวสาร และซื้อขายสินค้า',
           theme_color: '#111827',
           background_color: '#111827',
