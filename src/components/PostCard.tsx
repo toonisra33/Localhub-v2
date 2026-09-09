@@ -14,10 +14,11 @@ import {
   Store, 
   Coffee, 
   Trees, 
-  Building2, ShieldCheck 
+  Building2, ShieldCheck, Pin
 } from 'lucide-react';
 import { Post } from '../types';
 import { useCommunity } from '../context/CommunityContext';
+import { isAuthorizedAdminEmail } from '../lib/firebase';
 import { SafeImage } from './SafeImage';
 
 export interface PostCardProps {
@@ -36,9 +37,11 @@ export const PostCard: React.FC<PostCardProps> = ({
   onOpenComments, 
   onDelete 
 }) => {
-  const { showToast, openMediaViewer, jumpToMapLocation, location, openPublicProfile } = useCommunity();
+  const { showToast, openMediaViewer, jumpToMapLocation, location, openPublicProfile, userProfile, isLoggedIn, role, togglePinPost } = useCommunity();
   const [showMenu, setShowMenu] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  
+  const isRealAdmin = isLoggedIn && role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
 
   const handleShare = () => {
     navigator.clipboard?.writeText(window.location.href);
@@ -85,8 +88,14 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <div className={`bg-white rounded-[26px] p-5 border shadow-[0_4px_24px_-4px_rgba(0,0,0,0.03)] hover:shadow-md transition-all relative ${
-      post.category === 'แจ้งเหตุฉุกเฉิน' ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200/80'
+      post.category === 'แจ้งเหตุฉุกเฉิน' ? 'border-rose-300 bg-rose-50/30' : 
+      post.isPinned ? 'border-amber-300 bg-amber-50/30 shadow-[0_4px_24px_-4px_rgba(251,191,36,0.15)]' : 'border-slate-200/80'
     }`}>
+      {post.isPinned && (
+        <div className="absolute -top-3 -right-2 bg-gradient-to-br from-amber-400 to-amber-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow-md border border-amber-300/50 flex items-center gap-1 z-10 animate-fade-in">
+          <Pin size={12} className="fill-amber-100" /> ปักหมุดประกาศ
+        </div>
+      )}
       {/* Author Header */}
       <div className="flex justify-between items-start mb-3">
         <div 
@@ -119,7 +128,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               )}
               {post.author?.reputationScore !== undefined && post.author.reputationScore > 50 && (
                 <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-0.5" title="คะแนนความน่าเชื่อถือ">
-                  ⭐ {post.author.reputationScore}
+                  ⭐ {post.author.reputationScore >= 100 ? '100%' : post.author.reputationScore}
                 </span>
               )}
               {post.category && (
@@ -149,7 +158,16 @@ export const PostCard: React.FC<PostCardProps> = ({
           </button>
 
           {showMenu && (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 w-36 z-20 text-[12px] font-bold text-slate-700">
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 w-40 z-20 text-[12px] font-bold text-slate-700">
+              {isRealAdmin && (
+                <button
+                  onClick={() => { setShowMenu(false); togglePinPost(post.id, !post.isPinned); }}
+                  className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-amber-600"
+                >
+                  <Pin size={13} className={post.isPinned ? "fill-amber-600" : ""} />
+                  {post.isPinned ? 'ยกเลิกปักหมุด' : 'ปักหมุดประกาศ'}
+                </button>
+              )}
               <button
                 onClick={handleCopyText}
                 className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2"
@@ -164,6 +182,15 @@ export const PostCard: React.FC<PostCardProps> = ({
                 >
                   <Trash2 size={13} />
                   ลบโพสต์นี้
+                </button>
+              )}
+              {isRealAdmin && !isMyPost && onDelete && (
+                <button
+                  onClick={() => { setShowMenu(false); onDelete(); }}
+                  className="w-full px-3 py-2 text-left text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-slate-100"
+                >
+                  <Trash2 size={13} />
+                  ลบโพสต์ (Admin)
                 </button>
               )}
             </div>

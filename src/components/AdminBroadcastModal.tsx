@@ -355,8 +355,8 @@ export function AdminBroadcastModal() {
         setStatusFeedback(null);
         setOpenAdminModal(false);
       }, 1500);
-    } catch (error) {
-      showToast('เกิดข้อผิดพลาด ไม่สามารถส่งบรอดแคสต์ได้ (อาจไม่มีสิทธิ์หรือระบบขัดข้อง)', 'error');
+    } catch (error: any) {
+      showToast(`เกิดข้อผิดพลาด: ${error.message || 'ไม่สามารถส่งบรอดแคสต์ได้'}`, 'error');
     }
   };
 
@@ -810,7 +810,7 @@ export function AdminBroadcastModal() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
                   <ImageIcon size={15} className="text-purple-600" />
-                  <span>การแนบไฟล์มีเดีย (รูปภาพ / วิดีโอไม่เกิน 10 นาที)</span>
+                  <span>การแนบไฟล์มีเดีย (รูปภาพ / วิดีโอ)</span>
                 </div>
                 <span className="text-[11px] text-gray-400">เลือกประเภทสื่อ</span>
               </div>

@@ -2,6 +2,7 @@ import { compressImage } from '../../lib/imageUtils';
 import React, { useState, useRef } from 'react';
 import { X, User, Camera, Check, Upload, Briefcase, HeartPulse, Calendar, Home, Heart, Shield } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
+import { isAuthorizedAdminEmail } from '../../lib/firebase';
 
 interface EditProfileModalProps {
   onClose: () => void;
@@ -245,6 +246,9 @@ export function EditProfileModal({ onClose, onOpenVerification }: EditProfileMod
                   <option value="เจ้าของร้านค้า / ธุรกิจ">เจ้าของร้านค้า / ธุรกิจ</option>
                   <option value="เจ้าของที่พัก / โรงแรม">เจ้าของที่พัก / โรงแรม</option>
                   <option value="ผู้นำชุมชน / กรรมการชุมชน">ผู้นำชุมชน / กรรมการชุมชน</option>
+                  {(isAuthorizedAdminEmail(userProfile?.email) || occupation === 'admin/ผู้ดูแลระบบ') && (
+                    <option value="admin/ผู้ดูแลระบบ">admin/ผู้ดูแลระบบ</option>
+                  )}
                 </select>
                 <div className="flex justify-between items-center mt-2 px-1">
                   <span className="text-[11px] font-medium text-slate-500">แสดงสาธารณะ</span>

@@ -92,7 +92,8 @@ export function UserProfile() {
     openAuthModal,
     openContactAdminModal,
     logout,
-    showToast 
+    showToast,
+    openMediaViewer
   } = useCommunity();
 
   // Modals state
@@ -116,6 +117,10 @@ export function UserProfile() {
   // Filter user specific content
   const myPosts = posts.filter(p => p.author?.name === userProfile?.name);
   const myProducts = products.filter(p => p?.seller === userProfile?.name);
+  
+  // Extract photos and videos from my posts
+  const myPhotos = myPosts.flatMap(p => p.images || (p.image ? [p.image] : [])).filter(Boolean);
+  const myVideos = myPosts.filter(p => p.videoUrl).map(p => p.videoUrl as string);
   
   // Filter nearby users based on radius
   const nearbyUsers = MOCK_NEARBY_USERS.filter(u => u.distance <= friendSearchRadius);
@@ -312,7 +317,7 @@ export function UserProfile() {
               <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                 <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold border border-emerald-100">
                   <Award size={12} className="text-amber-500" /> 
-                  {isRealAdmin ? 'ผู้ดูแลระบบสูงสุด' : `คะแนนชุมชน: ${userProfile.reputationScore}`}
+                  {isRealAdmin ? 'ผู้ดูแลระบบสูงสุด (100%)' : `คะแนนชุมชน: ${userProfile.reputationScore >= 100 ? '100%' : userProfile.reputationScore}`}
                 </span>
 
                 {userProfile.isVerified && (
@@ -945,30 +950,71 @@ export function UserProfile() {
         {/* TAB 6: Photos */}
         {feedTab === 'photos' && (
           <div className="space-y-3.5">
-            <div className="bg-white p-8 rounded-[28px] text-center border border-slate-200/90 shadow-sm">
-              <div className="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 mx-auto flex items-center justify-center mb-3">
-                <ImageIcon size={26} />
+            {myPhotos.length === 0 ? (
+              <div className="bg-white p-8 rounded-[28px] text-center border border-slate-200/90 shadow-sm">
+                <div className="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 mx-auto flex items-center justify-center mb-3">
+                  <ImageIcon size={26} />
+                </div>
+                <h4 className="text-[15px] font-extrabold text-slate-800 mb-1">คลังรูปภาพของคุณ</h4>
+                <p className="text-[12px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+                  รูปภาพทั้งหมดที่คุณอัปโหลดหรือแชร์ในชุมชนจะถูกรวบรวมไว้ที่นี่
+                </p>
               </div>
-              <h4 className="text-[15px] font-extrabold text-slate-800 mb-1">คลังรูปภาพของคุณ</h4>
-              <p className="text-[12px] text-slate-500 max-w-xs mx-auto leading-relaxed">
-                รูปภาพทั้งหมดที่คุณอัปโหลดหรือแชร์ในชุมชนจะถูกรวบรวมไว้ที่นี่
-              </p>
-            </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1">
+                {myPhotos.map((photo, idx) => (
+                  <div 
+                    key={idx} 
+                    className="aspect-square bg-slate-100 cursor-pointer group relative overflow-hidden"
+                    onClick={() => openMediaViewer({ type: 'image', url: photo, title: 'รูปภาพของคุณ' })}
+                  >
+                    <img 
+                      src={photo} 
+                      alt={`รูปภาพ ${idx + 1}`} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* TAB 7: Videos */}
         {feedTab === 'videos' && (
           <div className="space-y-3.5">
-            <div className="bg-white p-8 rounded-[28px] text-center border border-slate-200/90 shadow-sm">
-              <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 mx-auto flex items-center justify-center mb-3">
-                <VideoIcon size={26} />
+            {myVideos.length === 0 ? (
+              <div className="bg-white p-8 rounded-[28px] text-center border border-slate-200/90 shadow-sm">
+                <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 mx-auto flex items-center justify-center mb-3">
+                  <VideoIcon size={26} />
+                </div>
+                <h4 className="text-[15px] font-extrabold text-slate-800 mb-1">วีดีโอของคุณ</h4>
+                <p className="text-[12px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+                  วีดีโอที่คุณแชร์จะแสดงที่นี่ เพื่อให้เพื่อนบ้านสามารถดูได้ง่ายๆ
+                </p>
               </div>
-              <h4 className="text-[15px] font-extrabold text-slate-800 mb-1">วีดีโอของคุณ</h4>
-              <p className="text-[12px] text-slate-500 max-w-xs mx-auto leading-relaxed">
-                วีดีโอที่คุณแชร์จะแสดงที่นี่ เพื่อให้เพื่อนบ้านสามารถดูได้ง่ายๆ
-              </p>
-            </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                {myVideos.map((video, idx) => (
+                  <div 
+                    key={idx} 
+                    className="aspect-video sm:aspect-square bg-slate-900 cursor-pointer group relative overflow-hidden flex items-center justify-center"
+                    onClick={() => openMediaViewer({ type: 'video', url: video, title: 'วิดีโอของคุณ' })}
+                  >
+                    <video 
+                      src={video} 
+                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-colors">
+                      <div className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                        <div className="w-0 h-0 border-y-[6px] border-y-transparent border-l-[10px] border-l-white ml-1"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

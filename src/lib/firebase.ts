@@ -358,6 +358,20 @@ export async function togglePostLikeInFirestore(postId: string, userId: string, 
   }
 }
 
+export async function togglePostPinInFirestore(postId: string, isPinned: boolean): Promise<void> {
+  const path = `posts/${postId}`;
+  try {
+    const postRef = doc(db, 'posts', postId);
+    await updateDoc(postRef, {
+      isPinned: isPinned,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+    throw error;
+  }
+}
+
 /**
  * Add comment to post in Firestore
  */
@@ -453,6 +467,7 @@ export async function saveEntityToFirestore(collectionName: string, id: string, 
     await setDoc(docRef, dataToSave, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+    throw error;
   }
 }
 

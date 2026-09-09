@@ -109,6 +109,7 @@ export interface Post {
   checkIn?: CheckInLocation;
   createdAt?: number;
   updatedAt?: number;
+  isPinned?: boolean;
 }
 
 export interface UserSessionLog {

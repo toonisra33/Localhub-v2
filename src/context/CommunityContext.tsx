@@ -37,6 +37,7 @@ import {
   isAuthorizedAdminEmail,
   savePostToFirestore,
   togglePostLikeInFirestore,
+  togglePostPinInFirestore,
   addCommentToFirestore,
   createNotificationInFirestore,
   deletePostFromFirestore,
@@ -99,6 +100,7 @@ interface CommunityContextType {
   posts: Post[];
   addPost: (content: string, category: string, images?: string[], customLocation?: Location, checkIn?: CheckInLocation, videoUrl?: string) => Promise<void>;
   toggleLikePost: (postId: string) => Promise<void>;
+  togglePinPost: (postId: string, isPinned: boolean) => Promise<void>;
   addComment: (postId: string, content: string) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
 
@@ -453,6 +455,25 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         isLikedByMe: !isLiked
       };
     }));
+  };
+
+  const togglePinPost = async (postId: string, isPinned: boolean) => {
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      return { ...p, isPinned };
+    }));
+    try {
+      await togglePostPinInFirestore(postId, isPinned);
+      showToast(isPinned ? 'ปักหมุดโพสต์เรียบร้อยแล้ว' : 'ยกเลิกการปักหมุดโพสต์แล้ว', 'success');
+    } catch (error) {
+      console.error('Error toggling post pin:', error);
+      showToast('เกิดข้อผิดพลาดในการปักหมุดโพสต์', 'error');
+      // Revert on error
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        return { ...p, isPinned: !isPinned };
+      }));
+    }
   };
 
   const addComment = async (postId: string, text: string) => {
@@ -917,6 +938,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
             likes: data.likes || 0,
             comments: data.comments || 0,
             likedBy: data.likedBy || [],
+            isPinned: data.isPinned || false,
           } as Post);
         });
         setPosts(fetchedPosts);
@@ -1148,6 +1170,7 @@ useEffect(() => {
         posts,
         addPost,
         toggleLikePost,
+        togglePinPost,
         addComment,
         deletePost,
         userSessions,

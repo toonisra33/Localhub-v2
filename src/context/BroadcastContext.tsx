@@ -67,8 +67,10 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     const unsub = onSnapshot(doc(db, 'broadcasts', 'active'), (snapshot) => {
       console.log('Broadcast snapshot:', snapshot.data()); if (snapshot.exists()) {
         const data = snapshot.data() as AdminBroadcast;
-        const todayStr = getLocalDateStr();
-        if (data.broadcastDateStr === todayStr && data.isActive) {
+        // Valid if active and created within the last 24 hours (prevents old broadcasts from showing days later)
+        const isRecent = (Date.now() - data.broadcastAt) < (24 * 60 * 60 * 1000);
+        
+        if (isRecent && data.isActive) {
           setActiveBroadcast(data);
           
           // If this is a newly received broadcast that we haven't seen yet, play the alert sound
@@ -118,9 +120,9 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const todayStr = getLocalDateStr();
-    // Midnight reset condition
-    if (activeBroadcast.broadcastDateStr !== todayStr) {
+    // Global 24 hour expiry
+    const isRecent = (Date.now() - activeBroadcast.broadcastAt) < (24 * 60 * 60 * 1000);
+    if (!isRecent) {
       setIsBroadcastVisible(false);
       setDeviceRemainingSeconds(0);
       return;
@@ -186,11 +188,13 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
 
     // Store in Firestore
     try {
-      saveEntityToFirestore('broadcasts', 'active', cleanData).then(() => console.log('Successfully saved broadcast')).catch(e => console.error('Failed to save broadcast', e));
+      await saveEntityToFirestore('broadcasts', 'active', cleanData);
+      console.log('Successfully saved broadcast');
       // Reset device first seen timestamp for this device so it gets fresh 15 mins
       localStorage.setItem(`${DEVICE_VIEW_PREFIX}${cleanData.id}`, now.toString());
     } catch (e) {
       console.error('Failed to save broadcast', e);
+      throw e; // rethrow to let the caller handle it
     }
   };
 

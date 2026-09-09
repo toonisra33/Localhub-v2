@@ -141,6 +141,17 @@ export function CommunityFeed() {
     ? displayPosts
     : displayPosts.filter(p => p.category === selectedCategory);
 
+  // Sort posts: Pinned posts first, then by creation time (latest first)
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    
+    // Fallback to time sorting if both are pinned or neither are pinned
+    const timeA = a.createdAt || 0;
+    const timeB = b.createdAt || 0;
+    return timeB - timeA;
+  });
+
   // Sync active modal post if open
   const activeModalPost = selectedPostForComments 
     ? posts.find(p => p.id === selectedPostForComments.id) || selectedPostForComments
@@ -228,12 +239,12 @@ export function CommunityFeed() {
 
       {/* Feed Posts */}
       <div className="p-4 space-y-3.5 max-w-md mx-auto">
-        {filteredPosts.length === 0 ? (
+        {sortedPosts.length === 0 ? (
           <div className="bg-white p-8 rounded-2xl text-center border border-slate-200 text-slate-400 text-[13px]">
             ยังไม่มีโพสต์ในหมวดหมู่นี้ เป็นคนแรกที่โพสต์เรื่องราว!
           </div>
         ) : (
-          filteredPosts.map(post => (
+          sortedPosts.map(post => (
             <PostCard 
               key={post.id} 
               post={post}
