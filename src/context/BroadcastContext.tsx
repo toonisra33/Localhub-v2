@@ -190,8 +190,6 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     try {
       await saveEntityToFirestore('broadcasts', 'active', cleanData);
       console.log('Successfully saved broadcast');
-      // Reset device first seen timestamp for this device so it gets fresh 15 mins
-      localStorage.setItem(`${DEVICE_VIEW_PREFIX}${cleanData.id}`, now.toString());
     } catch (e) {
       console.error('Failed to save broadcast', e);
       throw e; // rethrow to let the caller handle it

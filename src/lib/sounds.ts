@@ -1,6 +1,33 @@
 class SoundNotification {
   private audioContext: AudioContext | null = null;
   private isMuted: boolean = false;
+  private isUnlocked: boolean = false;
+
+  constructor() {
+    // Try to unlock audio context on first user interaction
+    const unlock = () => {
+      if (this.isUnlocked) return;
+      try {
+        this.initContext();
+        if (this.audioContext && this.audioContext.state !== 'suspended') {
+          this.isUnlocked = true;
+          // Clean up listeners once unlocked
+          document.removeEventListener('click', unlock);
+          document.removeEventListener('touchstart', unlock);
+          document.removeEventListener('keydown', unlock);
+        }
+      } catch (e) {
+        console.warn('Audio unlock failed', e);
+      }
+    };
+    
+    // Add interaction listeners to unlock AudioContext
+    if (typeof window !== 'undefined') {
+      document.addEventListener('click', unlock, { once: true, capture: true });
+      document.addEventListener('touchstart', unlock, { once: true, capture: true });
+      document.addEventListener('keydown', unlock, { once: true, capture: true });
+    }
+  }
 
   private initContext() {
     if (!this.audioContext) {
