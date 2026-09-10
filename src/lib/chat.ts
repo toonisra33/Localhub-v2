@@ -111,6 +111,26 @@ export const sendFriendRequest = async (senderId: string, receiverId: string) =>
     requesterId: senderId,
     createdAt: Date.now()
   });
+
+  // Also create a notification for the receiver
+  try {
+    const notificationsRef = collection(db, 'notifications');
+    const senderDoc = await getDoc(doc(db, 'users', senderId));
+    const senderName = senderDoc.exists() ? (senderDoc.data().name || 'มีผู้ใช้') : 'มีผู้ใช้';
+    
+    await setDoc(doc(notificationsRef, `friend_req_${friendshipId}`), {
+      id: `friend_req_${friendshipId}`,
+      type: 'system',
+      title: 'คำขอเป็นเพื่อน',
+      message: `${senderName} ได้ส่งคำขอเป็นเพื่อนถึงคุณ`,
+      time: 'เมื่อสักครู่',
+      read: false,
+      createdAt: Date.now(),
+      recipientUid: receiverId
+    });
+  } catch (error) {
+    console.error("Failed to send notification:", error);
+  }
 };
 
 export const acceptFriendRequest = async (userId1: string, userId2: string) => {

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X, AlertTriangle, Droplets, Zap, Construction, Car, ShieldAlert, Camera, MapPin, Sparkles, Navigation } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, AlertTriangle, Droplets, Zap, Construction, Car, ShieldAlert, Camera, MapPin, Sparkles, Navigation, Image as ImageIcon } from 'lucide-react';
+import { MapPinModal } from './MapPinModal';
 import { useCommunity } from '../../context/CommunityContext';
 import { Alert } from '../../types';
 
@@ -14,6 +15,8 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
   const [description, setDescription] = useState('');
   const [distance, setDistance] = useState('0.3');
   const [imageUrl, setImageUrl] = useState('');
+  const [showMapPin, setShowMapPin] = useState(false);
+  const [pinnedLocation, setPinnedLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
 
   const incidentTypes = [
@@ -24,31 +27,35 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
     { id: 'general', label: 'เหตุทั่วไป', icon: ShieldAlert, color: 'text-purple-500 bg-purple-50 border-purple-200' },
   ] as const;
 
-  const handleSimulatePhoto = () => {
-    setIsCapturing(true);
-    setTimeout(() => {
-      // Pick a suitable photo based on type
-      const samplePhotos = {
-        flood: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&q=80&w=600',
-        power: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=600',
-        road: 'https://images.unsplash.com/photo-1584467735815-f778f274e296?auto=format&fit=crop&q=80&w=600',
-        accident: 'https://images.unsplash.com/photo-1596541223130-5d31a73fb6c6?auto=format&fit=crop&q=80&w=600',
-        general: 'https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&q=80&w=600',
-      };
-      setImageUrl(samplePhotos[type]);
-      setIsCapturing(false);
-      showToast('📸 แนบภาพถ่ายสถานที่เรียบร้อย');
-    }, 600);
+  
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const localUrl = URL.createObjectURL(file);
+      setImageUrl(localUrl);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCameraClick = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const handleGalleryClick = () => {
+    galleryInputRef.current?.click();
+  };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       showToast('กรุณากรอกหัวข้อเหตุการณ์', 'error');
       return;
     }
 
-    addAlert({
+    await addAlert({
       type,
       title: title.trim(),
       description: description.trim() || 'ไม่มีคำอธิบายเพิ่มเติม',
@@ -140,15 +147,20 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
             />
           </div>
 
+          
           {/* Location details */}
-          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
+          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-800">
                 <MapPin size={14} className="text-emerald-600" />
                 <span>ต.{location.subdistrict} • {location.district}</span>
               </div>
               <div className="flex items-center gap-1">
-                {location.isGps ? (
+                {pinnedLocation ? (
+                  <span className="text-[10.5px] font-bold text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full border border-rose-300/40">
+                    📍 ปักหมุดแล้ว
+                  </span>
+                ) : location.isGps ? (
                   <span className="text-[10.5px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-300/40">
                     🎯 พิกัด GPS จริง
                   </span>
@@ -164,21 +176,15 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
                 )}
               </div>
             </div>
-
-            <div className="flex items-center justify-between text-[11.5px] text-slate-600 pt-1">
-              <span>ระยะทางโดยประมาณจากคุณ:</span>
-              <select
-                value={distance}
-                onChange={e => setDistance(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl px-2 py-1 font-bold text-slate-800 focus:outline-none"
-              >
-                <option value="0.1">0.1 กม. (ตรงนี้)</option>
-                <option value="0.3">0.3 กม.</option>
-                <option value="0.5">0.5 กม.</option>
-                <option value="1.0">1.0 กม.</option>
-                <option value="2.5">2.5 กม.</option>
-              </select>
-            </div>
+            
+            <button 
+              type="button"
+              onClick={() => setShowMapPin(true)}
+              className="w-full py-2.5 bg-white border border-slate-200 hover:border-emerald-300 rounded-xl text-slate-700 font-bold text-[12px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+            >
+              <MapPin size={16} className={pinnedLocation ? "text-rose-500" : "text-emerald-500"} />
+              {pinnedLocation ? 'แก้ไขจุดเกิดเหตุบนแผนที่' : 'ปักหมุดจุดเกิดเหตุบนแผนที่'}
+            </button>
           </div>
 
           {/* Camera / Photo Attachment */}
@@ -217,15 +223,43 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
                 </div>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={handleSimulatePhoto}
-                disabled={isCapturing}
-                className="w-full py-3 border-2 border-dashed border-slate-200 hover:border-rose-300 rounded-2xl bg-slate-50 hover:bg-rose-50/40 text-slate-600 hover:text-rose-600 flex items-center justify-center gap-2 text-[13px] font-bold transition-all"
-              >
-                <Camera size={18} className={isCapturing ? 'animate-spin' : ''} />
-                <span>{isCapturing ? 'กำลังจำลองการถ่ายภาพ...' : 'ถ่ายภาพ / แนบรูปภาพเหตุการณ์'}</span>
-              </button>
+              
+              <>
+              <input 
+                type="file" 
+                ref={cameraInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*,video/*"
+                capture="environment" 
+                className="hidden" 
+              />
+              <input 
+                type="file" 
+                ref={galleryInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*,video/*" 
+                className="hidden" 
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCameraClick}
+                  className="flex-1 py-3 border-2 border-dashed border-slate-200 hover:border-emerald-300 rounded-2xl bg-slate-50 hover:bg-emerald-50/40 text-slate-600 hover:text-emerald-600 flex flex-col items-center justify-center gap-1.5 text-[12px] font-bold transition-all"
+                >
+                  <Camera size={20} />
+                  <span>ถ่ายภาพตอนนี้</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGalleryClick}
+                  className="flex-1 py-3 border-2 border-dashed border-slate-200 hover:border-rose-300 rounded-2xl bg-slate-50 hover:bg-rose-50/40 text-slate-600 hover:text-rose-600 flex flex-col items-center justify-center gap-1.5 text-[12px] font-bold transition-all"
+                >
+                  <ImageIcon size={20} />
+                  <span>เลือกจากคลังภาพ</span>
+                </button>
+              </div>
+            </>
+
             )}
           </div>
 
@@ -248,7 +282,17 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
           </div>
         </form>
 
-      </div>
+            </div>
+      {showMapPin && (
+        <MapPinModal 
+          initialLocation={location}
+          onConfirm={(lat, lng) => {
+            setPinnedLocation({ lat, lng });
+            setShowMapPin(false);
+          }}
+          onClose={() => setShowMapPin(false)}
+        />
+      )}
     </div>
   );
 }

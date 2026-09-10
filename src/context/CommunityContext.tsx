@@ -93,7 +93,7 @@ interface CommunityContextType {
 
   // Alerts State
   alerts: Alert[];
-  addAlert: (alert: Omit<Alert, 'id' | 'time' | 'confirmations' | 'rejections' | 'status'>) => void;
+  addAlert: (alert: Omit<Alert, 'id' | 'time' | 'confirmations' | 'rejections' | 'status'>) => Promise<void>;
   voteAlert: (alertId: string, voteType: 'up' | 'down') => void;
 
   // Posts State (Synced with Firestore)
@@ -362,17 +362,37 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const addAlert = (alert: Omit<Alert, 'id' | 'time' | 'confirmations' | 'rejections' | 'status'>) => {
-    const newAlert: Alert = {
-      ...alert,
-      id: `alert_${Date.now()}`,
-      time: 'เมื่อสักครู่',
-      confirmations: 0,
-      rejections: 0,
-      status: 'unconfirmed'
-    };
-    setAlerts(prev => [newAlert, ...prev]);
-    showToast('แจ้งเตือนเหตุการณ์เรียบร้อยแล้ว แอดมินจะทำการตรวจสอบต่อไป', 'success');
+  const addAlert = async (alert: Omit<Alert, 'id' | 'time' | 'confirmations' | 'rejections' | 'status'>) => {
+    if (!currentUser) {
+      showToast('กรุณาเข้าสู่ระบบก่อนแจ้งเหตุ', 'error');
+      openAuthModal();
+      return;
+    }
+
+    try {
+      const { collection, addDoc } = await import('firebase/firestore');
+      
+      const alertData = {
+        ...alert,
+        time: 'เมื่อสักครู่',
+        confirmations: 0,
+        rejections: 0,
+        status: 'unconfirmed',
+        createdAt: Date.now(),
+        reportedBy: currentUser.uid,
+      };
+      
+      const alertsRef = collection(db, 'alerts');
+      const docRef = await addDoc(alertsRef, alertData);
+      
+      const newAlert = { id: docRef.id, ...alertData } as Alert;
+      setAlerts(prev => [newAlert, ...prev]);
+      
+      showToast('แจ้งเตือนเหตุการณ์เรียบร้อยแล้ว แอดมินจะทำการตรวจสอบต่อไป', 'success');
+    } catch (error) {
+      console.error('Error adding alert:', error);
+      showToast('เกิดข้อผิดพลาดในการแจ้งเหตุ กรุณาลองใหม่อีกครั้ง', 'error');
+    }
   };
 
   const voteAlert = (alertId: string, voteType: 'up' | 'down') => {
@@ -889,6 +909,31 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
   }, [verificationRequests]);
 
   useEffect(() => {
+    const unsubAlerts = onSnapshot(
+      query(collection(db, 'alerts'), orderBy('createdAt', 'desc'), limit(100)),
+      (snapshot) => {
+        const fetchedAlerts: Alert[] = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          fetchedAlerts.push({
+            id: docSnap.id,
+            type: data.type || 'general',
+            title: data.title || '',
+            description: data.description || '',
+            location: data.location || { district: '', province: '', subdistrict: '' },
+            time: data.time || 'เมื่อสักครู่',
+            status: data.status || 'unconfirmed',
+            confirmations: data.confirmations || 0,
+            rejections: data.rejections || 0,
+            reportedBy: data.reportedBy,
+            image: data.image
+          } as Alert);
+        });
+        setAlerts(fetchedAlerts.length > 0 ? fetchedAlerts : initialAlerts);
+      },
+      (error) => console.warn('Firestore subscription warning (alerts):', error)
+    );
+
     const unsubPosts = onSnapshot(
       query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(100)),
       (snapshot) => {
@@ -1018,6 +1063,7 @@ if (userSnap.exists()) {
     });
 
     return () => {
+      unsubAlerts();
       unsubPosts();
       unsubProducts();
       unsubEvents();

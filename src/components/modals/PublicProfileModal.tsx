@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageCircle, UserPlus, Check } from 'lucide-react';
+import { X, MessageCircle, UserPlus, Check, UserMinus } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
-import { getUserDetails, sendFriendRequest, acceptFriendRequest, subscribeToFriendshipStatus } from '../../lib/chat';
+import { getUserDetails, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, subscribeToFriendshipStatus } from '../../lib/chat';
 import { UserProfileData } from '../../types';
 
 interface PublicProfileModalProps {
@@ -97,6 +97,14 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
     } else if (friendStatus.status === 'pending' && friendStatus.requesterId !== userProfile.id) {
       await acceptFriendRequest(userProfile.id, userId);
       showToast('คุณเป็นเพื่อนกันแล้ว', 'success');
+    } else if (friendStatus.status === 'pending' && friendStatus.requesterId === userProfile.id) {
+      await rejectFriendRequest(userProfile.id, userId);
+      showToast('ยกเลิกคำขอเป็นเพื่อนแล้ว', 'info');
+    } else if (friendStatus.status === 'accepted') {
+      if (confirm('คุณต้องการยกเลิกการเป็นเพื่อนใช่หรือไม่?')) {
+        await rejectFriendRequest(userProfile.id, userId);
+        showToast('เลิกเป็นเพื่อนแล้ว', 'info');
+      }
     }
   };
 
@@ -173,17 +181,16 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
                 <div className="flex gap-3 mt-6 justify-center">
                   <button 
                     onClick={handleFriendAction}
-                    disabled={friendStatus.status === 'accepted' || (friendStatus.status === 'pending' && friendStatus.requesterId === userProfile?.id)}
                     className={`flex-1 max-w-[140px] py-2.5 rounded-xl text-[13px] font-extrabold flex items-center justify-center gap-1.5 transition-colors ${
-                      friendStatus.status === 'accepted' ? 'bg-slate-100 text-slate-500' 
-                      : (friendStatus.status === 'pending' && friendStatus.requesterId === userProfile?.id) ? 'bg-amber-50 text-amber-600'
+                      friendStatus.status === 'accepted' ? 'bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500' 
+                      : (friendStatus.status === 'pending' && friendStatus.requesterId === userProfile?.id) ? 'bg-amber-50 text-amber-600 hover:bg-red-50 hover:text-red-500'
                       : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                     }`}
                   >
                     {friendStatus.status === 'accepted' ? (
-                      <><Check size={16} /> เป็นเพื่อนแล้ว</>
+                      <><Check size={16} /> เพื่อนกันแล้ว</>
                     ) : friendStatus.status === 'pending' && friendStatus.requesterId === userProfile?.id ? (
-                      <>รอการตอบรับ</>
+                      <><X size={16} /> ยกเลิกคำขอ</>
                     ) : friendStatus.status === 'pending' && friendStatus.requesterId !== userProfile?.id ? (
                       <><Check size={16} /> ยอมรับคำขอ</>
                     ) : (
