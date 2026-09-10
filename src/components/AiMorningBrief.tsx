@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sparkles, Cloud, AlertTriangle, Calendar, Store, Briefcase, Megaphone, ChevronRight } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
-import { mockMorningBrief } from '../data';
+
 
 export function AiMorningBrief() {
   const { showToast, location } = useCommunity();
@@ -96,7 +96,7 @@ export function AiMorningBrief() {
     return () => clearInterval(interval);
   }, [location?.latitude, location?.longitude, location?.district, location?.subdistrict]);
 
-  const displayWeather = realWeather || mockMorningBrief.weather;
+  const displayWeather = realWeather || { weather: { temp: "-", condition: "-", pm25: "-" }, announcements: 0, roadClosures: 0, events: 0, newShops: 0, greeting: "สวัสดีตอนเช้า" }.weather;
 
   return (
     <div className="mx-5 -mt-5 mb-6 relative z-20">
@@ -127,8 +127,8 @@ export function AiMorningBrief() {
           <div className="text-[12.5px] text-slate-600 font-medium leading-relaxed mb-4 p-3 bg-slate-50 rounded-2xl border border-slate-100/50 space-y-2.5">
             <p>
               {greeting} <span className="font-bold text-indigo-600">แถว{locName}</span> อากาศตอนนี้ <span className="font-bold text-sky-600">{displayWeather}</span> 
-              {' '}มีประกาศจากแอดมิน <span className="font-bold text-rose-600">{mockMorningBrief.announcements} รายการ</span> 
-              {' '}และมีการปิดถนน <span className="font-bold text-amber-600">{mockMorningBrief.roadClosures} จุด</span> ในพื้นที่ ควรเผื่อเวลาเดินทางนะครับ
+              {' '}มีประกาศจากแอดมิน <span className="font-bold text-rose-600">{{ weather: { temp: "-", condition: "-", pm25: "-" }, announcements: 0, roadClosures: 0, events: 0, newShops: 0, greeting: "สวัสดีตอนเช้า" }.announcements} รายการ</span> 
+              {' '}และมีการปิดถนน <span className="font-bold text-amber-600">{{ weather: { temp: "-", condition: "-", pm25: "-" }, announcements: 0, roadClosures: 0, events: 0, newShops: 0, greeting: "สวัสดีตอนเช้า" }.roadClosures} จุด</span> ในพื้นที่ ควรเผื่อเวลาเดินทางนะครับ
             </p>
             {rainAlert && (
               <div className="flex items-start gap-2 bg-rose-50/80 p-2.5 rounded-xl border border-rose-100/60">
@@ -146,21 +146,21 @@ export function AiMorningBrief() {
               <div className="w-7 h-7 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-1.5">
                 <AlertTriangle size={14} />
               </div>
-              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{mockMorningBrief.roadClosures}</span>
+              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{{ weather: { temp: "-", condition: "-", pm25: "-" }, announcements: 0, roadClosures: 0, events: 0, newShops: 0, greeting: "สวัสดีตอนเช้า" }.roadClosures}</span>
               <span className="text-[10px] font-bold text-slate-500">แจ้งเตือนภัย</span>
             </div>
             <div className="bg-white border border-slate-150 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
               <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-1.5">
                 <Calendar size={14} />
               </div>
-              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{mockMorningBrief.events}</span>
+              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{{ weather: { temp: "-", condition: "-", pm25: "-" }, announcements: 0, roadClosures: 0, events: 0, newShops: 0, greeting: "สวัสดีตอนเช้า" }.events}</span>
               <span className="text-[10px] font-bold text-slate-500">กิจกรรมวันนี้</span>
             </div>
             <div className="bg-white border border-slate-150 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
               <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1.5">
                 <Store size={14} />
               </div>
-              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{mockMorningBrief.newShops}</span>
+              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{{ weather: { temp: "-", condition: "-", pm25: "-" }, announcements: 0, roadClosures: 0, events: 0, newShops: 0, greeting: "สวัสดีตอนเช้า" }.newShops}</span>
               <span className="text-[10px] font-bold text-slate-500">ร้านค้าใหม่</span>
             </div>
           </div>

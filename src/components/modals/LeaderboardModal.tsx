@@ -6,13 +6,7 @@ interface LeaderboardModalProps {
   onClose: () => void;
 }
 
-const mockLeaderboard = [
-  { id: 'u1', name: 'กิตติศักดิ์ พิทักษ์ถิ่น', role: 'อาสาสมัครกู้ภัย', score: 92, avatar: 'https://ui-avatars.com/api/?name=K&background=random', isVerified: true, isTop: true, rank: 1, badges: ['ช่วยชีวิต', 'รายงานเร็ว'] },
-  { id: 'u2', name: 'นพพร การช่าง', role: 'ช่างไฟชุมชน', score: 88, avatar: 'https://ui-avatars.com/api/?name=N&background=random', isVerified: true, isTop: true, rank: 2, badges: ['ซ่อมฟรี', 'ช่างใจดี'] },
-  { id: 'u3', name: 'ป้าศรี ของหวานโบราณ', role: 'ร้านค้าท้องถิ่น', score: 85, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150', isVerified: true, isTop: true, rank: 3, badges: ['อาหารสะอาด', 'ราคาถูก'] },
-  { id: 'u4', name: 'สุชาติ มอเตอร์ไซค์วิน', role: 'วินมอเตอร์ไซค์', score: 78, avatar: 'https://ui-avatars.com/api/?name=S&background=random', isVerified: true, isTop: false, rank: 4, badges: ['ส่งของไว'] },
-  { id: 'u5', name: 'ครูแอน ติวเตอร์', role: 'ครูอาสา', score: 75, avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150', isVerified: true, isTop: false, rank: 5, badges: ['สอนฟรี'] },
-];
+const mockLeaderboard: any[] = [];
 
 export function LeaderboardModal({ onClose }: LeaderboardModalProps) {
   const { showToast } = useCommunity();

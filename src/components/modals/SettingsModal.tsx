@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, Bell, Shield, Moon, Globe, Trash2, RefreshCw, Radio, UserPlus, LogIn, LogOut, UserCheck, ShieldCheck, FileText, ExternalLink } from 'lucide-react';
+import { X, Settings, Bell, Shield, Moon, Globe, Trash2, RefreshCw, Radio, UserPlus, LogIn, LogOut, UserCheck, ShieldCheck, FileText, ExternalLink, AlertTriangle, MessageCircle } from 'lucide-react';
 import { useBroadcast } from '../../context/BroadcastContext';
 import { useCommunity } from '../../context/CommunityContext';
 import { isAuthorizedAdminEmail } from '../../lib/firebase';
@@ -11,7 +11,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const { role, setRole } = useBroadcast();
-  const { isLoggedIn, userProfile, openAuthModal, logout, showToast } = useCommunity();
+  const { isLoggedIn, userProfile, openAuthModal, logout, showToast, openContactAdminModal } = useCommunity();
   const [allowNotifications, setAllowNotifications] = useState(true);
   const [emergencyAlertsOnly, setEmergencyAlertsOnly] = useState(false);
   const [radiusKm, setRadiusKm] = useState('5');
@@ -263,6 +263,30 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               >
                 <ExternalLink size={14} />
               </a>
+            </div>
+          </div>
+
+          {/* Help & Support */}
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
+            <h4 className="font-extrabold text-slate-900 text-[13.5px] flex items-center gap-1.5">
+              <MessageCircle size={16} className="text-emerald-600" />
+              <span>ช่วยเหลือและสนับสนุน</span>
+            </h4>
+            <p className="text-[11.5px] text-slate-500">
+              พบปัญหาการใช้งานหรือมีข้อเสนอแนะ แจ้งให้ทีมงานทราบ
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  openContactAdminModal('complaint');
+                }}
+                className="w-full py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-800 rounded-xl text-[12px] font-extrabold border border-slate-200 shadow-xs flex items-center justify-center gap-1.5 transition-all"
+              >
+                <AlertTriangle size={14} className="text-amber-500" />
+                <span>แจ้งปัญหาการใช้งาน</span>
+              </button>
             </div>
           </div>
 

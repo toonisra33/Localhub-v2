@@ -12,31 +12,7 @@ import { PostCard } from './PostCard';
 import { LocalHubLogo } from './LocalHubLogo';
 import { NotificationCenterModal } from './modals/NotificationCenterModal';
 
-// Mock data for trending global posts if needed
-const mockGlobalPosts: Post[] = [
-  {
-    id: 'g-mock1',
-    author: { name: 'ข่าวใหญ่ประเทศไทย', avatar: 'https://i.pravatar.cc/150?u=news1' },
-    category: 'ข่าวสารชุมชน',
-    content: '🚨 ประกาศด่วน! วันพรุ่งนี้จะมีพายุเข้าในหลายพื้นที่ทั่วประเทศ ขอให้ทุกท่านเตรียมรับมือและติดตามข่าวสารอย่างใกล้ชิด',
-    time: '2 ชั่วโมงที่แล้ว',
-    likes: 1240,
-    comments: 312,
-    createdAt: Date.now() - 7200000,
-    location: { province: 'ทั่วประเทศ', district: '', subdistrict: '' }
-  },
-  {
-    id: 'g-mock2',
-    author: { name: 'สาระน่ารู้', avatar: 'https://i.pravatar.cc/150?u=news2' },
-    category: 'ประกาศทั่วไป',
-    content: '💡 5 วิธีประหยัดไฟในฤดูร้อนที่จะถึงนี้ ทำได้ง่ายๆ ที่บ้านคุณ...',
-    time: '5 ชั่วโมงที่แล้ว',
-    likes: 856,
-    comments: 104,
-    createdAt: Date.now() - 18000000,
-    location: { province: 'ทั่วประเทศ', district: '', subdistrict: '' }
-  }
-];
+
 
 export function GlobalNewsFeed() {
   const { posts, toggleLikePost, deletePost, userProfile, openContactAdminModal, unreadNotificationsCount } = useCommunity();
@@ -48,7 +24,7 @@ export function GlobalNewsFeed() {
   // Combine real posts and mock global posts, then sort by engagement (likes + comments)
   const displayPosts = [
     ...posts,
-    ...mockGlobalPosts
+    
   ].sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments));
   
   // Sync active modal post if open

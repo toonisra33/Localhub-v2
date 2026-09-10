@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Briefcase, MapPin, Phone, Banknote, Clock, CheckCircle2 } from 'lucide-react';
-import { mockJobs } from '../../data';
+
 import { useCommunity } from '../../context/CommunityContext';
 
 interface LocalJobsModalProps {
@@ -46,7 +46,7 @@ export function LocalJobsModal({ onClose }: LocalJobsModalProps) {
 
         {/* Job List */}
         <div className="p-4 overflow-y-auto space-y-3.5 flex-1 bg-slate-50/50">
-          {mockJobs.map(job => {
+          {([]).map(job => {
             const isApplied = appliedJobs.includes(job.id);
             return (
               <div

@@ -39,8 +39,8 @@ export function LocationPermissionModal({ isOpen, onClose, onSuccess }: Location
       return;
     }
 
-    const success = await requestRealLocation();
-    if (success) {
+    const result = await requestRealLocation();
+    if (result.success) {
       if (onSuccess) onSuccess();
       onClose();
     }

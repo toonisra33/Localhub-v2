@@ -327,7 +327,9 @@ export function AdminBroadcastModal() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !message.trim()) return;
+    if (!title.trim()) { showToast('กรุณาระบุหัวข้อบรอดแคสต์', 'error'); return; }
+    if (!message.trim()) { showToast('กรุณาระบุรายละเอียด', 'error'); return; }
+    if (enableLink && !actionUrl.trim()) { showToast('กรุณาระบุลิงก์ปลายทาง (URL)', 'error'); return; }
 
     if (selectedMediaType === 'video' && videoDuration > 600) {
       setMediaError('ความยาววิดีโอต้องไม่เกิน 10 นาที');
@@ -635,7 +637,7 @@ export function AdminBroadcastModal() {
             </div>
           ) : (
             /* Form to create a new broadcast */
-            <form onSubmit={handleSend} className="space-y-4">
+            <div className="space-y-4">
             
             {/* Quick Presets across Marketing, News, Emergency */}
             <div>
@@ -782,7 +784,7 @@ export function AdminBroadcastModal() {
               </label>
               <input
                 type="text"
-                required
+                
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="เช่น 🛍️ แนะนำสินค้า OTOP ใหม่ หรือ 📰 ข่าวสารโครงการชุมชน..."
@@ -797,7 +799,7 @@ export function AdminBroadcastModal() {
               </label>
               <textarea
                 rows={3}
-                required
+                
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="ระบุข้อความนำเสนอ รายละเอียดสินค้า สาระประโยชน์ หรือคำแนะนำ..."
@@ -1043,7 +1045,7 @@ export function AdminBroadcastModal() {
                     </label>
                     <input
                       type="url"
-                      required={enableLink}
+                      
                       value={actionUrl}
                       onChange={(e) => setActionUrl(e.target.value)}
                       placeholder="เช่น https://lin.ee/xyz หรือ https://facebook.com/..."
@@ -1185,15 +1187,15 @@ export function AdminBroadcastModal() {
             {/* Submit Button */}
             <div className="pt-2">
               <button
-                type="submit"
-                disabled={role !== 'admin' || (selectedMediaType === 'video' && videoDuration > 600)}
+                type="button" onClick={handleSend}
+                disabled={selectedMediaType === 'video' && videoDuration > 600}
                 className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-700 hover:to-rose-800 disabled:opacity-50 text-white py-3.5 px-5 rounded-2xl font-bold text-[14px] flex items-center justify-center gap-2 shadow-lg shadow-red-500/25 transition-all"
               >
                 <Send size={18} />
                 ส่งบรอดแคสสู่ทุกอุปกรณ์ทันที (Broadcast Now)
               </button>
             </div>
-          </form>
+          </div>
           )}
 
         </div>

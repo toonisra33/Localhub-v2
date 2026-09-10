@@ -59,68 +59,26 @@ import { useCommunity } from '../context/CommunityContext';
 import { useBroadcast } from '../context/BroadcastContext';
 import { LocalHubLogo } from './LocalHubLogo';
 
+// Real-computed or empty fallbacks
+const REGISTRATION_TREND_DATA = { '7d': [], '30d': [] };
+const FEATURE_USAGE_DATA: any[] = [];
+const USER_ROLES_DATA: any[] = [];
+const INCIDENT_CATEGORIES_DATA: any[] = [];
+const DISTRICT_DISTRIBUTION_DATA: any[] = [];
+const AUDIT_LOGS: any[] = [];
+
+
 // Mock time-series data for registrations & active users
-const REGISTRATION_TREND_DATA = {
-  '7d': [
-    { date: '25 ส.ค.', newUsers: 34, activeUsers: 820, engagement: 210 },
-    { date: '26 ส.ค.', newUsers: 42, activeUsers: 910, engagement: 245 },
-    { date: '27 ส.ค.', newUsers: 56, activeUsers: 1040, engagement: 310 },
-    { date: '28 ส.ค.', newUsers: 38, activeUsers: 980, engagement: 280 },
-    { date: '29 ส.ค.', newUsers: 65, activeUsers: 1150, engagement: 420 },
-    { date: '30 ส.ค.', newUsers: 84, activeUsers: 1320, engagement: 560 },
-    { date: '31 ส.ค.', newUsers: 72, activeUsers: 1280, engagement: 490 },
-  ],
-  '30d': [
-    { date: 'สัปดาห์ 1', newUsers: 240, activeUsers: 3200, engagement: 1400 },
-    { date: 'สัปดาห์ 2', newUsers: 310, activeUsers: 3800, engagement: 1850 },
-    { date: 'สัปดาห์ 3', newUsers: 420, activeUsers: 4400, engagement: 2300 },
-    { date: 'สัปดาห์ 4', newUsers: 510, activeUsers: 4892, engagement: 2950 },
-  ]
-};
 
 // Feature usage distribution
-const FEATURE_USAGE_DATA = [
-  { name: 'เรดาร์รอบตัว (Around Me)', users: 3420, percentage: 38, color: '#10b981' },
-  { name: 'ฟีดชุมชน (Community Feed)', users: 2680, percentage: 29, color: '#0ea5e9' },
-  { name: 'เตือนภัยฉุกเฉิน (Alerts)', users: 1890, percentage: 21, color: '#f43f5e' },
-  { name: 'ตลาดนัดท้องถิ่น (Market)', users: 1540, percentage: 17, color: '#f59e0b' },
-  { name: 'ผู้ช่วย AI ชุมชน (AI Chat)', users: 1210, percentage: 13, color: '#8b5cf6' },
-  { name: 'บรอดแคสแอดมิน (Broadcast)', users: 4620, percentage: 51, color: '#ef4444' },
-];
 
 // User roles composition
-const USER_ROLES_DATA = [
-  { name: 'ลูกบ้าน/ผู้พักอาศัย', value: 3120, color: '#10b981' },
-  { name: 'ร้านค้า/ผู้ประกอบการ', value: 890, color: '#f59e0b' },
-  { name: 'อาสาสมัครเตือนภัย', value: 580, color: '#0ea5e9' },
-  { name: 'เจ้าหน้าที่เขต/นิติบุคคล', value: 302, color: '#6366f1' },
-];
 
 // Incident Categories breakdown
-const INCIDENT_CATEGORIES_DATA = [
-  { category: 'น้ำท่วมขัง', count: 54, resolved: 51, color: '#0ea5e9' },
-  { category: 'ไฟฟ้า/ประปาขัดข้อง', count: 38, resolved: 36, color: '#f59e0b' },
-  { category: 'งานซ่อมถนน/ปิดทาง', count: 28, resolved: 27, color: '#64748b' },
-  { category: 'อุบัติเหตุจราจร', count: 18, resolved: 18, color: '#f43f5e' },
-  { category: 'สัตว์หาย/ตามหาคน', count: 10, resolved: 9, color: '#10b981' },
-];
 
 // District distribution
-const DISTRICT_DISTRIBUTION_DATA = [
-  { district: 'จตุจักร (ลาดยาว/เสนา)', users: 2140, share: '43.7%' },
-  { district: 'บางเขน (อนุสาวรีย์)', users: 1230, share: '25.1%' },
-  { district: 'ลาดพร้าว (โชคชัย 4)', users: 840, share: '17.2%' },
-  { district: 'เมืองนนทบุรี (ประชานิเวศน์)', users: 682, share: '14.0%' },
-];
 
 // Recent Live Audit Logs
-const AUDIT_LOGS = [
-  { id: '1', time: '2 นาทีที่แล้ว', user: 'สมชาย รักดี', action: 'รายงานเหตุน้ำท่วม ซอยพหลโยธิน 35', type: 'alert', status: 'กำลังตรวจสอบ' },
-  { id: '2', time: '8 นาทีที่แล้ว', user: 'ป้าพร ขนมไทย', action: 'ลงรายการสินค้าใหม่: ข้าวต้มมัดใบตองสด (แผง 12)', type: 'market', status: 'อนุมัติ' },
-  { id: '3', time: '14 นาทีที่แล้ว', user: 'กิตติศักดิ์ พิทักษ์ถิ่น', action: 'ยืนยันเหตุการณ์ความปลอดภัย (อาสาเตือนภัย)', type: 'verify', status: 'สำเร็จ' },
-  { id: '4', time: '22 นาทีที่แล้ว', user: 'ระบบอัตโนมัติ', action: 'บรอดแคสแจ้งเตือนสภาพอากาศถูกส่งถึง 1,840 อุปกรณ์', type: 'broadcast', status: 'เสร็จสิ้น' },
-  { id: '5', time: '35 นาทีที่แล้ว', user: 'วิภาดา มงคลสุข', action: 'ยืนยันตัวตนด้วยบัตรประชาชนสำเร็จ (Level 2 Verified)', type: 'user', status: 'อนุมัติ' },
-];
 
 export function AdminDashboard() {
   const { 
@@ -625,7 +583,7 @@ export function AdminDashboard() {
                   <p className="text-[11.5px] font-medium text-slate-500">ตรวจสอบและอนุมัติการยืนยันตัวตนของสมาชิก</p>
                 </div>
                 <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-xl text-[12px] font-bold">
-                  รอตรวจสอบ: {verificationRequests.filter(req => req.status === 'pending').length}
+                  รอตรวจสอบ: {(verificationRequests || []).filter(req => req.status === 'pending').length}
                 </div>
               </div>
 

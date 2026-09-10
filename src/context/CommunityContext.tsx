@@ -25,7 +25,7 @@ import {
   initialLocation, 
   initialNotifications, 
   initialContactRequests,
-  mockEvents, 
+ 
   availableLocations 
 } from '../data';
 import { 
@@ -89,7 +89,7 @@ interface CommunityContextType {
   isLocationPermissionModalOpen: boolean;
   openLocationPermissionModal: () => void;
   closeLocationPermissionModal: () => void;
-  requestRealLocation: () => Promise<boolean>;
+  requestRealLocation: () => Promise<{success: boolean, lat?: number, lng?: number}>;
 
   // Alerts State
   alerts: Alert[];
@@ -205,7 +205,9 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>(() => {
     try {
       const saved = localStorage.getItem('locallink_verification_requests');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -228,27 +230,13 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [alerts, setAlerts] = useState<Alert[]>(() => {
-    try {
-      const saved = localStorage.getItem('locallink_alerts');
-      return saved ? JSON.parse(saved) : initialAlerts;
-    } catch {
-      return initialAlerts;
-    }
-  });
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [events, setEvents] = useState<LocalEvent[]>([]);
 
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
-    try {
-      const saved = localStorage.getItem('locallink_notifications');
-      return saved ? JSON.parse(saved) : initialNotifications;
-    } catch {
-      return initialNotifications;
-    }
-  });
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
@@ -305,14 +293,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const [activeMedia, setActiveMedia] = useState<{ url: string; type: 'image' | 'video'; title?: string; subtitle?: string } | null>(null);
 
   // Contact Admin & PR Requests State
-  const [contactRequests, setContactRequests] = useState<AdminContactRequest[]>(() => {
-    try {
-      const saved = localStorage.getItem('locallink_contact_requests');
-      return saved ? JSON.parse(saved) : initialContactRequests;
-    } catch {
-      return initialContactRequests;
-    }
-  });
+  const [contactRequests, setContactRequests] = useState<AdminContactRequest[]>([]);
   const [isContactAdminModalOpen, setIsContactAdminModalOpen] = useState(false);
   const [contactAdminInitialType, setContactAdminInitialType] = useState<ContactRequestType | undefined>(undefined);
 
@@ -349,7 +330,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const openLocationPermissionModal = () => setIsLocationPermissionModalOpen(true);
   const closeLocationPermissionModal = () => setIsLocationPermissionModalOpen(false);
   
-  const requestRealLocation = async (): Promise<boolean> => {
+  const requestRealLocation = async (): Promise<{success: boolean, lat?: number, lng?: number}> => {
     return new Promise((resolve) => {
       setIsLocatingGps(true);
       if ('geolocation' in navigator) {
@@ -363,20 +344,20 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
             setLocationPermissionStatus('granted');
             setIsLocatingGps(false);
             closeLocationPermissionModal();
-            resolve(true);
+            resolve({success: true, lat: position.coords.latitude, lng: position.coords.longitude});
           },
           (error) => {
             console.error('GPS Error:', error);
             setLocationPermissionStatus('denied');
             setIsLocatingGps(false);
-            resolve(false);
+            resolve({success: false});
           },
           { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
       } else {
         setLocationPermissionStatus('denied');
         setIsLocatingGps(false);
-        resolve(false);
+        resolve({success: false});
       }
     });
   };
@@ -590,7 +571,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
   };
 
   // Notifications Actions
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+  const unreadNotificationsCount = (notifications || []).filter(n => !n.read).length;
 
   const markNotificationRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));

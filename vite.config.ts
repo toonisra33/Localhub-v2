@@ -12,7 +12,7 @@ export default defineConfig(() => {
       VitePWA({
         registerType: 'autoUpdate',
         manifestFilename: 'manifest.json',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
+        includeAssets: ['favicon.ico', 'icon-192.png', 'icon-512.png'],
         manifest: {
           id: '/',
           name: 'LocalHub',

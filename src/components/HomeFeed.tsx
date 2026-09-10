@@ -29,7 +29,6 @@ import {
   ChevronRight,
   MessageCircle
 } from 'lucide-react';
-import { mockMorningBrief } from '../data';
 import { Alert } from '../types';
 import { useBroadcast } from '../context/BroadcastContext';
 import { useCommunity } from '../context/CommunityContext';
@@ -148,7 +147,7 @@ export function HomeFeed() {
 
   const filteredAlerts = alertFilter === 'all' 
     ? alerts 
-    : alerts.filter(a => a.type === alertFilter);
+    : (alerts || []).filter(a => a.type === alertFilter);
 
   return (
     <div className="pb-28 animate-in fade-in duration-300 bg-slate-50/60 min-h-screen">

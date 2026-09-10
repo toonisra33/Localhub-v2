@@ -53,17 +53,7 @@ import { SafeImage } from './SafeImage';
 import { Post, Product, Alert } from '../types';
 import { isAuthorizedAdminEmail } from '../lib/firebase';
 
-const MOCK_NEARBY_USERS = [
-  { id: 'nu1', name: 'สุชาติ มอเตอร์ไซค์วิน', avatar: 'https://ui-avatars.com/api/?name=S&background=random', bio: 'วินมอเตอร์ไซค์ปากซอย 35 ให้บริการ 06:00-22:00 น.', distance: 0.5, isVerified: true, reputationScore: 85 },
-  { id: 'nu2', name: 'ป้าศรี ของหวานโบราณ', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150', bio: 'ขายขนมหวานไทยโบราณสูตรต้นตำรับ สั่งล่วงหน้าได้', distance: 1.2, isVerified: true, reputationScore: 88 },
-  { id: 'nu3', name: 'นพพร การช่าง', avatar: 'https://ui-avatars.com/api/?name=N&background=random', bio: 'รับเหมาซ่อมแซมบ้าน ประปา ไฟฟ้า ในเขตจตุจักรและใกล้เคียง', distance: 2.5, isVerified: true, reputationScore: 92 },
-  { id: 'nu4', name: 'น้องฟ้าใส รักสัตว์', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=150', bio: 'รับฝากเลี้ยงและอาบน้ำสุนัข แมว ช่วงวันหยุดเสาร์อาทิตย์', distance: 4.8, isVerified: false, reputationScore: 40 },
-  { id: 'nu5', name: 'ลุงชม คนสวน', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150', bio: 'รับจัดสวน ตัดหญ้า ดูแลต้นไม้ ประสบการณ์กว่า 20 ปี', distance: 8.5, isVerified: true, reputationScore: 78 },
-  { id: 'nu6', name: 'ครูแอน ติวเตอร์', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150', bio: 'รับสอนพิเศษคณิตและวิทย์ ระดับประถม-ม.ต้น ดูก่อนได้', distance: 12.0, isVerified: true, reputationScore: 95 },
-  { id: 'nu7', name: 'เอกราช ฟาร์มผัก', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150', bio: 'ฟาร์มผักไฮโดรโปนิกส์ออร์แกนิก ส่งตรงถึงหน้าบ้าน', distance: 22.5, isVerified: false, reputationScore: 60 },
-  { id: 'nu8', name: 'ร้านป้าแมว ข้าวมันไก่', avatar: 'https://ui-avatars.com/api/?name=P&background=random', bio: 'ข้าวมันไก่ตอนเนื้อนุ่ม น้ำจิ้มรสเด็ด เปิด 07:00-14:00 น.', distance: 35.0, isVerified: true, reputationScore: 82 },
-  { id: 'nu9', name: 'ช่างแบงค์ แอร์บ้าน', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=150', bio: 'ล้างแอร์ ซ่อมแอร์ ติดตั้งแอร์ ราคากันเอง', distance: 45.0, isVerified: true, reputationScore: 89 },
-];
+
 
 type PersonalFeedTab = 'posts' | 'store' | 'saved' | 'alerts' | 'friends' | 'photos' | 'videos';
 
@@ -115,19 +105,19 @@ export function UserProfile() {
   const isRealAdmin = isAuthorizedAdmin && role === 'admin';
 
   // Filter user specific content
-  const myPosts = posts.filter(p => p.author?.name === userProfile?.name);
-  const myProducts = products.filter(p => p?.seller === userProfile?.name);
+  const myPosts = (posts || []).filter(p => p.author?.name === userProfile?.name);
+  const myProducts = (products || []).filter(p => p?.seller === userProfile?.name);
   
   // Extract photos and videos from my posts
   const myPhotos = myPosts.flatMap(p => p.images || (p.image ? [p.image] : [])).filter(Boolean);
   const myVideos = myPosts.filter(p => p.videoUrl).map(p => p.videoUrl as string);
   
   // Filter nearby users based on radius
-  const nearbyUsers = MOCK_NEARBY_USERS.filter(u => u.distance <= friendSearchRadius);
+  const nearbyUsers: any[] = [];
   // User's alerts (matching user's district or recent activity)
-  const myAlerts = alerts.filter(a => a.userVoted !== undefined || a.location.subdistrict === location.subdistrict);
+  const myAlerts = (alerts || []).filter(a => a.userVoted !== undefined || a.location.subdistrict === location.subdistrict);
   // Saved posts/items (demonstrated with liked or bookmarked posts)
-  const savedPosts = posts.filter(p => p.isLiked);
+  const savedPosts = (posts || []).filter(p => p.isLiked);
 
   // Sync active modal post if open
   const activeModalPost = selectedPostForComments 
@@ -1017,6 +1007,18 @@ export function UserProfile() {
             )}
           </div>
         )}
+
+        {/* Report Issue Button */}
+        <div className="pt-4">
+          <button
+            onClick={() => openContactAdminModal('complaint')}
+            className="w-full py-3 px-4 bg-white hover:bg-amber-50 text-slate-700 border border-slate-200/90 hover:border-amber-200 rounded-2xl text-[13px] font-extrabold transition-all flex items-center justify-center gap-2 shadow-xs"
+            title="แจ้งปัญหาการใช้งาน"
+          >
+            <AlertTriangle size={16} className="text-amber-500" />
+            แจ้งปัญหาการใช้งาน / เสนอแนะ
+          </button>
+        </div>
 
         {/* Logout Button */}
         {isLoggedIn && (

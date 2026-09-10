@@ -22,98 +22,7 @@ import { LocalHubLogo } from './LocalHubLogo';
 import { Megaphone } from 'lucide-react';
 import { PostCard } from './PostCard';
 import { Info } from 'lucide-react';
-const mockPosts: Post[] = [
-  {
-    id: 'mock1',
-    author: { name: 'สมชาย รักดี', avatar: 'https://i.pravatar.cc/150?u=somchai' },
-    category: 'แจ้งเหตุฉุกเฉิน',
-    content: 'ระวัง! ต้นไม้ใหญ่ล้มขวางทางเข้าซอย 4 รถยนต์ผ่านไม่ได้ครับ รบกวนผู้เกี่ยวข้องช่วยตรวจสอบด้วยครับ ⚠️',
-    time: '20 นาทีที่แล้ว',
-    likes: 12,
-    comments: 3,
-    createdAt: Date.now() - 1200000,
-    location: { province: 'กรุงเทพมหานคร', district: 'บางเขน', subdistrict: 'อนุสาวรีย์' }
-  },
-  {
-    id: 'mock2',
-    author: { name: 'ป้าศรี ของหวานโบราณ', avatar: 'https://i.pravatar.cc/150?u=pasri' },
-    category: 'ร้านอร่อยชุมชน',
-    content: 'วันนี้ป้าทำบัวลอยเบญจพรรณสูตรพิเศษนะคะ ใช้สีธรรมชาติจากใบเตย อัญชัน ฟักทอง บีทรูท แวะมาอุดหนุนได้ที่หน้าปากซอยเลยจ้า ถ้วยละ 25 บาทเท่านั้น 🥣✨',
-    images: ['https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=400&q=80'],
-    time: '1 ชั่วโมงที่แล้ว',
-    likes: 45,
-    comments: 8,
-    createdAt: Date.now() - 3600000,
-    location: { province: 'กรุงเทพมหานคร', district: 'บางเขน', subdistrict: 'อนุสาวรีย์' }
-  },
-  {
-    id: 'mock3',
-    author: { name: 'ลุงหนุ่ม ช่างซ่อม', avatar: 'https://i.pravatar.cc/150?u=lungnoom' },
-    category: 'ซื้อ-ขาย/บริการ',
-    content: 'รับซ่อมแอร์ ตู้เย็น เครื่องซักผ้า ราคากันเองสำหรับคนในชุมชนครับ เรียกใช้บริการได้ตลอด เสาร์-อาทิตย์ก็รับงานครับ โทร 081-xxx-xxxx',
-    time: '3 ชั่วโมงที่แล้ว',
-    likes: 8,
-    comments: 1,
-    createdAt: Date.now() - 10800000,
-    location: { province: 'กรุงเทพมหานคร', district: 'บางเขน', subdistrict: 'อนุสาวรีย์' }
-  },
-  {
-    id: 'mock4',
-    author: { name: 'ครูเจี๊ยบ สอนพิเศษ', avatar: 'https://i.pravatar.cc/150?u=krujeab' },
-    category: 'ข่าวสารชุมชน',
-    content: 'ประกาศจากกรรมการชุมชน: วันอาทิตย์นี้เวลา 09:00 น. จะมีกิจกรรมทำความสะอาดลานกีฬาชุมชน ขอเชิญชวนผู้ที่ว่างมาร่วมด้วยช่วยกันนะคะ เตรียมอุปกรณ์มาด้วยจะดีมากค่ะ 🧹🧹',
-    time: '4 ชั่วโมงที่แล้ว',
-    likes: 32,
-    comments: 5,
-    createdAt: Date.now() - 14400000,
-    location: { province: 'กรุงเทพมหานคร', district: 'บางเขน', subdistrict: 'อนุสาวรีย์' }
-  },
-  {
-    id: 'mock5',
-    author: { name: 'เอกพล ธรรมรักษ์', avatar: 'https://i.pravatar.cc/150?u=ekapol' },
-    category: 'ตามหาของ/สัตว์เลี้ยง',
-    content: 'น้องหมาพันธุ์ชิสุ ชื่อ "มอมแมม" หายไปจากบ้านโซนท้ายซอยตั้งแต่เมื่อคืนครับ ใครพบเห็นรบกวนแจ้งด้วยนะครับ มีรางวัลน้ำใจให้ครับ 🐶 ขอบคุณครับ',
-    images: ['https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=400&q=80'],
-    time: '5 ชั่วโมงที่แล้ว',
-    likes: 56,
-    comments: 12,
-    createdAt: Date.now() - 18000000,
-    location: { province: 'กรุงเทพมหานคร', district: 'บางเขน', subdistrict: 'อนุสาวรีย์' }
-  },
-  {
-    id: 'mock6',
-    author: { name: 'วิไลพร ขายผลไม้', avatar: 'https://i.pravatar.cc/150?u=wilaiporn' },
-    category: 'ซื้อ-ขาย/บริการ',
-    content: 'ผลไม้สดๆ มาลงใหม่จ้า มีทุเรียนหมอนทองกรอบนอกนุ่มใน มังคุดหวานๆ ลองกอง และเงาะโรงเรียน แวะมาเลือกชมได้เลยค่ะ 🍉🍊🥭',
-    time: 'เมื่อวาน',
-    likes: 24,
-    comments: 2,
-    createdAt: Date.now() - 86400000,
-    location: { province: 'กรุงเทพมหานคร', district: 'บางเขน', subdistrict: 'อนุสาวรีย์' }
-  },
-  {
-    id: 'mock7',
-    author: { name: 'สมบัติ รปภ.', avatar: 'https://i.pravatar.cc/150?u=sombat' },
-    category: 'ประกาศทั่วไป',
-    content: 'แจ้งเตือนลูกบ้านทุกท่าน รบกวนอย่าจอดรถขวางบริเวณหัวมุมถนนซอย 2 นะครับ รถเก็บขยะเข้าไม่ได้เมื่อเช้าครับ รบกวนด้วยครับ 🙏',
-    time: 'เมื่อวาน',
-    likes: 41,
-    comments: 7,
-    createdAt: Date.now() - 90000000,
-    location: { province: 'กรุงเทพมหานคร', district: 'บางเขน', subdistrict: 'อนุสาวรีย์' }
-  },
-  {
-    id: 'mock8',
-    author: { name: 'น้องฟาง นักศึกษา', avatar: 'https://i.pravatar.cc/150?u=nongfang' },
-    category: 'ขอความช่วยเหลือ',
-    content: 'พอดีกุญแจรถมอเตอร์ไซค์ตกหล่นหายแถวๆ สวนหย่อมช่วงเย็น ใครเก็บได้รบกวนทักมาทีนะคะ เดือดร้อนมากเลยค่ะ 😭',
-    time: 'เมื่อวาน',
-    likes: 15,
-    comments: 4,
-    createdAt: Date.now() - 95000000,
-    location: { province: 'กรุงเทพมหานคร', district: 'บางเขน', subdistrict: 'อนุสาวรีย์' }
-  }
-];
+
 import { NotificationCenterModal } from './modals/NotificationCenterModal';
 
 export function CommunityFeed() {
@@ -127,19 +36,11 @@ export function CommunityFeed() {
     'ทั้งหมด', 'แจ้งเหตุฉุกเฉิน', 'ซื้อ-ขาย/บริการ', 'ข่าวสารชุมชน', 'ตามหาของ/สัตว์เลี้ยง', 'ร้านอร่อยชุมชน', 'ประกาศทั่วไป', 'ขอความช่วยเหลือ'
   ];
 
-  // Show mock data alongside real posts so the feed looks populated for new users
-  const isMockData = true; // Always show for now as requested
-  const displayPosts = [
-    ...posts,
-    ...mockPosts.map(p => ({
-      ...p,
-      content: p.content + '\n\n*(นี่คือโพสต์ตัวอย่าง)*'
-    }))
-  ];
+  const displayPosts = posts;
   
   const filteredPosts = selectedCategory === 'ทั้งหมด'
     ? displayPosts
-    : displayPosts.filter(p => p.category === selectedCategory);
+    : (displayPosts || []).filter(p => p.category === selectedCategory);
 
   // Sort posts: Pinned posts first, then by creation time (latest first)
   const sortedPosts = [...filteredPosts].sort((a, b) => {

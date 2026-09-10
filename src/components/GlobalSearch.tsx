@@ -48,12 +48,12 @@ export function GlobalSearch() {
       }
     });
 
-    const matchedPosts = posts.filter(p => 
+    const matchedPosts = (posts || []).filter(p => 
       p.content.toLowerCase().includes(q) || 
       (p.category && p.category.toLowerCase().includes(q))
     ).slice(0, 5);
 
-    const matchedProducts = marketProducts.filter(p => 
+    const matchedProducts = (marketProducts || []).filter(p => 
       p.title.toLowerCase().includes(q) || 
       (p.description && p.description.toLowerCase().includes(q)) ||
       p.category.toLowerCase().includes(q)

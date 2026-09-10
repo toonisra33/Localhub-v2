@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Home, MapPin, Phone, Building, Tag } from 'lucide-react';
-import { mockRealEstate } from '../../data';
+
 import { useCommunity } from '../../context/CommunityContext';
 
 interface RealEstateModalProps {
@@ -12,8 +12,8 @@ export function RealEstateModal({ onClose }: RealEstateModalProps) {
   const [filterType, setFilterType] = useState<'all' | 'เช่า' | 'ขาย'>('all');
 
   const filteredItems = filterType === 'all'
-    ? mockRealEstate
-    : mockRealEstate.filter(item => item.type === filterType);
+    ? []
+    : ([].filter as any)(item => item.type === filterType);
 
   return (
     <div className="fixed inset-0 z-[80] bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">

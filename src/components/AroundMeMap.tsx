@@ -224,7 +224,9 @@ export function AroundMeMap() {
   const [customPins, setCustomPins] = useState<MapPoint[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_CUSTOM_PINS_KEY);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -254,8 +256,7 @@ export function AroundMeMap() {
 
   // Convert check-in posts into map pins
   const checkInMapPoints: MapPoint[] = useMemo(() => {
-    return posts
-      .filter(p => p.checkIn && p.checkIn.latitude && p.checkIn.longitude)
+    return (posts || []).filter(p => p.checkIn && p.checkIn.latitude && p.checkIn.longitude)
       .map(p => ({
         id: `post_checkin_${p.id}`,
         name: `📍 ${p.checkIn!.placeName}`,
@@ -316,7 +317,7 @@ export function AroundMeMap() {
 
   // Filter map points
   const filteredPoints = useMemo(() => {
-    return allMapPoints.filter(point => {
+    return (allMapPoints || []).filter(point => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q || 
         point.name.toLowerCase().includes(q) ||
@@ -380,9 +381,9 @@ export function AroundMeMap() {
 
   // Locate user GPS
   const handleGpsCenter = async () => {
-    const success = await requestRealLocation();
-    if (success && location.latitude && location.longitude) {
-      setMapCenter({ lat: location.latitude, lng: location.longitude });
+    const result = await requestRealLocation();
+    if (result.success && result.lat && result.lng) {
+      setMapCenter({ lat: result.lat, lng: result.lng });
       setMapZoom(16);
       showToast('🎯 ปักหมุดที่พิกัด GPS ปัจจุบันของคุณแล้ว');
     } else {

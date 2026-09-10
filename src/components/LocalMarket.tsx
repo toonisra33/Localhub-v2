@@ -32,7 +32,7 @@ export function LocalMarket() {
     'ทั้งหมด', 'อาหาร/เครื่องดื่ม', 'ของมือสอง', 'สินค้าเกษตร', 'บริการซ่อม', 'อสังหาฯ/ที่พัก'
   ];
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = (products || []).filter(p => {
     const matchSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.category.toLowerCase().includes(searchTerm.toLowerCase());
     if (selectedCategory === 'ทั้งหมด') return matchSearch;

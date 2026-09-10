@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Navigation, Phone, Star, MapPin, Clock, Utensils, Search, ExternalLink } from 'lucide-react';
-import { mockShops } from '../../data';
+
 import { useCommunity } from '../../context/CommunityContext';
 import { SafeImage } from '../SafeImage';
 
@@ -14,7 +14,7 @@ export function FoodGuideModal({ onClose }: FoodGuideModalProps) {
   const [selectedTag, setSelectedTag] = useState('ทั้งหมด');
 
   const foodPlaces = [
-    ...mockShops.filter(s => s.category.includes('อาหาร') || s.category.includes('คาเฟ่')),
+    
     {
       id: 'f3',
       name: 'ส้มตำแซ่บปากซอย 35 ไก่ย่างเขาสวนกวาง',
