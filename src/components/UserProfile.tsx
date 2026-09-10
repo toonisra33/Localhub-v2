@@ -197,7 +197,7 @@ export function UserProfile() {
   ];
 
   return (
-    <div className="pb-28 pt-2 animate-in fade-in duration-300 bg-slate-50/60 min-h-screen">
+    <div className="pb-48 pt-2 animate-in fade-in duration-300 bg-slate-50/60 min-h-screen">
       
       {/* Profile Header or Guest Welcome */}
       {!isLoggedIn ? (

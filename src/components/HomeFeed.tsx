@@ -150,7 +150,7 @@ export function HomeFeed() {
     : (alerts || []).filter(a => a.type === alertFilter);
 
   return (
-    <div className="pb-28 animate-in fade-in duration-300 bg-slate-50/60 min-h-screen">
+    <div className="pb-48 animate-in fade-in duration-300 bg-slate-50/60 min-h-screen">
       
       {/* Header / Location Selection with Modern Obsidian Gradient */}
       <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900 text-white pt-10 pb-9 px-5 rounded-b-[36px] shadow-[0_12px_40px_rgba(0,0,0,0.18)] sticky top-0 z-10 border-b border-slate-800/80">
@@ -242,7 +242,7 @@ export function HomeFeed() {
                 {location.district}, {location.province}
               </h1>
               
-              <p className="text-slate-400 text-[11.5px] font-medium mt-0.5 flex items-center gap-1 truncate max-w-[210px]">
+              <p className="text-slate-400 text-[11.5px] font-medium mt-0.5 flex items-center gap-1 line-clamp-2 pr-2">
                 <MapPin size={11} className="text-emerald-400 shrink-0" />
                 <span>ต.{location.subdistrict} • {location.village}</span>
               </p>
@@ -258,7 +258,7 @@ export function HomeFeed() {
           <button
             onClick={() => openLocationPermissionModal()}
             title="ขออนุญาตระบุพิกัดพื้นที่จริง"
-            className="w-12 h-[68px] bg-gradient-to-b from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl flex flex-col items-center justify-center gap-1 border border-emerald-400/30 shadow-md shadow-emerald-950/30 transition-all active:scale-95 shrink-0"
+            className="w-[52px] h-auto self-stretch py-2 bg-gradient-to-b from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl flex flex-col items-center justify-center gap-1 border border-emerald-400/30 shadow-md shadow-emerald-950/30 transition-all active:scale-95 shrink-0"
           >
             <Navigation size={18} className="animate-pulse" />
             <span className="text-[9.5px] font-extrabold leading-none">GPS จริง</span>
@@ -275,11 +275,11 @@ export function HomeFeed() {
                 <BarChart3 size={16} />
               </div>
               <div className="min-w-0">
-                <p className="text-[12px] font-extrabold text-white truncate flex items-center gap-1.5">
+                <p className="text-[12px] font-extrabold text-white flex items-center flex-wrap gap-1.5">
                   ศูนย์ควบคุมแอดมิน 
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping shrink-0" />
                 </p>
-                <p className="text-[10px] text-slate-300 truncate">ประชากร 4.8k คน • แก้เหตุแล้ว 94%</p>
+                <p className="text-[10px] text-slate-300 line-clamp-2 leading-tight">ประชากร 4.8k คน • แก้เหตุแล้ว 94%</p>
               </div>
             </div>
 
@@ -358,7 +358,7 @@ export function HomeFeed() {
                 <h3 className="text-[14px] font-extrabold text-white leading-snug group-hover:text-indigo-200 transition-colors">
                   มีข่าวสาร กิจกรรม หรืออยากขอประชาสัมพันธ์?
                 </h3>
-                <p className="text-[11.5px] text-slate-300 mt-0.5 line-clamp-1">
+                <p className="text-[11.5px] text-slate-300 mt-0.5 line-clamp-2 leading-relaxed">
                   ส่งเรื่องให้แอดมินช่วยกระจายข่าวสาร หรือแจ้งเบาะแสในพื้นที่ได้ตลอด 24 ชม.
                 </p>
               </div>
@@ -513,7 +513,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
           <div className="w-6 h-6 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-100">
             <MapPin size={13} className="text-emerald-600" />
           </div>
-          <span className="truncate">{alert.location.district} • ห่างจากคุณ {alert.location.distance || '0.5'} กม.</span>
+          <span className="line-clamp-2">{alert.location.district} • ห่างจากคุณ {alert.location.distance || '0.5'} กม.</span>
         </div>
         
         <div className="flex gap-2">

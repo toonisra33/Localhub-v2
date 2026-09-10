@@ -40,7 +40,7 @@ export function LocalMarket() {
   });
 
   return (
-    <div className="pb-28 pt-4 animate-in fade-in duration-300 bg-slate-50/60 min-h-screen">
+    <div className="pb-48 pt-4 animate-in fade-in duration-300 bg-slate-50/60 min-h-screen">
       
       {/* Sticky Header */}
       <div className="bg-white/90 backdrop-blur-xl px-5 pt-7 pb-4 border-b border-slate-200/70 sticky top-0 z-30 shadow-sm">

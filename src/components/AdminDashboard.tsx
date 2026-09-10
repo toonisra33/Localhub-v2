@@ -176,7 +176,7 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-28">
+    <div className="min-h-screen bg-slate-100 pb-48">
       
       {/* Top Admin Header Bar */}
       <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white p-5 pt-7 sticky top-0 z-30 shadow-xl border-b border-slate-800">
