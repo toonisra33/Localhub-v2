@@ -363,7 +363,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   };
 
   const addAlert = async (alert: Omit<Alert, 'id' | 'time' | 'confirmations' | 'rejections' | 'status'>) => {
-    if (!currentUser) {
+    if (!isLoggedIn || !userProfile?.id) {
       showToast('กรุณาเข้าสู่ระบบก่อนแจ้งเหตุ', 'error');
       openAuthModal();
       return;
@@ -379,7 +379,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         rejections: 0,
         status: 'unconfirmed',
         createdAt: Date.now(),
-        reportedBy: currentUser.uid,
+        reportedBy: userProfile.id,
       };
       
       const alertsRef = collection(db, 'alerts');

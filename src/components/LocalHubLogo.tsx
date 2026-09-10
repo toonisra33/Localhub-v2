@@ -24,7 +24,7 @@ export const LocalHubLogo: React.FC<LogoProps> = ({
         } shadow-emerald-500/25 ring-2 ring-white/20`}
       >
         <img 
-          src="/icon-192.png" 
+          src="/icon-192.png?v=2"
           alt="LocalHub" 
           className="w-full h-full object-cover"
         />
