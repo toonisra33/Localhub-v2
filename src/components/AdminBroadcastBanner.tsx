@@ -290,12 +290,12 @@ export function AdminBroadcastBanner() {
                       title: activeBroadcast.title,
                       subtitle: `บรอดแคสจาก: ${activeBroadcast.adminName}`
                     })}
-                    className="rounded-2xl overflow-hidden border border-white/20 shadow-md max-h-56 bg-black/40 relative cursor-pointer group"
+                    className="rounded-2xl overflow-hidden border border-white/20 shadow-md bg-black relative cursor-pointer group flex items-center justify-center"
                   >
                     <img 
                       src={activeBroadcast.mediaUrl} 
                       alt={activeBroadcast.title} 
-                      className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-auto max-h-[80vh] object-contain transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                       <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl text-white text-[12px] font-bold flex items-center gap-1.5">

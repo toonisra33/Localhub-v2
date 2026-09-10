@@ -325,11 +325,16 @@ export function AdminBroadcastModal() {
     }
   };
 
-  const handleSend = async (e: React.FormEvent) => {
+    const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Only title and message are strictly required
     if (!title.trim()) { showToast('กรุณาระบุหัวข้อบรอดแคสต์', 'error'); return; }
     if (!message.trim()) { showToast('กรุณาระบุรายละเอียด', 'error'); return; }
-    if (enableLink && !actionUrl.trim()) { showToast('กรุณาระบุลิงก์ปลายทาง (URL)', 'error'); return; }
+
+    // If link is enabled but empty, just ignore it instead of blocking
+    const finalActionUrl = (enableLink && actionUrl.trim()) ? actionUrl.trim() : undefined;
+    const finalActionText = (enableLink && actionUrl.trim()) ? (actionText.trim() || 'ไปยังลิงก์ข้อมูล') : undefined;
 
     if (selectedMediaType === 'video' && videoDuration > 600) {
       setMediaError('ความยาววิดีโอต้องไม่เกิน 10 นาที');
@@ -338,19 +343,19 @@ export function AdminBroadcastModal() {
 
     try {
       await sendBroadcast({
-      title: title.trim(),
-      message: message.trim(),
-      category,
-      severity,
-      targetArea: targetArea.trim() || undefined,
-      contactNumber: contactNumber.trim() || undefined,
-      mediaType: selectedMediaType === 'none' ? undefined : selectedMediaType,
-      mediaUrl: selectedMediaType !== 'none' && mediaUrl ? mediaUrl : undefined,
-      mediaFileName: selectedMediaType !== 'none' && mediaFileName ? mediaFileName : undefined,
-      videoDurationSeconds: selectedMediaType === 'video' ? videoDuration : undefined,
-      actionText: (enableLink && actionUrl.trim()) ? (actionText.trim() || 'ไปยังลิงก์ข้อมูล') : undefined,
-      actionUrl: (enableLink && actionUrl.trim()) ? actionUrl.trim() : undefined,
-    });
+        title: title.trim(),
+        message: message.trim(),
+        category,
+        severity,
+        targetArea: targetArea.trim() || undefined,
+        contactNumber: contactNumber.trim() || undefined,
+        mediaType: selectedMediaType === 'none' ? undefined : selectedMediaType,
+        mediaUrl: selectedMediaType !== 'none' && mediaUrl ? mediaUrl : undefined,
+        mediaFileName: selectedMediaType !== 'none' && mediaFileName ? mediaFileName : undefined,
+        videoDurationSeconds: selectedMediaType === 'video' ? videoDuration : undefined,
+        actionText: finalActionText,
+        actionUrl: finalActionUrl,
+      });
 
       setStatusFeedback('ส่งบรอดแคสสำเร็จ! ข้อความจะล็อกบนหน้าจอด้านบนสุดทุกเครื่อง 15 นาที');
       setTimeout(() => {
@@ -918,11 +923,11 @@ export function AdminBroadcastModal() {
                   </div>
 
                   {mediaUrl && (
-                    <div className="relative rounded-xl overflow-hidden border border-gray-200 max-h-36 bg-gray-900 flex items-center justify-center">
+                    <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-900 flex items-center justify-center">
                       <img 
                         src={mediaUrl} 
                         alt="Preview" 
-                        className="w-full h-36 object-cover" 
+                        className="w-full h-auto max-h-[50vh] object-contain" 
                         onError={() => setMediaError('ไม่สามารถโหลดภาพจาก URL นี้ได้')}
                       />
                       <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1">

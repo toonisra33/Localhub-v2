@@ -245,12 +245,13 @@ export interface VerificationRequest {
 }
 
 export interface MorningBrief {
-  weather: string;
+  weather: { temp: string; condition: string; pm25: string; } | string;
   roadClosures: number;
   events: number;
   newShops: number;
-  newJobs: number;
+  newJobs?: number;
   announcements: number;
+  greeting?: string;
 }
 
 export type ContactRequestType = 'pr_request' | 'news_report' | 'urgent_tip' | 'complaint' | 'special_help';
