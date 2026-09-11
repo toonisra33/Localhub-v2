@@ -103,17 +103,31 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
     }
 
     setIsAttaching(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setVideoUrl(event.target?.result as string);
-      showToast('🎥 แนบวิดีโอเรียบร้อยแล้ว', 'success');
+    const videoElement = document.createElement('video');
+    videoElement.preload = 'metadata';
+    const fileUrl = URL.createObjectURL(file);
+    videoElement.src = fileUrl;
+
+    videoElement.onloadedmetadata = () => {
+      URL.revokeObjectURL(fileUrl);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setVideoUrl(event.target?.result as string);
+        showToast('🎥 แนบวิดีโอเรียบร้อยแล้ว', 'success');
+        setIsAttaching(false);
+      };
+      reader.onerror = () => {
+        showToast('เกิดข้อผิดพลาดในการอ่านไฟล์วิดีโอ', 'error');
+        setIsAttaching(false);
+      };
+      reader.readAsDataURL(file);
+    };
+
+    videoElement.onerror = () => {
+      URL.revokeObjectURL(fileUrl);
+      showToast('ไฟล์วิดีโอไม่ถูกต้องหรือไม่รองรับ', 'error');
       setIsAttaching(false);
     };
-    reader.onerror = () => {
-      showToast('เกิดข้อผิดพลาดในการอ่านไฟล์วิดีโอ', 'error');
-      setIsAttaching(false);
-    };
-    reader.readAsDataURL(file);
 
     if (videoInputRef.current) {
       videoInputRef.current.value = '';

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useBackButton } from '../../hooks/useBackButton';
 import { X, MapPin, Check, Compass, Navigation, Sparkles, Loader2, Home, Search, Building2, Globe } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { Location } from '../../types';

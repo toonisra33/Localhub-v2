@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useBackButton } from '../../hooks/useBackButton';
 import { compressImage } from '../../lib/imageUtils';
 import { X, Send, Bot, Sparkles, Loader2, Image as ImageIcon } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';

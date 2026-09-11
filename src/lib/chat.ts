@@ -147,8 +147,6 @@ export const rejectFriendRequest = async (userId1: string, userId2: string) => {
   const friendshipRef = doc(db, 'friendships', friendshipId);
   const snap = await getDoc(friendshipRef);
   if (snap.exists()) {
-    // Delete the friendship doc
-    const { deleteDoc } = require('firebase/firestore');
     await deleteDoc(friendshipRef);
   }
 };

@@ -256,7 +256,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               </button>
               <a
                 href="/privacy.html"
-                target="_blank"
+                target={typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone) ? "_self" : "_blank"}
                 rel="noreferrer"
                 className="py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-600 rounded-xl text-[12px] font-bold border border-slate-200 shadow-xs flex items-center justify-center gap-1 transition-all"
                 title="เปิดในแท็บใหม่"

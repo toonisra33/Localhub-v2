@@ -3,6 +3,7 @@ import { X, AlertTriangle, Droplets, Zap, Construction, Car, ShieldAlert, Camera
 import { MapPinModal } from './MapPinModal';
 import { useCommunity } from '../../context/CommunityContext';
 import { Alert } from '../../types';
+import { compressImage } from '../../lib/imageUtils';
 
 interface IncidentReportModalProps {
   onClose: () => void;
@@ -18,6 +19,8 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
   const [showMapPin, setShowMapPin] = useState(false);
   const [pinnedLocation, setPinnedLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const incidentTypes = [
     { id: 'flood', label: 'น้ำท่วม/ขัง', icon: Droplets, color: 'text-sky-500 bg-sky-50 border-sky-200' },
@@ -31,11 +34,19 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
     const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const localUrl = URL.createObjectURL(file);
-      setImageUrl(localUrl);
+      if (!file.type.startsWith('image/')) {
+        showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+        return;
+      }
+      try {
+        const compressedBase64 = await compressImage(file);
+        setImageUrl(compressedBase64);
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ', 'error');
+      }
     }
   };
 
@@ -50,11 +61,14 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current || isSubmitting) return;
     if (!title.trim()) {
       showToast('กรุณากรอกหัวข้อเหตุการณ์', 'error');
       return;
     }
 
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     await addAlert({
       type,
       title: title.trim(),
@@ -66,6 +80,8 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
       image: imageUrl || undefined
     });
 
+    setIsSubmitting(false);
+    isSubmittingRef.current = false;
     onClose();
   };
 
@@ -229,7 +245,7 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
                 type="file" 
                 ref={cameraInputRef} 
                 onChange={handleFileChange} 
-                accept="image/*,video/*"
+                accept="image/*"
                 capture="environment" 
                 className="hidden" 
               />
@@ -237,7 +253,7 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
                 type="file" 
                 ref={galleryInputRef} 
                 onChange={handleFileChange} 
-                accept="image/*,video/*" 
+                accept="image/*" 
                 className="hidden" 
               />
               <div className="flex gap-2">
@@ -274,10 +290,15 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-[13.5px] shadow-lg shadow-rose-600/25 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              disabled={isSubmitting}
+              className={`flex-1 py-3 rounded-2xl font-bold text-[13.5px] transition-all flex items-center justify-center gap-1.5 ${
+                isSubmitting 
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/25 active:scale-95'
+              }`}
             >
               <AlertTriangle size={16} />
-              ส่งรายงานทันที
+              {isSubmitting ? 'กำลังส่งรายงาน...' : 'ส่งรายงานทันที'}
             </button>
           </div>
         </form>

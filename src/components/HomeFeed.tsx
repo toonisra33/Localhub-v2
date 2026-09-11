@@ -27,7 +27,8 @@ import {
   BarChart3,
   Megaphone,
   ChevronRight,
-  MessageCircle
+  MessageCircle,
+  Trash2
 } from 'lucide-react';
 import { Alert } from '../types';
 import { useBroadcast } from '../context/BroadcastContext';
@@ -44,6 +45,7 @@ import { LeaderboardModal } from './modals/LeaderboardModal';
 import { LocalHubLogo } from './LocalHubLogo';
 import { GlobalSearch } from './GlobalSearch';
 import { AiMorningBrief } from './AiMorningBrief';
+import { SafeImage } from './SafeImage';
 
 export function HomeFeed() {
   const { role, setOpenAdminModal } = useBroadcast();
@@ -54,6 +56,7 @@ export function HomeFeed() {
     location, 
     alerts, 
     voteAlert, 
+    deleteAlert,
     setActiveTab, 
     unreadNotificationsCount, 
     showToast,
@@ -75,6 +78,13 @@ export function HomeFeed() {
   React.useEffect(() => {
     const handleOpenNotif = () => setShowNotificationsModal(true);
     window.addEventListener('open-notifications', handleOpenNotif);
+    
+    // Check location on app start
+    if (typeof window !== 'undefined' && !sessionStorage.getItem('location_verified_this_session')) {
+      sessionStorage.setItem('location_verified_this_session', 'true');
+      setShowLocationModal(true);
+    }
+    
     return () => window.removeEventListener('open-notifications', handleOpenNotif);
   }, []);
   const [alertFilter, setAlertFilter] = useState<'all' | 'flood' | 'road' | 'power'>('all');
@@ -422,6 +432,7 @@ export function HomeFeed() {
                 alert={alert} 
                 onVote={(type) => voteAlert(alert.id, type)}
                 onCameraClick={() => setShowIncidentModal(true)}
+                onDelete={() => deleteAlert(alert.id)}
               />
             ))
           )}
@@ -447,14 +458,19 @@ interface AlertCardProps {
   alert: Alert;
   onVote: (type: 'up' | 'down') => void;
   onCameraClick: () => void;
+  onDelete?: () => void;
 }
 
 const AlertCard: React.FC<AlertCardProps> = ({ 
   alert, 
   onVote, 
-  onCameraClick 
+  onCameraClick,
+  onDelete
 }) => {
-  const { openMediaViewer } = useCommunity();
+  const { openMediaViewer, userProfile } = useCommunity();
+  const isMyAlert = userProfile?.id === alert.reportedBy;
+  const isAdmin = userProfile?.role === 'admin';
+  const canDelete = isMyAlert || isAdmin;
   const getStatusConfig = (status: Alert['status']) => {
     switch(status) {
       case 'unconfirmed': return { icon: AlertTriangle, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200/80', text: 'ยังไม่ยืนยัน' };
@@ -480,10 +496,21 @@ const AlertCard: React.FC<AlertCardProps> = ({
           <StatusIcon size={13} />
           {statusConfig.text}
         </div>
-        <span className="text-[11.5px] font-bold text-slate-400 flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md">
-          <Clock size={12} />
-          {alert.time}
-        </span>
+        <div className="flex items-center gap-2">
+          {canDelete && onDelete && (
+            <button 
+              onClick={onDelete}
+              className="text-slate-400 hover:text-rose-500 bg-slate-50 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors"
+              title="ลบรายการนี้"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+          <span className="text-[11.5px] font-bold text-slate-400 flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md">
+            <Clock size={12} />
+            {alert.time}
+          </span>
+        </div>
       </div>
       
       <div className="pl-1.5">
@@ -500,7 +527,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
             })}
             className="mb-3.5 rounded-2xl overflow-hidden max-h-44 border border-slate-150 bg-slate-900 cursor-pointer relative group"
           >
-            <img src={alert.image} alt={alert.title} className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300" />
+            <SafeImage src={alert.image} alt={alert.title} category="แจ้งเหตุ" fallbackType="alert" className="w-full h-44 group-hover:scale-105 transition-transform duration-300" />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
               <span className="bg-black/75 backdrop-blur-md text-white text-[11px] font-extrabold px-3 py-1 rounded-full border border-white/20">
                 แตะเพื่อดูภาพเต็มจอ

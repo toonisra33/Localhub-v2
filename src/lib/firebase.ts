@@ -446,6 +446,17 @@ export async function createNotificationInFirestore(
   }
 }
 
+export async function deleteAlertFromFirestore(alertId: string): Promise<void> {
+  const path = `alerts/${alertId}`;
+  try {
+    const alertRef = doc(db, 'alerts', alertId);
+    await deleteDoc(alertRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+    throw error;
+  }
+}
+
 export async function deletePostFromFirestore(postId: string): Promise<void> {
   const path = `posts/${postId}`;
   try {

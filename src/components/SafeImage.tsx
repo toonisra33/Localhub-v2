@@ -4,7 +4,7 @@ interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src?: string;
   alt?: string;
   category?: string;
-  fallbackType?: 'product' | 'shop' | 'food' | 'avatar' | 'general';
+  fallbackType?: 'product' | 'shop' | 'food' | 'avatar' | 'general' | 'alert';
   className?: string;
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
@@ -18,7 +18,12 @@ export function getSvgPlaceholder(category: string = '', title: string = 'สิ
   let bgColor2 = '#047857';
   let label = title || 'สินค้าชุมชน';
 
-  if (cat.includes('อาหาร') || cat.includes('เครื่องดื่ม') || cat.includes('food')) {
+  if (cat.includes('แจ้งเหตุ') || cat.includes('เหตุฉุกเฉิน') || cat.includes('alert')) {
+    bgColor1 = '#dc2626';
+    bgColor2 = '#991b1b';
+    label = title || 'แจ้งเหตุ / เตือนภัย';
+    iconSvg = `<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>`;
+  } else if (cat.includes('อาหาร') || cat.includes('เครื่องดื่ม') || cat.includes('food')) {
     bgColor1 = '#d97706';
     bgColor2 = '#b45309';
     label = 'อาหาร / เครื่องดื่ม';
@@ -76,6 +81,7 @@ export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   'สินค้าเกษตร': 'https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&q=80&w=600',
   'บริการซ่อม': 'https://images.unsplash.com/photo-1581092926289-e9162ab7a24f?auto=format&fit=crop&q=80&w=600',
   'อสังหาฯ/ที่พัก': 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=600',
+  'แจ้งเหตุ': 'https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&q=80&w=600',
   'เสื้อผ้า/แฟชั่น': 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&q=80&w=600',
   'ทั่วไป': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600'
 };
@@ -115,19 +121,17 @@ export function SafeImage({
   }, [src, category]);
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
     const checkImage = () => {
       if (imgRef.current?.complete) {
-        if (imgRef.current.naturalWidth > 0) {
-          setIsLoaded(true);
-        }
+        setIsLoaded(true);
+      } else {
+        // Fallback: forcefully show image after 2 seconds if events fail
+        timeout = setTimeout(() => setIsLoaded(true), 2000);
       }
     };
     
-    // Check immediately
     checkImage();
-    
-    // Check again after a tiny delay in case the browser hasn't updated naturalWidth yet
-    const timeout = setTimeout(checkImage, 50);
     return () => clearTimeout(timeout);
   }, [currentSrc]);
 

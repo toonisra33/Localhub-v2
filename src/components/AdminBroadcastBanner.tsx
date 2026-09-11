@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { isAuthorizedAdminEmail } from '../lib/firebase';
+import { openExternalLink } from '../utils/linkHandler';
 
 export function AdminBroadcastBanner() {
   const { 
@@ -234,15 +235,16 @@ export function AdminBroadcastBanner() {
               <div className="flex items-center gap-1.5 shrink-0 self-center">
                 {/* Quick Action Link Button in collapsed bar if provided */}
                 {!isExpanded && activeBroadcast.actionUrl && (
-                  <a
-                    href={activeBroadcast.actionUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openExternalLink(activeBroadcast.actionUrl!);
+                    }}
                     className={`hidden xs:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${theme.actionButton}`}
                   >
                     <ExternalLink size={12} />
                     <span className="max-w-[100px] truncate">{activeBroadcast.actionText || 'เปิดดู'}</span>
-                  </a>
+                  </button>
                 )}
 
                 {isRealAdmin && (
@@ -369,15 +371,16 @@ export function AdminBroadcastBanner() {
                   
                   {/* Optional Action Link: ONLY rendered if actionUrl is present */}
                   {activeBroadcast.actionUrl && (
-                    <a
-                      href={activeBroadcast.actionUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openExternalLink(activeBroadcast.actionUrl!);
+                      }}
                       className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-extrabold text-[13px] transition-all transform hover:scale-[1.02] active:scale-[0.98] ${theme.actionButton}`}
                     >
                       <ExternalLink size={15} />
                       <span>{activeBroadcast.actionText || 'ไปยังลิงก์ข้อมูล'}</span>
-                    </a>
+                    </button>
                   )}
 
                   {/* Emergency / Inquiries Contact Phone */}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useBackButton } from '../../hooks/useBackButton';
 import { X, MessageCircle, UserPlus, Check, UserMinus } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { getUserDetails, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, subscribeToFriendshipStatus } from '../../lib/chat';
@@ -86,25 +87,32 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
 
   if (!isOpen) return null;
 
+  useBackButton(isOpen, onClose);
+
   const handleFriendAction = async () => {
     if (!isLoggedIn || !userProfile?.id) {
       showToast('กรุณาเข้าสู่ระบบเพื่อดำเนินการ', 'error');
       return;
     }
-    if (friendStatus.status === 'none') {
-      await sendFriendRequest(userProfile.id, userId);
-      showToast('ส่งคำขอเป็นเพื่อนแล้ว', 'success');
-    } else if (friendStatus.status === 'pending' && friendStatus.requesterId !== userProfile.id) {
-      await acceptFriendRequest(userProfile.id, userId);
-      showToast('คุณเป็นเพื่อนกันแล้ว', 'success');
-    } else if (friendStatus.status === 'pending' && friendStatus.requesterId === userProfile.id) {
-      await rejectFriendRequest(userProfile.id, userId);
-      showToast('ยกเลิกคำขอเป็นเพื่อนแล้ว', 'info');
-    } else if (friendStatus.status === 'accepted') {
-      if (confirm('คุณต้องการยกเลิกการเป็นเพื่อนใช่หรือไม่?')) {
+    try {
+      if (friendStatus.status === 'none') {
+        await sendFriendRequest(userProfile.id, userId);
+        showToast('ส่งคำขอเป็นเพื่อนแล้ว', 'success');
+      } else if (friendStatus.status === 'pending' && friendStatus.requesterId !== userProfile.id) {
+        await acceptFriendRequest(userProfile.id, userId);
+        showToast('คุณเป็นเพื่อนกันแล้ว', 'success');
+      } else if (friendStatus.status === 'pending' && friendStatus.requesterId === userProfile.id) {
         await rejectFriendRequest(userProfile.id, userId);
-        showToast('เลิกเป็นเพื่อนแล้ว', 'info');
+        showToast('ยกเลิกคำขอเป็นเพื่อนแล้ว', 'info');
+      } else if (friendStatus.status === 'accepted') {
+        if (confirm('คุณต้องการยกเลิกการเป็นเพื่อนใช่หรือไม่?')) {
+          await rejectFriendRequest(userProfile.id, userId);
+          showToast('เลิกเป็นเพื่อนแล้ว', 'info');
+        }
       }
+    } catch (error) {
+      console.error('Friend action error:', error);
+      showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
     }
   };
 

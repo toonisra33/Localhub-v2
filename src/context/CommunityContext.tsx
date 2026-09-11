@@ -41,6 +41,7 @@ import {
   addCommentToFirestore,
   createNotificationInFirestore,
   deletePostFromFirestore,
+  deleteAlertFromFirestore,
   syncUserProfileToFirestore,
   logUserSession,
   testConnection,
@@ -95,6 +96,7 @@ interface CommunityContextType {
   alerts: Alert[];
   addAlert: (alert: Omit<Alert, 'id' | 'time' | 'confirmations' | 'rejections' | 'status'>) => Promise<void>;
   voteAlert: (alertId: string, voteType: 'up' | 'down') => void;
+  deleteAlert: (alertId: string) => Promise<void>;
 
   // Posts State (Synced with Firestore)
   posts: Post[];
@@ -385,8 +387,6 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       const alertsRef = collection(db, 'alerts');
       const docRef = await addDoc(alertsRef, alertData);
       
-      const newAlert = { id: docRef.id, ...alertData } as Alert;
-      setAlerts(prev => [newAlert, ...prev]);
       
       showToast('แจ้งเตือนเหตุการณ์เรียบร้อยแล้ว แอดมินจะทำการตรวจสอบต่อไป', 'success');
     } catch (error) {
@@ -406,6 +406,17 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         userVoted: voteType
       };
     }));
+  };
+
+  const deleteAlert = async (alertId: string) => {
+    try {
+      await deleteAlertFromFirestore(alertId);
+      setAlerts(prev => prev.filter(a => a.id !== alertId));
+      showToast('ลบรายการแจ้งเหตุเรียบร้อยแล้ว', 'success');
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      showToast('เกิดข้อผิดพลาดในการลบรายการแจ้งเหตุ', 'error');
+    }
   };
 
   const addPost = async (content: string, category: string, images?: string[], customLocation?: Location, checkIn?: CheckInLocation, videoUrl?: string) => {
@@ -447,6 +458,13 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleLikePost = async (postId: string) => {
+    const userId = auth.currentUser?.uid || userProfile?.id || 'anonymous';
+    if (userId === 'anonymous') {
+      showToast('กรุณาเข้าสู่ระบบก่อนกดถูกใจ', 'error');
+      openAuthModal();
+      return;
+    }
+
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
       const isLiked = p.isLikedByMe;
@@ -456,6 +474,25 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         isLikedByMe: !isLiked
       };
     }));
+
+    try {
+      const post = posts.find(p => p.id === postId);
+      if (post) {
+        await togglePostLikeInFirestore(postId, userId, post.isLikedByMe);
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      // Revert state on error
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        const isLiked = p.isLikedByMe;
+        return {
+          ...p,
+          likes: isLiked ? p.likes - 1 : p.likes + 1,
+          isLikedByMe: !isLiked
+        };
+      }));
+    }
   };
 
   const togglePinPost = async (postId: string, isPinned: boolean) => {
@@ -478,14 +515,55 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   };
 
   const addComment = async (postId: string, text: string) => {
+    const userId = auth.currentUser?.uid || userProfile?.id || 'anonymous';
+    if (userId === 'anonymous') {
+      showToast('กรุณาเข้าสู่ระบบก่อนแสดงความคิดเห็น', 'error');
+      openAuthModal();
+      return;
+    }
+
+    const commentId = `cmt_${Date.now()}`;
+    const newComment = {
+      id: commentId,
+      postId: postId,
+      authorUid: userId,
+      author: {
+        name: userProfile.name,
+        avatar: userProfile.avatar,
+        isVerified: userProfile.isVerified,
+      },
+      text: text,
+      createdAt: Date.now()
+    };
+
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
       return { ...p, comments: p.comments + 1 };
     }));
+
+    try {
+      await addCommentToFirestore(postId, newComment as any);
+      showToast('เพิ่มความคิดเห็นเรียบร้อยแล้ว', 'success');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      showToast('เกิดข้อผิดพลาดในการเพิ่มความคิดเห็น', 'error');
+      // Revert state
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        return { ...p, comments: p.comments - 1 };
+      }));
+    }
   };
 
   const deletePost = async (postId: string) => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
+    try {
+      await deletePostFromFirestore(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      showToast('ลบโพสต์เรียบร้อยแล้ว', 'success');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      showToast('เกิดข้อผิดพลาดในการลบโพสต์', 'error');
+    }
   };
 
   const deleteContactRequest = async (id: string) => {
@@ -1194,6 +1272,7 @@ useEffect(() => {
         alerts,
         addAlert,
         voteAlert,
+        deleteAlert,
         posts,
         addPost,
         toggleLikePost,

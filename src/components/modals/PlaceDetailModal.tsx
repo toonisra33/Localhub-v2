@@ -40,13 +40,15 @@ interface PlaceDetailModalProps {
   onDeletePin?: (id: string) => void;
 }
 
+import { openExternalLink } from '../../utils/linkHandler';
+
 export function PlaceDetailModal({ place, onClose, onDeletePin }: PlaceDetailModalProps) {
   const { showToast, openMediaViewer } = useCommunity();
 
   const handleNavigate = () => {
     showToast(`📍 กำลังเปิดเส้นทางนำทางไปยัง "${place.name}" บน Google Maps`);
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
-    window.open(mapsUrl, '_blank');
+    openExternalLink(mapsUrl);
   };
 
   const handleCopyCoords = () => {

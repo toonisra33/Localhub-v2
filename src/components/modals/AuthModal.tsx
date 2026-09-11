@@ -1,5 +1,6 @@
 import { compressImage } from '../../lib/imageUtils';
 import React, { useState, useRef } from 'react';
+import { useBackButton } from '../../hooks/useBackButton';
 import { 
   X, 
   UserPlus, 
@@ -215,6 +216,8 @@ export function AuthModal() {
     });
     setIsSubmitting(false);
   };
+
+  useBackButton(isAuthModalOpen, closeAuthModal);
 
   const handleGoogleSignIn = async () => {
     setIsSigningInGoogle(true);

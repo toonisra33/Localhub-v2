@@ -1,8 +1,22 @@
 const fs = require('fs');
-let rules = fs.readFileSync('firestore.rules', 'utf8');
-rules = rules.replace(
-  /match \/broadcasts\/\{broadcastId\} \{\s+allow read: if true;\s+allow write: if true; \/\/ Relaxed for demo purposes\s+\}/,
-  'match /broadcasts/{broadcastId} {\n      allow read: if true;\n      allow write: if isAdmin();\n    }'
-);
-fs.writeFileSync('firestore.rules', rules);
-console.log('Restored firestore.rules');
+const path = 'firestore.rules';
+let content = fs.readFileSync(path, 'utf8');
+
+const target = `    match /alerts/{alertId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }`;
+
+const replacement = `    match /alerts/{alertId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.reportedBy == request.auth.uid);
+    }`;
+
+content = content.replace(target, replacement);
+
+fs.writeFileSync(path, content);
+console.log('Done patching firestore.rules');

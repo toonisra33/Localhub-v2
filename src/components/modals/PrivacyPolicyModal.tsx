@@ -71,7 +71,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
             </button>
             <a
               href="/privacy.html"
-              target="_blank"
+              target={typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone) ? "_self" : "_blank"}
               rel="noreferrer"
               className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors shrink-0"
               title="เปิดหน้าเว็บเต็ม"
@@ -151,7 +151,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2 shrink-0">
           <a
             href="/privacy.html"
-            target="_blank"
+            target={typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone) ? "_self" : "_blank"}
             rel="noreferrer"
             className="text-[12px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
           >
