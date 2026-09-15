@@ -69,8 +69,8 @@ jobs:
             "backgroundColor": "#111827",
             "enableNotifications": true,
             "startUrl": "/",
-            "iconUrl": "https://raw.githubusercontent.com/toonisra33/localhub/main/public/icon-512.png",
-            "maskableIconUrl": "https://raw.githubusercontent.com/toonisra33/localhub/main/public/icon-512.png",
+            "iconUrl": "https://localhub-69fbe.web.app/icon-512.png",
+            "maskableIconUrl": "https://localhub-69fbe.web.app/icon-512.png",
             "splashScreenFadeOutDuration": 300,
             "signingKey": {
               "path": "./android.keystore",
