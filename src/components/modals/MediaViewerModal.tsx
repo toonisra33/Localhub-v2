@@ -36,6 +36,15 @@ export function MediaViewerModal({ media, onClose }: MediaViewerModalProps) {
 
   if (!media) return null;
 
+  const mediaUrl = typeof media.url === 'string' ? media.url : ((media.url as any)?.url || '');
+  
+  // Intelligent video detection: Only treat as video if explicit or has video file extension / video mime type
+  const isVideo = media.type === 'video' || 
+    (typeof mediaUrl === 'string' && (
+      /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(mediaUrl) || 
+      mediaUrl.startsWith('data:video')
+    ));
+
   const handleZoomIn = () => {
     setScale(prev => Math.min(prev + 0.3, 3));
   };
@@ -51,14 +60,14 @@ export function MediaViewerModal({ media, onClose }: MediaViewerModalProps) {
   const handleDownload = async () => {
     try {
       const a = document.createElement('a');
-      a.href = media.url;
-      a.download = media.title || 'media-locallink';
+      a.href = mediaUrl;
+      a.download = media.title || (isVideo ? 'video-locallink' : 'image-locallink');
       a.target = '_blank';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
     } catch {
-      window.open(media.url, '_blank');
+      window.open(mediaUrl, '_blank');
     }
   };
 
@@ -74,7 +83,7 @@ export function MediaViewerModal({ media, onClose }: MediaViewerModalProps) {
       >
         <div className="flex flex-col min-w-0 pr-4">
           <h3 className="font-extrabold text-[15px] sm:text-[17px] text-white truncate drop-shadow-md">
-            {media.title || (media.type === 'video' ? 'วิดีโอ (โหมดเต็มหน้าจอ)' : 'รูปภาพ (โหมดเต็มหน้าจอ)')}
+            {media.title || (isVideo ? 'วิดีโอ (โหมดเต็มหน้าจอ)' : 'รูปภาพ (โหมดเต็มหน้าจอ)')}
           </h3>
           {media.subtitle && (
             <p className="text-[12px] text-slate-300 truncate">{media.subtitle}</p>
@@ -82,7 +91,7 @@ export function MediaViewerModal({ media, onClose }: MediaViewerModalProps) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {media.type === 'image' && (
+          {!isVideo && (
             <div className="hidden sm:flex items-center bg-white/10 backdrop-blur-md rounded-2xl p-1 border border-white/15">
               <button
                 onClick={handleZoomIn}
@@ -131,31 +140,31 @@ export function MediaViewerModal({ media, onClose }: MediaViewerModalProps) {
         className="w-full flex-1 flex items-center justify-center relative overflow-hidden py-4"
         onClick={onClose}
       >
-        {media.type === 'image' ? (
+        {isVideo ? (
+          <div 
+            className="max-w-[95vw] sm:max-w-[85vw] max-h-[75vh] w-full max-w-3xl flex items-center justify-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <video 
+              src={mediaUrl} 
+              controls 
+              autoPlay 
+              playsInline
+              className="w-full max-h-[75vh] rounded-2xl shadow-2xl bg-black ring-1 ring-white/15 object-contain"
+            />
+          </div>
+        ) : (
           <div 
             className="transition-transform duration-200 ease-out flex items-center justify-center max-w-full max-h-full"
             style={{ transform: `scale(${scale})` }}
             onClick={e => e.stopPropagation()}
           >
             <img 
-              src={media.url} 
+              src={mediaUrl} 
               alt={media.title || 'Full view'} 
               className="max-w-[95vw] sm:max-w-[85vw] max-h-[75vh] object-contain rounded-2xl shadow-2xl ring-1 ring-white/10"
               style={{ cursor: scale > 1 ? 'grab' : 'zoom-in' }}
               onClick={() => setScale(prev => prev === 1 ? 1.6 : 1)}
-            />
-          </div>
-        ) : (
-          <div 
-            className="max-w-[95vw] sm:max-w-[85vw] max-h-[75vh] w-full max-w-3xl flex items-center justify-center"
-            onClick={e => e.stopPropagation()}
-          >
-            <video 
-              src={media.url} 
-              controls 
-              autoPlay 
-              playsInline
-              className="w-full max-h-[75vh] rounded-2xl shadow-2xl bg-black ring-1 ring-white/15 object-contain"
             />
           </div>
         )}
@@ -168,7 +177,7 @@ export function MediaViewerModal({ media, onClose }: MediaViewerModalProps) {
       >
         <p className="text-[12px] text-slate-400 font-medium bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 inline-flex items-center gap-2 shadow-lg">
           <Maximize2 size={13} className="text-emerald-400" />
-          <span>แตะที่รูปเพื่อย่อ/ขยาย หรือกดปุ่ม ✕ เพื่อปิด</span>
+          <span>{isVideo ? 'แตะปุ่มควบคุมวิดีโอ หรือกดปุ่ม ✕ เพื่อปิด' : 'แตะที่รูปเพื่อย่อ/ขยาย หรือกดปุ่ม ✕ เพื่อปิด'}</span>
         </p>
       </div>
     </div>

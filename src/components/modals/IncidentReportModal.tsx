@@ -75,6 +75,8 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
       description: description.trim() || 'ไม่มีคำอธิบายเพิ่มเติม',
       location: {
         ...location,
+        latitude: pinnedLocation?.lat || location.latitude,
+        longitude: pinnedLocation?.lng || location.longitude,
         distance: parseFloat(distance) || 0.5
       },
       image: imageUrl || undefined

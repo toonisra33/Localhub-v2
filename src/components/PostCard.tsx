@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Post } from '../types';
 import { useCommunity } from '../context/CommunityContext';
+import { calculateDistance } from '../lib/distance';
 import { isAuthorizedAdminEmail } from '../lib/firebase';
 import { SafeImage } from './SafeImage';
 
@@ -38,6 +39,13 @@ export const PostCard: React.FC<PostCardProps> = ({
   onDelete 
 }) => {
   const { showToast, openMediaViewer, jumpToMapLocation, location, openPublicProfile, userProfile, isLoggedIn, role, togglePinPost } = useCommunity();
+  
+  const displayDistance = React.useMemo(() => {
+    if (location?.latitude && location?.longitude && post.location?.latitude && post.location?.longitude) {
+      return calculateDistance(location.latitude, location.longitude, post.location.latitude, post.location.longitude);
+    }
+    return post.location?.distance ? `${post.location.distance} กม.` : '';
+  }, [location, post.location]);
   const [showMenu, setShowMenu] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   
@@ -142,7 +150,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               <span>•</span>
               <span className="flex items-center text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
                 <MapPin size={10} className="mr-0.5" />
-                ต.{post.location.subdistrict} {post.location.distance ? `(${post.location.distance} กม.)` : ''}
+                ต.{post.location.subdistrict} {displayDistance ? `(${displayDistance})` : ''}
               </span>
             </div>
           </div>

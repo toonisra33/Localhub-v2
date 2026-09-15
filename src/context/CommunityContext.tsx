@@ -167,7 +167,12 @@ promptMessage?: string) => boolean;
 
   // Global Fullscreen Media Viewer
   activeMedia: { url: string; type: 'image' | 'video'; title?: string; subtitle?: string } | null;
-  openMediaViewer: (media: { url: string; type?: 'image' | 'video'; title?: string; subtitle?: string }) => void;
+  openMediaViewer: (
+    media: string | { url: string; type?: 'image' | 'video'; title?: string; subtitle?: string },
+    type?: 'image' | 'video',
+    title?: string,
+    subtitle?: string
+  ) => void;
   closeMediaViewer: () => void;
 
   // Contact Admin & PR Requests
@@ -324,8 +329,31 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const openModal = (modalId: string) => setActiveModal(modalId);
   const closeModal = () => setActiveModal(null);
 
-  const openMediaViewer = (url: string, type: 'image' | 'video', title?: string, subtitle?: string) => {
-    setActiveMedia({ url, type, title, subtitle });
+  const openMediaViewer = (
+    media: string | { url: string; type?: 'image' | 'video'; title?: string; subtitle?: string },
+    type?: 'image' | 'video',
+    title?: string,
+    subtitle?: string
+  ) => {
+    if (!media) return;
+    if (typeof media === 'string') {
+      const isVideo = type === 'video' || /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(media) || media.startsWith('data:video');
+      setActiveMedia({
+        url: media,
+        type: isVideo ? 'video' : 'image',
+        title,
+        subtitle
+      });
+    } else {
+      const url = typeof media.url === 'string' ? media.url : ((media as any)?.src || '');
+      const isVideo = media.type === 'video' || /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url) || url.startsWith('data:video');
+      setActiveMedia({ 
+        url, 
+        type: isVideo ? 'video' : 'image', 
+        title: media.title, 
+        subtitle: media.subtitle 
+      });
+    }
   };
   const closeMediaViewer = () => setActiveMedia(null);
 
@@ -337,16 +365,64 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       setIsLocatingGps(true);
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
+          async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            let finalLocationUpdates: any = { latitude: lat, longitude: lng };
+            
+            try {
+               const userEnvApiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) || '';
+               const fallbackKey = 'AIzaSyAbIv0M35oWeTTRnSw-o6Yz4DY6KxiTEQw';
+               const apiKey = (userEnvApiKey && userEnvApiKey.trim().length > 10 && !userEnvApiKey.includes('MY_KEY')) ? userEnvApiKey : fallbackKey;
+               
+               const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=th`);
+               const data = await response.json();
+               
+               if (data.results && data.results.length > 0) {
+                 const firstResult = data.results[0];
+                 const components = firstResult.address_components;
+                 
+                 const getComp = (types: string[]) => {
+                   const comp = components.find((c: any) => c.types.some((t: string) => types.includes(t)));
+                   return comp ? comp.long_name : '';
+                 };
+                 
+                 const poi = getComp(['point_of_interest', 'establishment', 'premise', 'route']);
+                 const neighborhood = getComp(['neighborhood', 'sublocality_level_2', 'sublocality_level_1']);
+                 
+                 const subdistrict = getComp(['sublocality_level_2', 'sublocality_level_1', 'locality']);
+                 const district = getComp(['administrative_area_level_2', 'locality']);
+                 const province = getComp(['administrative_area_level_1']);
+                 
+                 // If there's a plus code or formatted address we can use as fallback for village/placeName
+                 let village = poi || neighborhood;
+                 if (!village) {
+                   const parts = firstResult.formatted_address.split(' ');
+                   village = parts[0];
+                 }
+                 
+                 finalLocationUpdates = {
+                   ...finalLocationUpdates,
+                   subdistrict: subdistrict || '',
+                   district: district || '',
+                   province: province || '',
+                   village: village || '',
+                   isGps: true
+                 };
+               }
+            } catch (err) {
+               console.error('Google Maps Geocoding failed:', err);
+            }
+
             setLocation(prev => ({
               ...prev,
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude
+              ...finalLocationUpdates,
+              isGps: true
             }));
             setLocationPermissionStatus('granted');
             setIsLocatingGps(false);
             closeLocationPermissionModal();
-            resolve({success: true, lat: position.coords.latitude, lng: position.coords.longitude});
+            resolve({success: true, lat, lng});
           },
           (error) => {
             console.error('GPS Error:', error);

@@ -4,6 +4,8 @@
     "namespace": "android_app",
     "package_name": "com.toon.localhub",
     "sha256_cert_fingerprints": [
+      "E5:EE:9B:81:FA:27:DE:9C:4F:17:1C:C4:3B:B1:B4:9D:1F:8B:72:5A:09:99:85:50:C2:5D:B0:53:BC:B8:26:93",
+      "E2:65:0B:DE:83:0C:3E:FE:2C:50:D2:C9:79:1C:0B:AC:25:8E:32:9F:B0:D4:77:A2:D0:FF:34:B8:34:3F:32:59",
       "86:8F:0C:0A:44:74:FB:F9:02:00:46:6A:26:B0:F7:B7:6B:F7:D5:13:93:E3:F3:2E:0B:80:BE:C4:5E:4A:48:32",
       "18:27:DA:69:6A:A5:C1:A8:71:DB:E0:87:B9:8E:C3:C2:16:D2:11:67:CF:FB:48:E9:7F:85:36:85:34:13:25:89"
     ]

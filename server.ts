@@ -134,27 +134,48 @@ async function startServer() {
     }
   });
 
-    // Vite middleware for development
+  // Explicit route for Android Digital Asset Links (Required for TWA / Play Store full standalone app verification)
+  app.get('/.well-known/assetlinks.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    const assetlinksPath = path.join(process.cwd(), 'public', '.well-known', 'assetlinks.json');
+    const distAssetlinksPath = path.join(process.cwd(), 'dist', '.well-known', 'assetlinks.json');
+    if (fs.existsSync(assetlinksPath)) {
+      res.sendFile(assetlinksPath);
+    } else if (fs.existsSync(distAssetlinksPath)) {
+      res.sendFile(distAssetlinksPath);
+    } else {
+      res.status(404).json({ error: "assetlinks.json not found" });
+    }
+  });
+
+  // Explicit route for Web App Manifest
+  app.get('/manifest.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    const manifestPath = path.join(process.cwd(), 'public', 'manifest.json');
+    const distManifestPath = path.join(process.cwd(), 'dist', 'manifest.json');
+    if (fs.existsSync(manifestPath)) {
+      res.sendFile(manifestPath);
+    } else if (fs.existsSync(distManifestPath)) {
+      res.sendFile(distManifestPath);
+    } else {
+      res.status(404).json({ error: "manifest.json not found" });
+    }
+  });
+
+  // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "custom",
+      appType: "spa",
     });
     app.use(vite.middlewares);
-    
-    app.use("*", async (req, res, next) => {
-      try {
-        let template = fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf-8");
-        template = await vite.transformIndexHtml(req.originalUrl, template);
-        res.status(200).set({ "Content-Type": "text/html" }).end(template);
-      } catch (e: any) {
-        vite.ssrFixStacktrace(e);
-        next(e);
-      }
-    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { dotfiles: 'allow' }));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

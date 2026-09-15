@@ -46,6 +46,8 @@ import { LocalHubLogo } from './LocalHubLogo';
 import { GlobalSearch } from './GlobalSearch';
 import { AiMorningBrief } from './AiMorningBrief';
 import { SafeImage } from './SafeImage';
+import { calculateDistance } from "../lib/distance";
+import { PWAInstallButton } from './PWAInstallButton';
 
 export function HomeFeed() {
   const { role, setOpenAdminModal } = useBroadcast();
@@ -170,6 +172,9 @@ export function HomeFeed() {
           <LocalHubLogo size="sm" variant="light" showSubtitle={true} />
           
           <div className="flex items-center gap-2">
+            {/* PWA In-App Install Prompt */}
+            <PWAInstallButton />
+
             {/* Contact Admin & Request PR Button */}
             <button
               onClick={() => openContactAdminModal('pr_request')}
@@ -467,7 +472,14 @@ const AlertCard: React.FC<AlertCardProps> = ({
   onCameraClick,
   onDelete
 }) => {
-  const { openMediaViewer, userProfile } = useCommunity();
+  const { openMediaViewer, userProfile, location } = useCommunity();
+  
+  const displayDistance = React.useMemo(() => {
+    if (location?.latitude && location?.longitude && alert.location?.latitude && alert.location?.longitude) {
+      return calculateDistance(location.latitude, location.longitude, alert.location.latitude, alert.location.longitude);
+    }
+    return `${alert.location.distance || '0.5'} กม.`;
+  }, [location, alert.location]);
   const isMyAlert = userProfile?.id === alert.reportedBy;
   const isAdmin = userProfile?.role === 'admin';
   const canDelete = isMyAlert || isAdmin;
@@ -540,7 +552,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
           <div className="w-6 h-6 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-100">
             <MapPin size={13} className="text-emerald-600" />
           </div>
-          <span className="line-clamp-2">{alert.location.district} • ห่างจากคุณ {alert.location.distance || '0.5'} กม.</span>
+          <span className="line-clamp-2">{alert.location.district} • ห่างจากคุณ {displayDistance}</span>
         </div>
         
         <div className="flex gap-2">
