@@ -28,7 +28,10 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+
+      - name: Accept Android SDK Licenses
+        run: yes | sdkmanager --licenses || true
 
       - name: Install Project Dependencies & Build Web
         run: |
@@ -73,8 +76,8 @@ jobs:
               "path": "./android.keystore",
               "alias": "localhub"
             },
-            "appVersionName": "1.0.1",
-            "appVersionCode": 2,
+            "appVersionName": "1.0.2",
+            "appVersionCode": 3,
             "shortcuts": [],
             "generatorApp": "bubblewrap-core",
             "webManifestUrl": "https://localhub-69fbe.web.app/manifest.json",
