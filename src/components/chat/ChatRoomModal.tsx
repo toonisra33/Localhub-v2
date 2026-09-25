@@ -26,6 +26,10 @@ export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUse
   
   // Track previous message count to detect new messages
   const prevMessageCountRef = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useBackButton(isOpen, onClose);
 
   useEffect(() => {
     if (!isOpen || !userProfile?.id) return;
@@ -63,10 +67,6 @@ export function ChatRoomModal({ isOpen, onClose, roomId: initialRoomId, otherUse
   }, [isOpen, roomId, otherUserId, userProfile]);
 
   if (!isOpen) return null;
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

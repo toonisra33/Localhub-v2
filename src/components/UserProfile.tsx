@@ -788,11 +788,11 @@ export function UserProfile() {
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
                         alert.type === 'accident' 
                           ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : alert.type === 'disaster'
+                          : alert.type === 'flood'
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                       }`}>
-                        {alert.type === 'accident' ? '🚨 อุบัติเหตุ' : alert.type === 'disaster' ? '🌊 ภัยธรรมชาติ' : '📢 แจ้งเตือน'}
+                        {alert.type === 'accident' ? '🚨 อุบัติเหตุ' : alert.type === 'flood' ? '🌊 ภัยธรรมชาติ' : '📢 แจ้งเตือน'}
                       </span>
                       <span className="text-[11px] text-slate-400 font-medium">
                         {alert.time}
@@ -815,7 +815,7 @@ export function UserProfile() {
                   <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400">
                     <span>ยืนยันแล้ว {alert.confirmations} คน</span>
                     <span className="text-emerald-600 font-extrabold">
-                      {alert.status === 'active' ? '● กำลังเกิดเหตุ' : '✓ คลี่คลายแล้ว'}
+                      {alert.status === 'unconfirmed' ? '● รอการยืนยัน' : '✓ ตรวจสอบแล้ว'}
                     </span>
                   </div>
                 </div>

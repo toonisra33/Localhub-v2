@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { X, Settings, Bell, Shield, Moon, Globe, Trash2, RefreshCw, Radio, UserPlus, LogIn, LogOut, UserCheck, ShieldCheck, FileText, ExternalLink, AlertTriangle, MessageCircle } from 'lucide-react';
+import { X, Settings, Bell, Shield, Moon, Globe, Trash2, RefreshCw, Radio, UserPlus, LogIn, LogOut, UserCheck, ShieldCheck, FileText, ExternalLink, AlertTriangle, MessageCircle, Sparkles, Share2 } from 'lucide-react';
 import { useBroadcast } from '../../context/BroadcastContext';
 import { useCommunity } from '../../context/CommunityContext';
 import { isAuthorizedAdminEmail } from '../../lib/firebase';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
+import { PromoKitModal } from './PromoKitModal';
+import { PWAInstallButton } from '../PWAInstallButton';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -16,6 +18,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const [emergencyAlertsOnly, setEmergencyAlertsOnly] = useState(false);
   const [radiusKm, setRadiusKm] = useState('5');
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showPromoModal, setShowPromoModal] = useState(false);
 
   const isAuthorizedAdmin = isLoggedIn && isAuthorizedAdminEmail(userProfile?.email);
 
@@ -236,6 +239,51 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             />
           </div>
 
+          {/* App Installation Section */}
+          <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-extrabold text-white text-[13.5px] flex items-center gap-1.5">
+                <Radio size={16} className="text-emerald-400" />
+                <span>การติดตั้งเป็นแอปแท้ (เต็มหน้าจอ)</span>
+              </h4>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                PWA / WebAPK
+              </span>
+            </div>
+            <p className="text-[11.5px] text-slate-300">
+              เปิดใช้งานแบบไม่มีแถบ URL หรือเบราว์เซอร์กวนใจ รองรับทั้ง Android (Chrome) และ iPhone (Safari)
+            </p>
+            <div className="pt-1">
+              <PWAInstallButton className="w-full justify-center py-2.5" />
+            </div>
+          </div>
+
+          {/* Promo & Marketing Kit Section */}
+          <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-slate-50 p-4 rounded-2xl border border-emerald-300/60 space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-extrabold text-slate-900 text-[13.5px] flex items-center gap-1.5">
+                <Sparkles size={16} className="text-emerald-600" />
+                <span>ชุดสื่อและภาพโปรโมทแอป (Promo Kit)</span>
+              </h4>
+              <span className="text-[10.5px] font-black px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                3 แบบ
+              </span>
+            </div>
+            <p className="text-[11.5px] text-slate-600">
+              รวมภาพโปสเตอร์กราฟิก แคปชั่นแนะนำ และลิงก์สำหรับแชร์ชวนเพื่อนบ้านมาใช้งาน
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowPromoModal(true)}
+                className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[12px] font-extrabold shadow-sm flex items-center justify-center gap-2 transition-all"
+              >
+                <Share2 size={14} />
+                <span>เปิดดูภาพและชุดสื่อโปรโมท</span>
+              </button>
+            </div>
+          </div>
+
           {/* Privacy Policy & Legal */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
             <h4 className="font-extrabold text-slate-900 text-[13.5px] flex items-center gap-1.5">
@@ -308,6 +356,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         <PrivacyPolicyModal 
           isOpen={showPrivacyModal} 
           onClose={() => setShowPrivacyModal(false)} 
+        />
+
+        {/* Promo Kit Modal */}
+        <PromoKitModal
+          isOpen={showPromoModal}
+          onClose={() => setShowPromoModal(false)}
         />
 
       </div>

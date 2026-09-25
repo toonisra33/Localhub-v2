@@ -6,6 +6,10 @@
   "theme_color": "#111827",
   "background_color": "#111827",
   "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "categories": ["social", "utilities", "news"],
   "start_url": "/",
   "scope": "/",
   "icons": [

@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { X, AlertTriangle, Droplets, Zap, Construction, Car, ShieldAlert, Camera, MapPin, Sparkles, Navigation, Image as ImageIcon } from 'lucide-react';
 import { MapPinModal } from './MapPinModal';
+import { LocationConfirmPostModal } from './LocationConfirmPostModal';
 import { useCommunity } from '../../context/CommunityContext';
-import { Alert } from '../../types';
+import { Alert, Location } from '../../types';
 import { compressImage } from '../../lib/imageUtils';
 
 interface IncidentReportModalProps {
@@ -20,6 +21,7 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
   const [pinnedLocation, setPinnedLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showLocationConfirm, setShowLocationConfirm] = useState(false);
   const isSubmittingRef = useRef(false);
 
   const incidentTypes = [
@@ -67,6 +69,10 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
       return;
     }
 
+    setShowLocationConfirm(true);
+  };
+
+  const handleFinalSubmit = async (confirmedLoc: Location) => {
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     await addAlert({
@@ -74,9 +80,9 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
       title: title.trim(),
       description: description.trim() || 'ไม่มีคำอธิบายเพิ่มเติม',
       location: {
-        ...location,
-        latitude: pinnedLocation?.lat || location.latitude,
-        longitude: pinnedLocation?.lng || location.longitude,
+        ...confirmedLoc,
+        latitude: pinnedLocation?.lat || confirmedLoc.latitude,
+        longitude: pinnedLocation?.lng || confirmedLoc.longitude,
         distance: parseFloat(distance) || 0.5
       },
       image: imageUrl || undefined
@@ -84,6 +90,7 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
 
     setIsSubmitting(false);
     isSubmittingRef.current = false;
+    setShowLocationConfirm(false);
     onClose();
   };
 
@@ -316,6 +323,14 @@ export function IncidentReportModal({ onClose }: IncidentReportModalProps) {
           onClose={() => setShowMapPin(false)}
         />
       )}
+
+      {/* Location Confirm Modal before posting incident */}
+      <LocationConfirmPostModal 
+        isOpen={showLocationConfirm}
+        onClose={() => setShowLocationConfirm(false)}
+        onConfirm={handleFinalSubmit}
+        postType="incident"
+      />
     </div>
   );
 }

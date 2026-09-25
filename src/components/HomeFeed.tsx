@@ -28,7 +28,8 @@ import {
   Megaphone,
   ChevronRight,
   MessageCircle,
-  Trash2
+  Trash2,
+  Sparkles
 } from 'lucide-react';
 import { Alert } from '../types';
 import { useBroadcast } from '../context/BroadcastContext';
@@ -42,6 +43,7 @@ import { EmergencyHelpModal } from './modals/EmergencyHelpModal';
 import { LocationPickerModal } from './modals/LocationPickerModal';
 import { NotificationCenterModal } from './modals/NotificationCenterModal';
 import { LeaderboardModal } from './modals/LeaderboardModal';
+import { PromoKitModal } from './modals/PromoKitModal';
 import { LocalHubLogo } from './LocalHubLogo';
 import { GlobalSearch } from './GlobalSearch';
 import { AiMorningBrief } from './AiMorningBrief';
@@ -76,16 +78,11 @@ export function HomeFeed() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const [showPromoModal, setShowPromoModal] = useState(false);
   
   React.useEffect(() => {
     const handleOpenNotif = () => setShowNotificationsModal(true);
     window.addEventListener('open-notifications', handleOpenNotif);
-    
-    // Check location on app start
-    if (typeof window !== 'undefined' && !sessionStorage.getItem('location_verified_this_session')) {
-      sessionStorage.setItem('location_verified_this_session', 'true');
-      setShowLocationModal(true);
-    }
     
     return () => window.removeEventListener('open-notifications', handleOpenNotif);
   }, []);
@@ -172,6 +169,16 @@ export function HomeFeed() {
           <LocalHubLogo size="sm" variant="light" showSubtitle={true} />
           
           <div className="flex items-center gap-2">
+            {/* Promo & Share Kit Button */}
+            <button
+              onClick={() => setShowPromoModal(true)}
+              className="h-8 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl flex items-center gap-1 transition-all border border-emerald-400/40 shadow-sm text-[11px] font-extrabold active:scale-95"
+              title="เปิดดูชุดสื่อและภาพโปรโมท 3 แบบ"
+            >
+              <Sparkles size={13} className="text-emerald-200" />
+              <span>สื่อโปรโมท</span>
+            </button>
+
             {/* PWA In-App Install Prompt */}
             <PWAInstallButton />
 
@@ -454,6 +461,7 @@ export function HomeFeed() {
       {showLocationModal && <LocationPickerModal onClose={() => setShowLocationModal(false)} />}
       {showLeaderboardModal && <LeaderboardModal onClose={() => setShowLeaderboardModal(false)} />}
       {showNotificationsModal && <NotificationCenterModal onClose={() => setShowNotificationsModal(false)} />}
+      {showPromoModal && <PromoKitModal isOpen={showPromoModal} onClose={() => setShowPromoModal(false)} />}
 
     </div>
   );

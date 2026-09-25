@@ -61,6 +61,7 @@ import {
 import { 
   doc, 
   getDoc, 
+  getDocs,
   setDoc, 
   updateDoc, 
   deleteDoc,
@@ -140,7 +141,7 @@ interface CommunityContextType {
   rejectVerificationRequest: (requestId: string) => void;
   login: (credentials: { phoneOrEmail: string; password?: string; name?: string; avatar?: string; address?: string }) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
-  register: (data: { name: string; phone: string; email?: string; password?: string; address: string; villageOrCondo?: string; avatar?: string; bio?: string }) => Promise<boolean>;
+  register: (data: { name: string; phone: string; email?: string; password?: string; address: string; villageOrCondo?: string; avatar?: string; bio?: string; occupation?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
   viewingProfileId: string | null;
@@ -861,7 +862,25 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
     }
     
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, credentials.phoneOrEmail, credentials.password);
+      let loginIdentifier = credentials.phoneOrEmail.trim();
+
+      // If phone number is entered without @, find associated email from Firestore users
+      if (!loginIdentifier.includes('@')) {
+        const cleanPhone = loginIdentifier.replace(/[-\s]/g, '');
+        try {
+          const q = query(collection(db, 'users'), where('phone', '==', cleanPhone));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            loginIdentifier = snap.docs[0].data().email || `${cleanPhone}@locallink.app`;
+          } else {
+            loginIdentifier = `${cleanPhone}@locallink.app`;
+          }
+        } catch {
+          loginIdentifier = `${cleanPhone}@locallink.app`;
+        }
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, loginIdentifier, credentials.password);
       const user = userCredential.user;
       
       const userRef = doc(db, 'users', user.uid);
@@ -1235,15 +1254,18 @@ useEffect(() => {
       if (!snapshot.empty) {
         const logs = snapshot.docs.map(docSnap => {
           const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            userId: data.userId || 'anonymous',
-            userName: data.userName || 'สมาชิก',
-            userEmail: data.userEmail || '',
-            loginMethod: data.loginMethod || 'google',
-            ipOrLocation: data.ipOrLocation || 'กรุงเทพมหานคร',
-            createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now()
-          };
+            const timestamp = data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.timestamp || Date.now());
+            return {
+              id: docSnap.id,
+              userId: data.userId || 'anonymous',
+              userName: data.userName || 'สมาชิก',
+              userEmail: data.userEmail || '',
+              loginMethod: data.loginMethod || 'google',
+              ipOrLocation: data.ipOrLocation || 'กรุงเทพมหานคร',
+              timestamp,
+              timeStr: new Date(timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+              createdAt: timestamp
+            };
         });
         logs.sort((a,b) => b.createdAt - a.createdAt);
         setUserSessions(logs);

@@ -85,9 +85,9 @@ export function PublicProfileModal({ isOpen, onClose, userId, onMessageClick }: 
     }
   }, [isOpen, userId, isLoggedIn, userProfile]);
 
-  if (!isOpen) return null;
-
   useBackButton(isOpen, onClose);
+
+  if (!isOpen) return null;
 
   const handleFriendAction = async () => {
     if (!isLoggedIn || !userProfile?.id) {

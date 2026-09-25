@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Post } from '../types';
 import { useCommunity } from '../context/CommunityContext';
+import { useBroadcast } from '../context/BroadcastContext';
 import { calculateDistance } from '../lib/distance';
 import { isAuthorizedAdminEmail } from '../lib/firebase';
 import { SafeImage } from './SafeImage';
@@ -38,7 +39,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   onOpenComments, 
   onDelete 
 }) => {
-  const { showToast, openMediaViewer, jumpToMapLocation, location, openPublicProfile, userProfile, isLoggedIn, role, togglePinPost } = useCommunity();
+  const { showToast, openMediaViewer, jumpToMapLocation, location, openPublicProfile, userProfile, isLoggedIn, togglePinPost } = useCommunity();
+  const { role } = useBroadcast();
   
   const displayDistance = React.useMemo(() => {
     if (location?.latitude && location?.longitude && post.location?.latitude && post.location?.longitude) {
@@ -132,7 +134,9 @@ export const PostCard: React.FC<PostCardProps> = ({
             <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="font-extrabold text-slate-900 text-[14px] leading-tight">{post.author?.name}</h3>
               {post.author?.isVerified && (
-                <ShieldCheck size={14} className="text-emerald-500 shrink-0" title="ยืนยันตัวตนแล้ว" />
+                <span title="ยืนยันตัวตนแล้ว">
+                  <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
+                </span>
               )}
               {post.author?.reputationScore !== undefined && post.author.reputationScore > 50 && (
                 <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-0.5" title="คะแนนความน่าเชื่อถือ">

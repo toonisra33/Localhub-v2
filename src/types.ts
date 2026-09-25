@@ -103,6 +103,7 @@ export interface Post {
   images?: string[];
   videoUrl?: string;
   isLiked?: boolean;
+  isLikedByMe?: boolean;
   likedBy?: string[];
   category?: string;
   commentList?: PostComment[];
@@ -120,8 +121,9 @@ export interface UserSessionLog {
   loginMethod: 'google' | 'password' | 'anonymous';
   ipOrLocation?: string;
   userAgent?: string;
-  timestamp: number;
-  timeStr: string;
+  timestamp?: number;
+  timeStr?: string;
+  createdAt?: number;
 }
 
 export interface Product {
@@ -232,6 +234,7 @@ export interface UserProfileData {
   reputationScore: number;
   role?: UserRole;
   isGoogleUser?: boolean;
+  badge?: string;
 }
 
 export interface VerificationRequest {

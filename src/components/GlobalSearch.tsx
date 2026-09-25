@@ -6,7 +6,7 @@ import { Post, Product, UserProfileData } from '../types';
 export function GlobalSearch() {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const { posts, marketProducts, openPublicProfile, setActiveTab } = useCommunity();
+  const { posts, products, openPublicProfile, setActiveTab } = useCommunity();
   // Assume we fetch users or we have them locally. In a real app we'd query Firestore.
   // We'll mock users or just search from authors of posts and products for now, or just simulate.
   
@@ -53,7 +53,7 @@ export function GlobalSearch() {
       (p.category && p.category.toLowerCase().includes(q))
     ).slice(0, 5);
 
-    const matchedProducts = (marketProducts || []).filter(p => 
+    const matchedProducts = (products || []).filter(p => 
       p.title.toLowerCase().includes(q) || 
       (p.description && p.description.toLowerCase().includes(q)) ||
       p.category.toLowerCase().includes(q)
@@ -64,7 +64,7 @@ export function GlobalSearch() {
       posts: matchedPosts,
       products: matchedProducts
     });
-  }, [query, posts, marketProducts]);
+  }, [query, posts, products]);
 
   return (
     <div className="relative z-50 w-full mb-3" ref={containerRef}>

@@ -137,7 +137,7 @@ export function AdminBroadcastModal() {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [category, setCategory] = useState<BroadcastCategory>('announcement');
-  const [severity, setSeverity] = useState<BroadcastSeverity>('info');
+  const [severity, setSeverity] = useState<BroadcastSeverity>('normal');
   const [targetArea, setTargetArea] = useState('');
   const [contactNumber, setContactNumber] = useState('');
 

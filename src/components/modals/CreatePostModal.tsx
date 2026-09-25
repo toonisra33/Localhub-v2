@@ -20,8 +20,9 @@ import {
   Play
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
-import { CheckInLocation } from '../../types';
+import { CheckInLocation, Location } from '../../types';
 import { CheckInPickerModal } from './CheckInPickerModal';
+import { LocationConfirmPostModal } from './LocationConfirmPostModal';
 
 interface CreatePostModalProps {
   onClose: () => void;
@@ -41,6 +42,7 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
   // Check-in state
   const [checkIn, setCheckIn] = useState<CheckInLocation | null>(initialCheckIn);
   const [showCheckInPicker, setShowCheckInPicker] = useState<boolean>(false);
+  const [showLocationConfirm, setShowLocationConfirm] = useState(false);
 
   const categories = [
     'ข่าวสารชุมชน', 'ซื้อ-ขาย/บริการ', 'แจ้งเหตุฉุกเฉิน', 'ตามหาของ/สัตว์เลี้ยง', 'ร้านอร่อยชุมชน', 'ประกาศทั่วไป', 'ขอความช่วยเหลือ', 'พูดคุยแลกเปลี่ยน'
@@ -144,17 +146,21 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
       showToast('กรุณากรอกข้อความที่ต้องการแชร์', 'error');
       return;
     }
+    
+    // Check if GPS is ready, else pop the confirm modal anyway
+    setShowLocationConfirm(true);
+  };
 
-    // Determine location
+  const handleFinalSubmit = (confirmedLoc: Location) => {
     const effectiveLoc = checkIn ? {
-      ...location,
+      ...confirmedLoc,
       latitude: checkIn.latitude,
       longitude: checkIn.longitude,
-      subdistrict: checkIn.subdistrict || location.subdistrict,
-      district: checkIn.district || location.district,
-      province: checkIn.province || location.province,
+      subdistrict: checkIn.subdistrict || confirmedLoc.subdistrict,
+      district: checkIn.district || confirmedLoc.district,
+      province: checkIn.province || confirmedLoc.province,
       village: checkIn.placeName
-    } : location;
+    } : confirmedLoc;
 
     addPost(
       content.trim(), 
@@ -164,6 +170,7 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
       checkIn || undefined,
       videoUrl || undefined
     );
+    setShowLocationConfirm(false);
     onClose();
   };
 
@@ -475,6 +482,14 @@ export function CreatePostModal({ onClose, initialCheckIn = null }: CreatePostMo
           onClose={() => setShowCheckInPicker(false)}
         />
       )}
+
+      {/* Location Confirm Modal before posting */}
+      <LocationConfirmPostModal 
+        isOpen={showLocationConfirm}
+        onClose={() => setShowLocationConfirm(false)}
+        onConfirm={handleFinalSubmit}
+        postType="feed"
+      />
     </>
   );
 }

@@ -97,7 +97,6 @@ export function AdminDashboard() {
   } = useCommunity();
   const { 
     activeBroadcast, 
-    broadcastHistory, 
     setOpenAdminModal, 
     role 
   } = useBroadcast();

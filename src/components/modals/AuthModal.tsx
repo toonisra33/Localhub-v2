@@ -66,7 +66,7 @@ export function AuthModal() {
   const [regSubdistrict, setRegSubdistrict] = useState(location?.subdistrict || '');
   const [regZipcode, setRegZipcode] = useState('');
 
-  const [regVillage, setRegVillage] = useState(location.village || 'หมู่บ้านพหลโยธิน');
+  const [regVillage, setRegVillage] = useState(location?.village || 'หมู่บ้านพหลโยธิน');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -104,6 +104,8 @@ export function AuthModal() {
       if (zip) setRegZipcode(zip);
     }
   }, [regProvince, regDistrict, regSubdistrict, getZipcode]);
+
+  useBackButton(isAuthModalOpen, closeAuthModal);
 
   if (!isAuthModalOpen) return null;
 
@@ -217,8 +219,6 @@ export function AuthModal() {
     setIsSubmitting(false);
   };
 
-  useBackButton(isAuthModalOpen, closeAuthModal);
-
   const handleGoogleSignIn = async () => {
     setIsSigningInGoogle(true);
     try {
@@ -226,6 +226,9 @@ export function AuthModal() {
       if (success) {
         closeAuthModal();
       }
+    } catch (err: any) {
+      console.error('Google sign-in error:', err);
+      showToast('ไม่สามารถเชื่อมต่อ Google Sign-in ได้ กรุณาเข้าสู่ระบบด้วยเบอร์โทร/อีเมล หรือเปิดบนเบราว์เซอร์', 'error');
     } finally {
       setIsSigningInGoogle(false);
     }

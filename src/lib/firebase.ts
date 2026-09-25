@@ -245,14 +245,33 @@ export async function signInWithGoogleAuth(locationString?: string) {
     const isStandalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone);
 
     if (isStandalone || isInsideIframe) {
-      // For installed PWAs, we MUST use Popup. 
-      // Using Redirect in a PWA kicks the user out of the app into a normal browser tab.
-      const result = await signInWithPopup(auth, googleProvider);
-      return { user: result.user, role: 'user' }; 
+      // In PWA/TWA or iframe, try popup first
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        return { user: result.user, role: 'user' }; 
+      } catch (popupErr: any) {
+        console.warn('Popup login failed, attempting redirect fallback...', popupErr);
+        if (
+          popupErr.code === 'auth/popup-blocked' ||
+          popupErr.code === 'auth/operation-not-supported-in-this-environment' ||
+          popupErr.code === 'auth/popup-closed-by-user' ||
+          popupErr.code === 'auth/cancelled-popup-request'
+        ) {
+          await signInWithRedirect(auth, googleProvider);
+          return { user: auth.currentUser, role: 'user' };
+        }
+        throw popupErr;
+      }
     } else {
       // For normal mobile browsers, Redirect is safer against popup blockers.
-      await signInWithRedirect(auth, googleProvider);
-      return { user: auth.currentUser, role: 'user' }; 
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return { user: auth.currentUser, role: 'user' }; 
+      } catch (redirectErr: any) {
+        console.warn('Redirect login failed, attempting popup fallback...', redirectErr);
+        const result = await signInWithPopup(auth, googleProvider);
+        return { user: result.user, role: 'user' };
+      }
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'users');
