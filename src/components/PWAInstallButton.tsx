@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ExternalLink, X, CheckCircle2, ShieldCheck } from 'lucide-react';
 
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.web.localhub_69fbe.twa';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.toon.localhub&pcampaignid=web_share';
 
 export const PWAInstallButton: React.FC<{ className?: string }> = ({ className = '' }) => {
   const [showPlayStoreModal, setShowPlayStoreModal] = useState(false);

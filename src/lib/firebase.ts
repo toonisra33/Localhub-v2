@@ -52,6 +52,18 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
+
+export function getGoogleAuthProvider() {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({
+    prompt: 'select_account'
+  });
+  provider.addScope('email');
+  provider.addScope('profile');
+  return provider;
+}
 
 // Configured Root Admins (Initial bootstrap emails)
 export const ROOT_ADMIN_EMAILS = [
@@ -173,7 +185,7 @@ export async function logUserSession(
 /**
  * Check redirect result after returning from Google Login
  */
-export async function checkAuthRedirectResult(): Promise<boolean> {
+export async function checkAuthRedirectResult(): Promise<{ user: any; role: string; name: string; avatar: string } | null> {
   try {
     const result = await getRedirectResult(auth);
     if (result && result.user) {
@@ -222,16 +234,20 @@ export async function checkAuthRedirectResult(): Promise<boolean> {
         'google',
         locationString
       );
-      return true;
+
+      const name = user.displayName || user.email?.split('@')[0] || 'สมาชิก Google';
+      const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+
+      return { user, role, name, avatar };
     }
-    return false;
+    return null;
   } catch (error: any) {
     if (error && error.message && error.message.includes("Database is closing")) {
-      console.warn("Firebase Auth: Ignored 'Database is closing' error during getRedirectResult. This is a common harmless warning in Android WebViews.");
-      return false;
+      console.warn("Firebase Auth: Ignored 'Database is closing' error during getRedirectResult.");
+      return null;
     }
     console.error('Redirect auth error:', error);
-    return false;
+    return null;
   }
 }
 
@@ -243,22 +259,34 @@ export async function resetUserPassword(email: string): Promise<void> {
 }
 
 /**
- * Sign in with Google Auth (always prompts for account selection)
+ * Direct Google Redirect Auth (guarantees account chooser opens even if popups are blocked)
  */
-export async function signInWithGoogleAuth(locationString?: string) {
+export async function signInWithGoogleDirectRedirect(locationString?: string): Promise<void> {
+  if (typeof window !== 'undefined' && locationString) {
+    try {
+      sessionStorage.setItem('locallink_pending_loc', locationString);
+    } catch {}
+  }
+  const provider = getGoogleAuthProvider();
+  await signInWithRedirect(auth, provider);
+}
+
+/**
+ * Sign in with Google Auth (always forces account selection dialog)
+ */
+export async function signInWithGoogleAuth(locationString?: string): Promise<{ user: any; role: string } | { isRedirecting: boolean }> {
   try {
     if (typeof window !== 'undefined' && locationString) {
-      sessionStorage.setItem('locallink_pending_loc', locationString);
+      try {
+        sessionStorage.setItem('locallink_pending_loc', locationString);
+      } catch {}
     }
     
-    // Always force account selection dialog so user can pick their email
-    googleProvider.setCustomParameters({
-      prompt: 'select_account'
-    });
+    const provider = getGoogleAuthProvider();
 
-    // Strategy 1: Try signInWithPopup first (reliable in all modern browsers without losing page state)
+    // Strategy 1: Try signInWithPopup first
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, provider);
       const user = result.user;
       const isAdmin = isAuthorizedAdminEmail(user.email);
       const role = isAdmin ? 'admin' : 'user';
@@ -305,7 +333,7 @@ export async function signInWithGoogleAuth(locationString?: string) {
 
       return { user, role };
     } catch (popupErr: any) {
-      console.warn('Popup login failed, evaluating fallback...', popupErr);
+      console.warn('Popup login attempt failed, evaluating fallback...', popupErr);
       // If user simply closed the popup, do not redirect
       if (popupErr.code === 'auth/popup-closed-by-user') {
         throw popupErr;
@@ -315,10 +343,12 @@ export async function signInWithGoogleAuth(locationString?: string) {
       if (
         popupErr.code === 'auth/popup-blocked' ||
         popupErr.code === 'auth/operation-not-supported-in-this-environment' ||
-        popupErr.code === 'auth/cancelled-popup-request'
+        popupErr.code === 'auth/cancelled-popup-request' ||
+        popupErr.code === 'auth/internal-error'
       ) {
-        await signInWithRedirect(auth, googleProvider);
-        return { user: auth.currentUser, role: 'user' };
+        console.log('Redirecting to Google via signInWithRedirect...');
+        await signInWithRedirect(auth, provider);
+        return { isRedirecting: true };
       }
       throw popupErr;
     }

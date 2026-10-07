@@ -32,7 +32,8 @@ import {
   auth, 
   db, 
   signInWithGoogleAuth, 
-  checkAuthRedirectResult,
+  signInWithGoogleDirectRedirect,
+  checkAuthRedirectResult, 
   signOutAuth, 
   isAuthorizedAdminEmail,
   savePostToFirestore,
@@ -142,6 +143,7 @@ interface CommunityContextType {
   rejectVerificationRequest: (requestId: string) => void;
   login: (credentials: { phoneOrEmail: string; password?: string; name?: string; avatar?: string; address?: string }) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
+  loginWithGoogleRedirect: () => Promise<void>;
   register: (data: { name: string; phone: string; email?: string; password?: string; address: string; villageOrCondo?: string; avatar?: string; bio?: string; occupation?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
@@ -289,9 +291,19 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('locallink_is_logged_in');
-      return saved !== null ? JSON.parse(saved) : true;
+      if (saved !== null) {
+        const val = JSON.parse(saved);
+        const profileSaved = localStorage.getItem('locallink_profile');
+        if (profileSaved) {
+          const prof = JSON.parse(profileSaved);
+          if (prof && prof.email && prof.name !== 'ผู้เยี่ยมชม') {
+            return Boolean(val);
+          }
+        }
+      }
+      return false;
     } catch {
-      return true;
+      return false;
     }
   });
 
@@ -981,25 +993,61 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
 
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
-      const locStr = `ต.${location.subdistrict}, ${location.district}`;
+      const locStr = `ต.${location.subdistrict || 'ลาดยาว'}, ${location.district || 'จตุจักร'}`;
       const result = await signInWithGoogleAuth(locStr);
-      if (result && result.user) {
+
+      if ('isRedirecting' in result && result.isRedirecting) {
+        showToast('กำลังนำคุณไปยังหน้าเลือกบัญชี Google...', 'info');
+        return false;
+      }
+
+      if ('user' in result && result.user) {
         setIsLoggedIn(true);
         setIsAuthModalOpen(false);
+        try {
+          localStorage.setItem('locallink_is_logged_in', JSON.stringify(true));
+        } catch {}
+
         const isAdmin = isAuthorizedAdminEmail(result.user.email);
+        const name = result.user.displayName || result.user.email?.split('@')[0] || 'สมาชิก';
+        
+        setUserProfile(prev => ({
+          ...prev,
+          id: result.user.uid,
+          uid: result.user.uid,
+          name: name,
+          email: result.user.email || '',
+          avatar: result.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+          role: isAdmin ? 'admin' : 'user',
+          isVerified: isAdmin ? true : false,
+          reputationScore: isAdmin ? 100 : 50
+        }));
+
         if (isAdmin) {
           showToast(`👑 ยินดีต้อนรับผู้ดูแลระบบ (${result.user.email})! ได้รับสิทธิ์แอดมินแล้ว`, 'success');
         } else {
-          showToast(`👋 ยินดีต้อนรับ, ${result.user.displayName || result.user.email}! เข้าสู่ระบบสำเร็จแล้ว`, 'success');
+          showToast(`👋 ยินดีต้อนรับ, ${name}! เข้าสู่ระบบสำเร็จแล้ว`, 'success');
         }
+        return true;
       }
-      return true;
+      return false;
     } catch (err: any) {
       console.error('Google Sign-in failed:', err);
       if (err.code !== 'auth/popup-closed-by-user') {
         showToast(err.message || 'การเข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
       }
       return false;
+    }
+  };
+
+  const loginWithGoogleRedirect = async (): Promise<void> => {
+    try {
+      const locStr = `ต.${location.subdistrict || 'ลาดยาว'}, ${location.district || 'จตุจักร'}`;
+      showToast('กำลังนำคุณไปยังหน้าเลือกบัญชี Google...', 'info');
+      await signInWithGoogleDirectRedirect(locStr);
+    } catch (err: any) {
+      console.error('Google redirect failed:', err);
+      showToast('ไม่สามารถเปิดหน้า Google ได้ กรุณาลองใหม่อีกครั้ง', 'error');
     }
   };
 
@@ -1110,7 +1158,33 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
 
   useEffect(() => {
     // Check for Google Auth redirect result
-    checkAuthRedirectResult().catch(err => {
+    checkAuthRedirectResult().then(authResult => {
+      if (authResult && authResult.user) {
+        setIsLoggedIn(true);
+        try {
+          localStorage.setItem('locallink_is_logged_in', JSON.stringify(true));
+        } catch {}
+
+        const isAdmin = isAuthorizedAdminEmail(authResult.user.email);
+        setUserProfile(prev => ({
+          ...prev,
+          id: authResult.user.uid,
+          uid: authResult.user.uid,
+          name: authResult.name,
+          email: authResult.user.email || '',
+          avatar: authResult.avatar,
+          role: isAdmin ? 'admin' : (authResult.role as any || 'user'),
+          isVerified: isAdmin ? true : false,
+          reputationScore: isAdmin ? 100 : 50
+        }));
+
+        if (isAdmin) {
+          showToast(`👑 ยินดีต้อนรับผู้ดูแลระบบ (${authResult.user.email})! ได้รับสิทธิ์แอดมินแล้ว`, 'success');
+        } else {
+          showToast(`👋 ยินดีต้อนรับคุณ ${authResult.name}! เข้าสู่ระบบด้วย Google สำเร็จแล้ว`, 'success');
+        }
+      }
+    }).catch(err => {
       console.error('Error checking auth redirect result:', err);
     });
   }, []);
@@ -1459,6 +1533,7 @@ useEffect(() => {
         rejectVerificationRequest,
         login,
         loginWithGoogle,
+        loginWithGoogleRedirect,
         register,
         logout,
         isAuthModalOpen,
