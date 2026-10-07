@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { useBroadcast } from '../../context/BroadcastContext';
-import { isAuthorizedAdminEmail, ROOT_ADMIN_EMAILS } from '../../lib/firebase';
+import { isAuthorizedAdminEmail, ROOT_ADMIN_EMAILS, resetUserPassword } from '../../lib/firebase';
 import { LocalHubLogo } from '../LocalHubLogo';
 import { useThaiAddress } from '../../hooks/useThaiAddress';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
@@ -217,6 +217,27 @@ export function AuthModal() {
       name: isAdminLogin ? 'แอดมินศูนย์ควบคุมชุมชน' : undefined
     });
     setIsSubmitting(false);
+  };
+
+  const handleForgotPassword = async () => {
+    const email = loginPhoneOrEmail.trim();
+    if (!email || !email.includes('@')) {
+      showToast('กรุณากรอกอีเมลของคุณในช่องเบอร์โทร/อีเมลด้านบน เพื่อรับลิงก์รีเซ็ตรหัสผ่าน', 'info');
+      return;
+    }
+
+    try {
+      showToast('กำลังส่งลิงก์รีเซ็ตรหัสผ่าน...', 'info');
+      await resetUserPassword(email);
+      showToast(`ส่งลิงก์ตั้งรหัสผ่านใหม่ไปยัง ${email} แล้ว! กรุณาตรวจสอบกล่องจดหมายของคุณ`, 'success');
+    } catch (err: any) {
+      console.error('Password reset error:', err);
+      if (err.code === 'auth/user-not-found') {
+        showToast('ไม่พบบัญชีผู้ใช้งานที่ใช้อีเมลนี้ในระบบ', 'error');
+      } else {
+        showToast('ไม่สามารถส่งลิงก์รีเซ็ตได้ กรุณาตรวจสอบอีเมลหรือลองใหม่อีกครั้ง', 'error');
+      }
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -727,7 +748,7 @@ export function AuthModal() {
                   </label>
                   <button 
                     type="button" 
-                    onClick={() => showToast('ระบบได้ส่งรหัส OTP กู้คืนไปยังเบอร์โทรศัพท์ของคุณแล้ว', 'info')}
+                    onClick={handleForgotPassword}
                     className="text-[11px] font-extrabold text-emerald-600 hover:underline"
                   >
                     ลืมรหัสผ่าน?

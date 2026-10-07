@@ -11,6 +11,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth';
 import { 
@@ -229,6 +230,13 @@ export async function checkAuthRedirectResult(): Promise<boolean> {
     console.error('Redirect auth error:', error);
     return false;
   }
+}
+
+/**
+ * Send password reset email via Firebase Auth
+ */
+export async function resetUserPassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
 }
 
 /**

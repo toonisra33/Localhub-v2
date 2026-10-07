@@ -336,7 +336,7 @@ export function HomeFeed() {
           <span className="text-[11px] font-bold text-slate-400">แตะเพื่อเปิดบริการ</span>
         </div>
 
-        <div className="flex overflow-x-auto hide-scrollbar gap-3.5 pb-2 -mx-5 px-5">
+        <div className="flex overflow-x-auto hide-scrollbar gap-3.5 pb-2 -mx-5 px-5 sm:grid sm:grid-cols-3 md:grid-cols-6 sm:overflow-visible sm:mx-0 sm:px-0">
           {quickMenus.map((menu, idx) => {
             const Icon = menu.icon;
             return (
@@ -432,9 +432,9 @@ export function HomeFeed() {
           </div>
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-4">
           {filteredAlerts.length === 0 ? (
-            <div className="bg-white p-8 rounded-2xl text-center border border-slate-200 text-slate-400 text-[13px]">
+            <div className="md:col-span-2 bg-white p-8 rounded-2xl text-center border border-slate-200 text-slate-400 text-[13px]">
               ไม่พบรายการเตือนภัยในหมวดหมู่นี้
             </div>
           ) : (
