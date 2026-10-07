@@ -25,7 +25,7 @@ import {
   initialLocation, 
   initialNotifications, 
   initialContactRequests,
- 
+  mockEvents,
   availableLocations 
 } from '../data';
 import { 
@@ -58,6 +58,7 @@ import {
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
+import { reverseGeocodeLocation } from '../lib/reverseGeocode';
 import { 
   doc, 
   getDoc, 
@@ -232,19 +233,58 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useState<Location>(() => {
     try {
       const saved = localStorage.getItem('locallink_user_location');
-      return saved ? JSON.parse(saved) : initialLocation;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.province && parsed.province.trim() !== '' && parsed.district && parsed.district.trim() !== '') {
+          return parsed;
+        }
+      }
+      return initialLocation;
     } catch {
       return initialLocation;
     }
   });
 
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>(() => {
+    try {
+      const saved = localStorage.getItem('locallink_alerts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialAlerts;
+  });
 
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [events, setEvents] = useState<LocalEvent[]>([]);
+  const [posts, setPosts] = useState<Post[]>(() => {
+    try {
+      const saved = localStorage.getItem('locallink_posts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialPosts;
+  });
 
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const saved = localStorage.getItem('locallink_products');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialProducts;
+  });
+
+  const [events, setEvents] = useState<LocalEvent[]>(() => {
+    return mockEvents;
+  });
+
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    return initialNotifications;
+  });
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
@@ -364,80 +404,75 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const requestRealLocation = async (): Promise<{success: boolean, lat?: number, lng?: number}> => {
     return new Promise((resolve) => {
       setIsLocatingGps(true);
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            let finalLocationUpdates: any = { latitude: lat, longitude: lng };
-            
-            try {
-               const userEnvApiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) || '';
-               const fallbackKey = 'AIzaSyAbIv0M35oWeTTRnSw-o6Yz4DY6KxiTEQw';
-               const apiKey = (userEnvApiKey && userEnvApiKey.trim().length > 10 && !userEnvApiKey.includes('MY_KEY')) ? userEnvApiKey : fallbackKey;
-               
-               const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=th`);
-               const data = await response.json();
-               
-               if (data.results && data.results.length > 0) {
-                 const firstResult = data.results[0];
-                 const components = firstResult.address_components;
-                 
-                 const getComp = (types: string[]) => {
-                   const comp = components.find((c: any) => c.types.some((t: string) => types.includes(t)));
-                   return comp ? comp.long_name : '';
-                 };
-                 
-                 const poi = getComp(['point_of_interest', 'establishment', 'premise', 'route']);
-                 const neighborhood = getComp(['neighborhood', 'sublocality_level_2', 'sublocality_level_1']);
-                 
-                 const subdistrict = getComp(['sublocality_level_2', 'sublocality_level_1', 'locality']);
-                 const district = getComp(['administrative_area_level_2', 'locality']);
-                 const province = getComp(['administrative_area_level_1']);
-                 
-                 // If there's a plus code or formatted address we can use as fallback for village/placeName
-                 let village = poi || neighborhood;
-                 if (!village) {
-                   const parts = firstResult.formatted_address.split(' ');
-                   village = parts[0];
-                 }
-                 
-                 finalLocationUpdates = {
-                   ...finalLocationUpdates,
-                   subdistrict: subdistrict || '',
-                   district: district || '',
-                   province: province || '',
-                   village: village || '',
-                   isGps: true
-                 };
-               }
-            } catch (err) {
-               console.error('Google Maps Geocoding failed:', err);
-            }
-
-            setLocation(prev => ({
-              ...prev,
-              ...finalLocationUpdates,
-              isGps: true
-            }));
-            setLocationPermissionStatus('granted');
-            setIsLocatingGps(false);
-            closeLocationPermissionModal();
-            resolve({success: true, lat, lng});
-          },
-          (error) => {
-            console.error('GPS Error:', error);
-            setLocationPermissionStatus('denied');
-            setIsLocatingGps(false);
-            resolve({success: false});
-          },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-      } else {
+      if (!('geolocation' in navigator)) {
         setLocationPermissionStatus('denied');
         setIsLocatingGps(false);
-        resolve({success: false});
+        resolve({ success: false });
+        return;
       }
+
+      const handleGpsSuccess = async (position: GeolocationPosition) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        try {
+          const geocoded = await reverseGeocodeLocation(lat, lng);
+          const newLocation: Location = {
+            latitude: lat,
+            longitude: lng,
+            subdistrict: geocoded?.subdistrict || 'ในเมือง',
+            district: geocoded?.district || 'เมือง',
+            province: geocoded?.province || 'กรุงเทพมหานคร',
+            village: geocoded?.village || 'จุดตรวจพบ GPS',
+            isGps: true
+          };
+
+          setLocation(newLocation);
+          try {
+            localStorage.setItem('locallink_user_location', JSON.stringify(newLocation));
+          } catch {}
+
+          setLocationPermissionStatus('granted');
+          setIsLocatingGps(false);
+          closeLocationPermissionModal();
+          showToast(`📍 ปักหมุดพิกัดจริง: ต.${newLocation.subdistrict} อ.${newLocation.district} จ.${newLocation.province}`, 'success');
+          resolve({ success: true, lat, lng });
+        } catch (err) {
+          console.error('Reverse geocode processing error:', err);
+          setLocation(prev => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            isGps: true
+          }));
+          setLocationPermissionStatus('granted');
+          setIsLocatingGps(false);
+          closeLocationPermissionModal();
+          resolve({ success: true, lat, lng });
+        }
+      };
+
+      const handleGpsFailure = (error?: GeolocationPositionError) => {
+        // Fallback: try low-accuracy network/wifi geolocation
+        navigator.geolocation.getCurrentPosition(
+          handleGpsSuccess,
+          (err2) => {
+            console.error('GPS and Network Location failed:', err2 || error);
+            setLocationPermissionStatus('denied');
+            setIsLocatingGps(false);
+            showToast('ไม่สามารถระบุพิกัด GPS ได้ กรุณาเปิดบริการตำแหน่งบนอุปกรณ์ของคุณ', 'error');
+            resolve({ success: false });
+          },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+        );
+      };
+
+      // Try high-accuracy GPS satellite first
+      navigator.geolocation.getCurrentPosition(
+        handleGpsSuccess,
+        handleGpsFailure,
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+      );
     });
   };
 
@@ -947,12 +982,23 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
       const locStr = `ต.${location.subdistrict}, ${location.district}`;
-      await signInWithGoogleAuth(locStr);
-      // Since it redirects, code execution stops here
+      const result = await signInWithGoogleAuth(locStr);
+      if (result && result.user) {
+        setIsLoggedIn(true);
+        setIsAuthModalOpen(false);
+        const isAdmin = isAuthorizedAdminEmail(result.user.email);
+        if (isAdmin) {
+          showToast(`👑 ยินดีต้อนรับผู้ดูแลระบบ (${result.user.email})! ได้รับสิทธิ์แอดมินแล้ว`, 'success');
+        } else {
+          showToast(`👋 ยินดีต้อนรับ, ${result.user.displayName || result.user.email}! เข้าสู่ระบบสำเร็จแล้ว`, 'success');
+        }
+      }
       return true;
     } catch (err: any) {
       console.error('Google Sign-in failed:', err);
-      showToast(err.message || 'การเข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+      if (err.code !== 'auth/popup-closed-by-user') {
+        showToast(err.message || 'การเข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+      }
       return false;
     }
   };
@@ -1104,7 +1150,10 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
         });
         setAlerts(fetchedAlerts.length > 0 ? fetchedAlerts : initialAlerts);
       },
-      (error) => console.warn('Firestore subscription warning (alerts):', error)
+      (error) => {
+        console.warn('Firestore subscription warning (alerts):', error);
+        setAlerts(prev => prev.length > 0 ? prev : initialAlerts);
+      }
     );
 
     const unsubPosts = onSnapshot(
@@ -1140,30 +1189,38 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
             isPinned: data.isPinned || false,
           } as Post);
         });
-        setPosts(fetchedPosts);
+        setPosts(fetchedPosts.length > 0 ? fetchedPosts : initialPosts);
       },
-      (error) => console.warn('Firestore subscription warning (posts):', error)
+      (error) => {
+        console.warn('Firestore subscription warning (posts):', error);
+        setPosts(prev => prev.length > 0 ? prev : initialPosts);
+      }
     );
 
     const unsubProducts = onSnapshot(
       query(collection(db, 'products'), orderBy('createdAt', 'desc'), limit(100)),
       (snapshot) => {
-        const fetchedProds = [];
-        snapshot.forEach(doc => fetchedProds.push(doc.data()));
-        setProducts(fetchedProds);
+        const fetchedProds: Product[] = [];
+        snapshot.forEach(doc => fetchedProds.push(doc.data() as Product));
+        setProducts(fetchedProds.length > 0 ? fetchedProds : initialProducts);
       },
-      (error) => console.warn('Firestore subscription warning (products):', error)
+      (error) => {
+        console.warn('Firestore subscription warning (products):', error);
+        setProducts(prev => prev.length > 0 ? prev : initialProducts);
+      }
     );
 
-    
     const unsubEvents = onSnapshot(
       query(collection(db, 'events'), limit(50)),
       (snapshot) => {
-        const fetchedEvents = [];
-        snapshot.forEach(doc => fetchedEvents.push(doc.data()));
-        setEvents(fetchedEvents);
+        const fetchedEvents: LocalEvent[] = [];
+        snapshot.forEach(doc => fetchedEvents.push(doc.data() as LocalEvent));
+        setEvents(fetchedEvents.length > 0 ? fetchedEvents : mockEvents);
       },
-      (error) => console.warn('Firestore subscription warning (events):', error)
+      (error) => {
+        console.warn('Firestore subscription warning (events):', error);
+        setEvents(prev => prev.length > 0 ? prev : mockEvents);
+      }
     );
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -1177,6 +1234,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
           const userSnap = await getDoc(userRef);
 if (userSnap.exists()) {
             const data = userSnap.data();
+            const isAdmin = isAuthorizedAdminEmail(firebaseUser.email);
             setUserProfile(prev => ({
               ...prev,
               id: firebaseUser.uid,
@@ -1188,9 +1246,9 @@ if (userSnap.exists()) {
               address: data.address || '',
               villageOrCondo: data.villageOrCondo || '',
               bio: data.bio || '',
-              role: data.role || 'user',
-              isVerified: data.isVerified || false,
-              reputationScore: data.reputationScore || 50,
+              role: isAdmin ? 'admin' : (data.role || 'user'),
+              isVerified: isAdmin ? true : (data.isVerified || false),
+              reputationScore: isAdmin ? 100 : (data.reputationScore || 50),
               occupation: data.occupation || '',
               birthDate: data.birthDate || '',
               relationshipStatus: data.relationshipStatus || '',
@@ -1200,6 +1258,7 @@ if (userSnap.exists()) {
           } else {
             // New Google User - create document (only if Google, to prevent race condition with email registration)
             const isGoogleUser = firebaseUser.providerData.some(p => p.providerId === 'google.com');
+            const isAdmin = isAuthorizedAdminEmail(firebaseUser.email);
             
             if (isGoogleUser) {
               const newUserData = {
@@ -1207,9 +1266,9 @@ if (userSnap.exists()) {
                 displayName: firebaseUser.displayName || 'สมาชิก',
                 email: firebaseUser.email || '',
                 photoURL: firebaseUser.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
-                role: 'user',
-                isVerified: false,
-                reputationScore: 50,
+                role: isAdmin ? 'admin' : 'user',
+                isVerified: isAdmin ? true : false,
+                reputationScore: isAdmin ? 100 : 50,
                 joinedDate: new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
               };
               await setDoc(userRef, newUserData);
@@ -1220,9 +1279,9 @@ if (userSnap.exists()) {
                 name: newUserData.displayName,
                 email: newUserData.email,
                 avatar: newUserData.photoURL,
-                role: 'user',
-                isVerified: false,
-                reputationScore: 50,
+                role: isAdmin ? 'admin' : 'user',
+                isVerified: isAdmin ? true : false,
+                reputationScore: isAdmin ? 100 : 50,
                 isGoogleUser: true
               }));
             }

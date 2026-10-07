@@ -102,10 +102,10 @@ export function DesktopSidebar({
           </div>
 
           <p className="font-extrabold text-[15px] text-white leading-tight truncate group-hover:text-emerald-200 transition-colors">
-            {location.district}, {location.province}
+            {(location?.district?.trim() || 'จตุจักร')}, {(location?.province?.trim() || 'กรุงเทพมหานคร')}
           </p>
           <p className="text-[11.5px] text-slate-400 truncate mt-0.5">
-            ต.{location.subdistrict} • {location.village}
+            ต.{(location?.subdistrict?.trim() || 'ลาดยาว')} • {(location?.village?.trim() || 'หมู่บ้านพหลโยธินวิลล่า')}
           </p>
         </div>
 

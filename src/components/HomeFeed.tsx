@@ -49,7 +49,6 @@ import { GlobalSearch } from './GlobalSearch';
 import { AiMorningBrief } from './AiMorningBrief';
 import { SafeImage } from './SafeImage';
 import { calculateDistance } from "../lib/distance";
-import { PWAInstallButton } from './PWAInstallButton';
 
 export function HomeFeed() {
   const { role, setOpenAdminModal } = useBroadcast();
@@ -169,41 +168,6 @@ export function HomeFeed() {
           <LocalHubLogo size="sm" variant="light" showSubtitle={true} />
           
           <div className="flex items-center gap-2">
-            {/* Promo & Share Kit Button */}
-            <button
-              onClick={() => setShowPromoModal(true)}
-              className="h-8 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl flex items-center gap-1 transition-all border border-emerald-400/40 shadow-sm text-[11px] font-extrabold active:scale-95"
-              title="เปิดดูชุดสื่อและภาพโปรโมท 3 แบบ"
-            >
-              <Sparkles size={13} className="text-emerald-200" />
-              <span>สื่อโปรโมท</span>
-            </button>
-
-            {/* PWA In-App Install Prompt */}
-            <PWAInstallButton />
-
-            {/* Contact Admin & Request PR Button */}
-            <button
-              onClick={() => openContactAdminModal('pr_request')}
-              className="h-8 px-2.5 bg-indigo-600/80 hover:bg-indigo-600 text-indigo-100 hover:text-white rounded-xl flex items-center gap-1 transition-all border border-indigo-500/40 shadow-sm text-[11px] font-extrabold active:scale-95"
-              title="ส่งข้อความติดต่อแอดมิน / ขอประชาสัมพันธ์"
-            >
-              <Megaphone size={13} className="text-indigo-200" />
-              <span>ติดต่อแอดมิน</span>
-            </button>
-
-            {/* Admin Broadcast Quick Action (Admin Only) */}
-            {role === 'admin' && (
-              <button
-                onClick={() => setOpenAdminModal(true)}
-                className="h-8 px-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl flex items-center gap-1 transition-all shadow-md shadow-red-500/25 text-[11px] font-extrabold border border-red-400/40 active:scale-95"
-                title="ส่งสัญญาณบรอดแคส (Admin Only)"
-              >
-                <Radio size={13} className="animate-pulse" />
-                <span>บรอดแคส</span>
-              </button>
-            )}
-
             {/* Notification Bell */}
             <button 
               onClick={() => setShowNotificationsModal(true)}
@@ -238,39 +202,41 @@ export function HomeFeed() {
               </button>
             )}
           </div>
-        
         </div>
-
-        
 
         <div className="mb-4"><GlobalSearch /></div>
         {/* Location Selector */}
         <div className="flex items-center gap-2">
-          <div onClick={() => setShowLocationModal(true)} className="flex-1 cursor-pointer group flex justify-between items-center bg-slate-800/40 hover:bg-slate-800/70 p-2.5 rounded-2xl border border-slate-800/80 transition-all">
-            <div>
+          <div 
+            onClick={() => setShowLocationModal(true)} 
+            className="flex-1 min-w-0 cursor-pointer group flex justify-between items-center bg-slate-800/50 hover:bg-slate-800/80 p-2.5 rounded-2xl border border-slate-800/90 transition-all"
+          >
+            <div className="min-w-0 flex-1 pr-2">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="inline-flex items-center gap-1 text-emerald-400 text-[10.5px] font-extrabold">
+                <span className="inline-flex items-center gap-1 text-emerald-400 text-[10.5px] font-extrabold shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  {location.isGps ? 'พิกัด GPS จริง' : 'พื้นที่ปัจจุบัน'}
+                  {location?.isGps ? 'พิกัด GPS จริง' : 'พื้นที่ปัจจุบัน'}
                 </span>
-                {location.isGps && (
-                  <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9.5px] font-bold border border-emerald-400/30">
+                {location?.isGps && (
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9.5px] font-bold border border-emerald-400/30 shrink-0">
                     GPS Active
                   </span>
                 )}
               </div>
               
-              <h1 className="text-[17px] font-extrabold tracking-tight flex items-center gap-1.5 text-white group-hover:text-emerald-300 transition-colors">
-                {location.district}, {location.province}
+              <h1 className="text-[16px] sm:text-[17px] font-extrabold tracking-tight text-white group-hover:text-emerald-300 transition-colors truncate">
+                {(location?.district?.trim() || 'จตุจักร')}, {(location?.province?.trim() || 'กรุงเทพมหานคร')}
               </h1>
               
-              <p className="text-slate-400 text-[11.5px] font-medium mt-0.5 flex items-center gap-1 line-clamp-2 pr-2">
+              <p className="text-slate-400 text-[11.5px] font-medium mt-0.5 flex items-center gap-1 truncate">
                 <MapPin size={11} className="text-emerald-400 shrink-0" />
-                <span>ต.{location.subdistrict} • {location.village}</span>
+                <span className="truncate">
+                  ต.{(location?.subdistrict?.trim() || 'ลาดยาว')} • {(location?.village?.trim() || 'หมู่บ้านพหลโยธินวิลล่า')}
+                </span>
               </p>
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-700/60 group-hover:bg-emerald-500/20 text-slate-300 group-hover:text-emerald-300 text-[11px] font-bold px-2 py-1.5 rounded-xl border border-slate-600/40 group-hover:border-emerald-400/40 transition-colors">
+            <div className="flex items-center gap-1 bg-slate-700/60 group-hover:bg-emerald-500/20 text-slate-300 group-hover:text-emerald-300 text-[11px] font-bold px-2.5 py-1.5 rounded-xl border border-slate-600/40 group-hover:border-emerald-400/40 transition-colors shrink-0">
               <span>เปลี่ยน</span>
               <ChevronDown size={13} />
             </div>

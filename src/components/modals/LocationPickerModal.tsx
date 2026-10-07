@@ -214,10 +214,10 @@ export function LocationPickerModal({ onClose }: LocationPickerModalProps) {
                 พื้นที่ปัจจุบันที่คุณเลือก
               </span>
               <h4 className="font-extrabold text-slate-800 text-sm mt-0.5 truncate max-w-[220px]">
-                {location.subdistrict} ({location.district})
+                {(location?.subdistrict?.trim() || 'ลาดยาว')} ({(location?.district?.trim() || 'จตุจักร')})
               </h4>
               <p className="text-[11px] text-slate-500 truncate max-w-[220px]">
-                {currentAreaName}
+                {currentAreaName || `${location?.province || 'กรุงเทพมหานคร'}`}
               </p>
             </div>
           </div>

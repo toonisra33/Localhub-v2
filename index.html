@@ -1,6 +1,37 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      // Suppress harmless Vite HMR WebSocket errors in AI Studio reverse-proxy preview
+      (function() {
+        var isWsError = function(msg) {
+          if (!msg) return false;
+          var s = typeof msg === 'string' ? msg : (msg.message || '');
+          return s.indexOf('WebSocket closed without opened') !== -1 ||
+                 s.indexOf('failed to connect to websocket') !== -1 ||
+                 s.indexOf('vite:ws:disconnect') !== -1;
+        };
+        window.addEventListener('error', function(e) {
+          if (isWsError(e.message) || isWsError(e.error)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isWsError(e.reason)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+        var origErr = console.error;
+        console.error = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            if (isWsError(arguments[i])) return;
+          }
+          origErr.apply(console, arguments);
+        };
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>LocalHub</title>

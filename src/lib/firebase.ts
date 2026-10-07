@@ -49,6 +49,9 @@ export const db = initializeFirestore(app, {
 
 
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 // Configured Root Admins (Initial bootstrap emails)
 export const ROOT_ADMIN_EMAILS = [
@@ -240,7 +243,7 @@ export async function resetUserPassword(email: string): Promise<void> {
 }
 
 /**
- * Sign in with Google Auth (uses Redirect for mobile compatibility)
+ * Sign in with Google Auth (always prompts for account selection)
  */
 export async function signInWithGoogleAuth(locationString?: string) {
   try {
@@ -248,41 +251,79 @@ export async function signInWithGoogleAuth(locationString?: string) {
       sessionStorage.setItem('locallink_pending_loc', locationString);
     }
     
-    // Check execution environment
-    const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
-    const isStandalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone);
+    // Always force account selection dialog so user can pick their email
+    googleProvider.setCustomParameters({
+      prompt: 'select_account'
+    });
 
-    if (isStandalone || isInsideIframe) {
-      // In PWA/TWA or iframe, try popup first
+    // Strategy 1: Try signInWithPopup first (reliable in all modern browsers without losing page state)
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const isAdmin = isAuthorizedAdminEmail(user.email);
+      const role = isAdmin ? 'admin' : 'user';
+
+      // Save user record to Firestore immediately
       try {
-        const result = await signInWithPopup(auth, googleProvider);
-        return { user: result.user, role: 'user' }; 
-      } catch (popupErr: any) {
-        console.warn('Popup login failed, attempting redirect fallback...', popupErr);
-        if (
-          popupErr.code === 'auth/popup-blocked' ||
-          popupErr.code === 'auth/operation-not-supported-in-this-environment' ||
-          popupErr.code === 'auth/popup-closed-by-user' ||
-          popupErr.code === 'auth/cancelled-popup-request'
-        ) {
-          await signInWithRedirect(auth, googleProvider);
-          return { user: auth.currentUser, role: 'user' };
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        const userData = {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || 'สมาชิกชุมชน',
+          photoURL: user.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
+          role: isAdmin ? 'admin' : (userSnap.exists() ? (userSnap.data().role || 'user') : 'user'),
+          isVerified: isAdmin ? true : (userSnap.exists() ? (userSnap.data().isVerified || false) : false),
+          reputationScore: isAdmin ? 100 : (userSnap.exists() ? (userSnap.data().reputationScore || 50) : 50),
+          lastLoginAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            ...userData,
+            createdAt: serverTimestamp(),
+            phone: user.phoneNumber || '',
+            address: locationString || 'ชุมชนในพื้นที่',
+            villageOrCondo: 'ชุมชนในพื้นที่',
+            bio: 'สมาชิกชุมชนผู้ใช้งานผ่าน Google Account',
+          });
+        } else {
+          await setDoc(userRef, userData, { merge: true });
         }
+
+        await logUserSession(
+          user.uid,
+          user.displayName || user.email || 'สมาชิก Google',
+          user.email || '',
+          'google',
+          locationString || 'ประเทศไทย'
+        );
+      } catch (dbErr) {
+        console.warn('Firestore user profile sync warning:', dbErr);
+      }
+
+      return { user, role };
+    } catch (popupErr: any) {
+      console.warn('Popup login failed, evaluating fallback...', popupErr);
+      // If user simply closed the popup, do not redirect
+      if (popupErr.code === 'auth/popup-closed-by-user') {
         throw popupErr;
       }
-    } else {
-      // For normal mobile browsers, Redirect is safer against popup blockers.
-      try {
+
+      // If popup was blocked or unsupported, fallback to redirect
+      if (
+        popupErr.code === 'auth/popup-blocked' ||
+        popupErr.code === 'auth/operation-not-supported-in-this-environment' ||
+        popupErr.code === 'auth/cancelled-popup-request'
+      ) {
         await signInWithRedirect(auth, googleProvider);
-        return { user: auth.currentUser, role: 'user' }; 
-      } catch (redirectErr: any) {
-        console.warn('Redirect login failed, attempting popup fallback...', redirectErr);
-        const result = await signInWithPopup(auth, googleProvider);
-        return { user: result.user, role: 'user' };
+        return { user: auth.currentUser, role: 'user' };
       }
+      throw popupErr;
     }
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'users');
+    console.error('Google Auth Error:', error);
     throw error;
   }
 }

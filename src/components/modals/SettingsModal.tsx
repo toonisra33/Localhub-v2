@@ -244,14 +244,14 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             <div className="flex items-center justify-between">
               <h4 className="font-extrabold text-white text-[13.5px] flex items-center gap-1.5">
                 <Radio size={16} className="text-emerald-400" />
-                <span>การติดตั้งเป็นแอปแท้ (เต็มหน้าจอ)</span>
+                <span>ดาวน์โหลดแอปพลิเคชันอย่างเป็นทางการ</span>
               </h4>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                PWA / WebAPK
+                Google Play Store
               </span>
             </div>
             <p className="text-[11.5px] text-slate-300">
-              เปิดใช้งานแบบไม่มีแถบ URL หรือเบราว์เซอร์กวนใจ รองรับทั้ง Android (Chrome) และ iPhone (Safari)
+              การติดตั้ง application ต้องทำผ่านการดาวน์โหลดจาก Google Play Store เท่านั้น เพื่อความปลอดภัยและการใช้งานเต็มรูปแบบ
             </p>
             <div className="pt-1">
               <PWAInstallButton className="w-full justify-center py-2.5" />

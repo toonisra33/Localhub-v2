@@ -172,6 +172,35 @@ async function startServer() {
       server: { middlewareMode: true, hmr: false },
       appType: "spa",
     });
+
+    // Intercept /@vite/client to neutralize benign WebSocket rejection in AI Studio proxy
+    app.use((req, res, next) => {
+      if (req.url === '/@vite/client' || req.url?.startsWith('/@vite/client')) {
+        const originalEnd = res.end;
+        const originalWrite = res.write;
+        const chunks: Buffer[] = [];
+
+        res.write = function (chunk: any) {
+          if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          return true;
+        } as any;
+
+        res.end = function (chunk?: any) {
+          if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          let body = Buffer.concat(chunks).toString('utf8');
+          if (body.includes('WebSocket closed without opened')) {
+            body = body.replace(
+              'reject(new Error("WebSocket closed without opened."))',
+              'resolve()'
+            );
+            res.setHeader('Content-Length', Buffer.byteLength(body));
+          }
+          return originalEnd.call(this, body);
+        } as any;
+      }
+      next();
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');

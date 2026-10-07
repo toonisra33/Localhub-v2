@@ -221,7 +221,7 @@ export function UserProfile() {
               เข้าสู่ระบบ / ลงทะเบียนสมาชิก
             </h2>
             <p className="text-[12px] text-slate-300 font-medium max-w-xs mx-auto mb-4 leading-relaxed">
-              ร่วมเป็นส่วนหนึ่งของชุมชน {location.district} เพื่อโพสต์ข่าวสาร จัดการร้านค้าส่วนตัว และติดตามเหตุการณ์ในพื้นที่
+              ร่วมเป็นส่วนหนึ่งของชุมชน {location?.district?.trim() || 'จตุจักร'} เพื่อโพสต์ข่าวสาร จัดการร้านค้าส่วนตัว และติดตามเหตุการณ์ในพื้นที่
             </p>
 
             <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">

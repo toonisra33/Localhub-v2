@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { CheckInLocation, Location } from '../../types';
 import { WORLDWIDE_AREAS_DATABASE, SearchAreaItem } from '../../data/thailandLocations';
+import { reverseGeocodeLocation } from '../../lib/reverseGeocode';
 
 interface CheckInPickerModalProps {
   initialCheckIn?: CheckInLocation | null;
@@ -168,37 +169,15 @@ export function CheckInPickerModal({
   const performReverseGeocode = async (targetLat: number, targetLng: number) => {
     setIsReverseGeocoding(true);
     try {
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${targetLat},${targetLng}&key=${apiKey}&language=th`);
-      const data = await response.json();
-      
-      if (data.results && data.results.length > 0) {
-        const firstResult = data.results[0];
-        const components = firstResult.address_components;
-        
-        const getComp = (types: string[]) => {
-          const comp = components.find((c: any) => c.types.some((t: string) => types.includes(t)));
-          return comp ? comp.long_name : '';
-        };
-        
-        const poi = getComp(['point_of_interest', 'establishment', 'premise', 'route']);
-        const neighborhood = getComp(['neighborhood', 'sublocality_level_2', 'sublocality_level_1']);
-        
-        const sub = getComp(['sublocality_level_2', 'sublocality_level_1', 'locality']);
-        const dist = getComp(['administrative_area_level_2', 'locality']);
-        const prov = getComp(['administrative_area_level_1']);
-        
-        let title = poi || neighborhood;
-        if (!title) {
-          title = firstResult.formatted_address.split(',')[0].split(' ')[0];
+      const geocoded = await reverseGeocodeLocation(targetLat, targetLng);
+      if (geocoded) {
+        if (geocoded.village && geocoded.village !== 'จุดที่เลือกบนแผนที่') {
+          setPlaceName(geocoded.village);
         }
-        
-        if (title && title !== 'จุดที่เลือกบนแผนที่') {
-          setPlaceName(title);
-        }
-        if (sub) setSubdistrict(sub);
-        if (dist) setDistrict(dist);
-        if (prov) setProvince(prov);
-        if (firstResult.formatted_address) setAddress(firstResult.formatted_address);
+        if (geocoded.subdistrict) setSubdistrict(geocoded.subdistrict);
+        if (geocoded.district) setDistrict(geocoded.district);
+        if (geocoded.province) setProvince(geocoded.province);
+        if (geocoded.formattedAddress) setAddress(geocoded.formattedAddress);
       }
     } catch (e) {
       console.error('Reverse geocode error:', e);

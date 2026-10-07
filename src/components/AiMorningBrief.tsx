@@ -4,7 +4,7 @@ import { useCommunity } from '../context/CommunityContext';
 
 
 export function AiMorningBrief() {
-  const { showToast, location } = useCommunity();
+  const { showToast, location, alerts, products, events } = useCommunity();
   const [realWeather, setRealWeather] = React.useState<string | null>(null);
   
   const [greeting, setGreeting] = React.useState("สวัสดีครับ ☀️");
@@ -127,8 +127,8 @@ export function AiMorningBrief() {
           <div className="text-[12.5px] text-slate-600 font-medium leading-relaxed mb-4 p-3 bg-slate-50 rounded-2xl border border-slate-100/50 space-y-2.5">
             <p>
               {greeting} <span className="font-bold text-indigo-600">แถว{locName}</span> อากาศตอนนี้ <span className="font-bold text-sky-600">{displayWeather}</span> 
-              {' '}มีประกาศจากแอดมิน <span className="font-bold text-rose-600">{0} รายการ</span> 
-              {' '}และมีการปิดถนน <span className="font-bold text-amber-600">{0} จุด</span> ในพื้นที่ ควรเผื่อเวลาเดินทางนะครับ
+              {' '}มีรายงานเหตุการณ์ในพื้นที่ <span className="font-bold text-rose-600">{(alerts || []).length} เรื่อง</span> 
+              {' '}และมีกิจกรรมชุมชน <span className="font-bold text-amber-600">{(events || []).length} งาน</span> ติดตามข่าวสารได้ตลอดวันครับ
             </p>
             {rainAlert && (
               <div className="flex items-start gap-2 bg-rose-50/80 p-2.5 rounded-xl border border-rose-100/60">
@@ -146,22 +146,22 @@ export function AiMorningBrief() {
               <div className="w-7 h-7 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-1.5">
                 <AlertTriangle size={14} />
               </div>
-              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{0}</span>
+              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{(alerts || []).length}</span>
               <span className="text-[10px] font-bold text-slate-500">แจ้งเตือนภัย</span>
             </div>
             <div className="bg-white border border-slate-150 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
               <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-1.5">
                 <Calendar size={14} />
               </div>
-              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{0}</span>
-              <span className="text-[10px] font-bold text-slate-500">กิจกรรมวันนี้</span>
+              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{(events || []).length}</span>
+              <span className="text-[10px] font-bold text-slate-500">กิจกรรมชุมชน</span>
             </div>
             <div className="bg-white border border-slate-150 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
               <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1.5">
                 <Store size={14} />
               </div>
-              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{0}</span>
-              <span className="text-[10px] font-bold text-slate-500">ร้านค้าใหม่</span>
+              <span className="text-[14px] font-black text-slate-800 leading-none mb-0.5">{(products || []).length}</span>
+              <span className="text-[10px] font-bold text-slate-500">สินค้าในตลาด</span>
             </div>
           </div>
         </div>
