@@ -16,22 +16,30 @@ if (container) {
   );
 }
 
-// Safely register PWA service worker after initial UI mounts
+// Safely handle PWA service worker: Do NOT register inside iframes or dev environments to prevent preview locks
 try {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-    registerSW({
-      immediate: true,
-      onRegisteredSW(_swUrl, registration) {
-        if (registration) {
-          setInterval(() => {
-            try { registration.update(); } catch {}
-          }, 60 * 60 * 1000); // Check update every hour
+    const isIframe = window.self !== window.top;
+    if (isIframe) {
+      // In an iframe (AI Studio preview), unregister any service workers to keep live updates working
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      }).catch(() => {});
+    } else {
+      registerSW({
+        immediate: false,
+        onRegisteredSW(_swUrl, registration) {
+          if (registration) {
+            setInterval(() => {
+              try { registration.update(); } catch {}
+            }, 60 * 60 * 1000); // Check update every hour
+          }
+        },
+        onRegisterError(err) {
+          console.warn('PWA registration notice:', err);
         }
-      },
-      onRegisterError(err) {
-        console.warn('PWA registration notice:', err);
-      }
-    });
+      });
+    }
   }
 } catch (e) {
   console.warn('PWA registration skipped:', e);

@@ -6,6 +6,7 @@ import { isAuthorizedAdminEmail } from '../../lib/firebase';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
 import { PromoKitModal } from './PromoKitModal';
 import { PWAInstallButton } from '../PWAInstallButton';
+import { safeStorage } from '../../lib/safeStorage';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -23,7 +24,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const isAuthorizedAdmin = isLoggedIn && isAuthorizedAdminEmail(userProfile?.email);
 
   const handleResetDemoData = () => {
-    localStorage.clear();
+    safeStorage.clear();
     showToast('รีเซ็ตข้อมูลระบบเรียบร้อย กำลังโหลดหน้าใหม่...', 'info');
     setTimeout(() => {
       window.location.reload();

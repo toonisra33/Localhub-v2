@@ -35,6 +35,7 @@ import { PlaceDetailModal, MapPoint } from './modals/PlaceDetailModal';
 import { AddCustomPinModal } from './modals/AddCustomPinModal';
 import { LocalHubLogo } from './LocalHubLogo';
 import { MapSearchAutocomplete, AutocompleteResult } from './MapSearchAutocomplete';
+import { safeStorage } from '../lib/safeStorage';
 
 // Helper function to calculate geodesic distance in km/meters
 function calculateDistanceStr(lat1: number, lon1: number, lat2: number, lon2: number): string {
@@ -220,10 +221,10 @@ export function AroundMeMap() {
   const [pendingPinCoords, setPendingPinCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showAddPinModal, setShowAddPinModal] = useState<boolean>(false);
 
-  // Custom Pinned places stored in localStorage
+  // Custom Pinned places stored in safeStorage
   const [customPins, setCustomPins] = useState<MapPoint[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_CUSTOM_PINS_KEY);
+      const saved = safeStorage.getItem(STORAGE_CUSTOM_PINS_KEY);
       if (!saved) return [];
       const parsed = JSON.parse(saved);
       return Array.isArray(parsed) ? parsed : [];
@@ -232,12 +233,12 @@ export function AroundMeMap() {
     }
   });
 
-  // Sync custom pins to localStorage
+  // Sync custom pins to safeStorage
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_CUSTOM_PINS_KEY, JSON.stringify(customPins));
+      safeStorage.setItem(STORAGE_CUSTOM_PINS_KEY, JSON.stringify(customPins));
     } catch (e) {
-      console.error('Failed to save pins to localStorage', e);
+      console.error('Failed to save pins to safeStorage', e);
     }
   }, [customPins]);
 

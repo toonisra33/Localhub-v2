@@ -166,20 +166,61 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development (HMR disabled in AI Studio cloud environment)
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: false },
-      appType: "spa",
-    });
+  // Always serve dist/assets statically if built, preventing HTML fallback syntax error on chunk URLs
+  const distAssetsPath = path.join(process.cwd(), 'dist', 'assets');
+  if (fs.existsSync(distAssetsPath)) {
+    app.use('/assets', express.static(distAssetsPath));
+  }
 
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
+  // Handle any missing JS chunk requests to prevent Vite returning index.html as a script
+  app.get('/assets/*.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, no-cache');
+    res.send(`
+      console.warn("Stale chunk requested, reloading page to get latest bundle...");
+      if (typeof window !== 'undefined') {
+        setTimeout(function() {
+          window.location.reload();
+        }, 100);
+      }
+    `);
+  });
+
+  // Force-cleanup rogue service workers in AI Studio preview
+  app.get(['/sw.js', '/workbox-*.js'], (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.send(`
+      self.addEventListener('install', () => self.skipWaiting());
+      self.addEventListener('activate', (event) => {
+        event.waitUntil(
+          caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+            .then(() => self.registration.unregister())
+            .then(() => self.clients.matchAll())
+            .then((clients) => {
+              clients.forEach((client) => client.navigate(client.url));
+            })
+        );
+      });
+    `);
+  });
+
+  // Serve built production dist if available (guarantees preview in AI Studio matches published system)
+  const distPath = path.join(process.cwd(), 'dist');
+  const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
+
+  if (hasDist) {
     app.use(express.static(distPath, { dotfiles: 'allow' }));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
+  } else {
+    // Vite middleware fallback if dist is not yet generated
+    const vite = await createViteServer({
+      server: { middlewareMode: true, hmr: false },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
   }
 
   app.listen(PORT, "0.0.0.0", () => {

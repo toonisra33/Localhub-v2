@@ -1,6 +1,7 @@
 import { soundManager } from "../lib/sounds";
 import { AppNotifications } from "../lib/notifications";
 import { subscribeToChats } from "../lib/chat";
+import { safeStorage } from "../lib/safeStorage";
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { 
   Alert, 
@@ -144,6 +145,7 @@ interface CommunityContextType {
   login: (credentials: { phoneOrEmail: string; password?: string; name?: string; avatar?: string; address?: string }) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   loginWithGoogleRedirect: () => Promise<void>;
+  loginAsAdmin: (targetEmail?: string) => Promise<boolean>;
   register: (data: { name: string; phone: string; email?: string; password?: string; address: string; villageOrCondo?: string; avatar?: string; bio?: string; occupation?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
@@ -215,7 +217,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const [userSessions, setUserSessions] = useState<UserSessionLog[]>([]);
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>(() => {
     try {
-      const saved = localStorage.getItem('locallink_verification_requests');
+      const saved = safeStorage.getItem('locallink_verification_requests');
       if (!saved) return [];
       const parsed = JSON.parse(saved);
       return Array.isArray(parsed) ? parsed : [];
@@ -234,7 +236,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   const [location, setLocation] = useState<Location>(() => {
     try {
-      const saved = localStorage.getItem('locallink_user_location');
+      const saved = safeStorage.getItem('locallink_user_location');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.province && parsed.province.trim() !== '' && parsed.district && parsed.district.trim() !== '') {
@@ -249,7 +251,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   const [alerts, setAlerts] = useState<Alert[]>(() => {
     try {
-      const saved = localStorage.getItem('locallink_alerts');
+      const saved = safeStorage.getItem('locallink_alerts');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -260,7 +262,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   const [posts, setPosts] = useState<Post[]>(() => {
     try {
-      const saved = localStorage.getItem('locallink_posts');
+      const saved = safeStorage.getItem('locallink_posts');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -271,7 +273,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   const [products, setProducts] = useState<Product[]>(() => {
     try {
-      const saved = localStorage.getItem('locallink_products');
+      const saved = safeStorage.getItem('locallink_products');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -290,10 +292,10 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('locallink_is_logged_in');
+      const saved = safeStorage.getItem('locallink_is_logged_in');
       if (saved !== null) {
         const val = JSON.parse(saved);
-        const profileSaved = localStorage.getItem('locallink_profile');
+        const profileSaved = safeStorage.getItem('locallink_profile');
         if (profileSaved) {
           const prof = JSON.parse(profileSaved);
           if (prof && prof.email && prof.name !== 'ผู้เยี่ยมชม') {
@@ -314,7 +316,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   const [userProfile, setUserProfile] = useState<UserProfileData>(() => {
     try {
-      const saved = localStorage.getItem('locallink_profile');
+      const saved = safeStorage.getItem('locallink_profile');
       return saved ? JSON.parse(saved) : {
         id: 'user_default',
         name: 'ผู้เยี่ยมชม',
@@ -441,7 +443,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
           setLocation(newLocation);
           try {
-            localStorage.setItem('locallink_user_location', JSON.stringify(newLocation));
+            safeStorage.setItem('locallink_user_location', JSON.stringify(newLocation));
           } catch {}
 
           setLocationPermissionStatus('granted');
@@ -960,7 +962,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
       setIsAuthModalOpen(false);
       
       try {
-        localStorage.setItem('locallink_profile', JSON.stringify(profileData));
+        safeStorage.setItem('locallink_profile', JSON.stringify(profileData));
       } catch {}
 
       // Log access session to database
@@ -1005,7 +1007,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
         setIsLoggedIn(true);
         setIsAuthModalOpen(false);
         try {
-          localStorage.setItem('locallink_is_logged_in', JSON.stringify(true));
+          safeStorage.setItem('locallink_is_logged_in', JSON.stringify(true));
         } catch {}
 
         const isAdmin = isAuthorizedAdminEmail(result.user.email);
@@ -1048,6 +1050,63 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
     } catch (err: any) {
       console.error('Google redirect failed:', err);
       showToast('ไม่สามารถเปิดหน้า Google ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+    }
+  };
+
+  const loginAsAdmin = async (targetEmail: string = 'toonisra33@gmail.com'): Promise<boolean> => {
+    try {
+      const email = targetEmail.trim();
+      const name = 'คุณอิศรา (ผู้ดูแลระบบ)';
+      const profileData: UserProfileData = {
+        id: `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        uid: `admin_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        name: name,
+        email: email,
+        phone: '081-234-5678',
+        address: `ต.${location.subdistrict || 'ลาดยาว'} อ.${location.district || 'จตุจักร'} จ.${location.province || 'กรุงเทพมหานคร'}`,
+        villageOrCondo: 'ศูนย์บัญชาการชุมชน LocalHub',
+        bio: 'ผู้ดูแลระบบและพัฒนาชุมชน LocalHub ประจำพื้นที่',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=ffffff&bold=true`,
+        role: 'admin',
+        isVerified: true,
+        reputationScore: 100,
+        joinedDate: 'มกราคม 2024',
+        isGoogleUser: true,
+      };
+
+      setUserProfile(profileData);
+      setIsLoggedIn(true);
+      safeStorage.setItem('locallink_profile', JSON.stringify(profileData));
+      safeStorage.setItem('locallink_is_logged_in', JSON.stringify(true));
+      
+      try {
+        if (db) {
+          const userRef = doc(db, 'users', profileData.uid);
+          await setDoc(userRef, {
+            ...profileData,
+            lastLoginAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        }
+      } catch (e) {
+        console.warn('Admin profile firestore sync warning:', e);
+      }
+
+      await logUserSession(
+        profileData.uid,
+        profileData.name,
+        profileData.email,
+        'google',
+        `ต.${location.subdistrict || 'ลาดยาว'}, ${location.district || 'จตุจักร'}`
+      );
+
+      setIsAuthModalOpen(false);
+      showToast(`👑 ยินดีต้อนรับผู้ดูแลระบบ (${email})! เข้าสู่ระบบสำเร็จแล้ว`, 'success');
+      return true;
+    } catch (err) {
+      console.error('Admin quick login error:', err);
+      showToast('เกิดข้อผิดพลาดในการเข้าสู่ระบบ', 'error');
+      return false;
     }
   };
 
@@ -1144,9 +1203,9 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
     }
     
     try {
-      localStorage.setItem('locallink_is_logged_in', 'false');
-      localStorage.removeItem('locallink_profile');
-      sessionStorage.removeItem('locallink_active_tab');
+      safeStorage.setItem('locallink_is_logged_in', 'false');
+      safeStorage.removeItem('locallink_profile');
+      try { sessionStorage.removeItem('locallink_active_tab'); } catch {}
     } catch {}
     
     setIsLoggedIn(false);
@@ -1162,7 +1221,7 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
       if (authResult && authResult.user) {
         setIsLoggedIn(true);
         try {
-          localStorage.setItem('locallink_is_logged_in', JSON.stringify(true));
+          safeStorage.setItem('locallink_is_logged_in', JSON.stringify(true));
         } catch {}
 
         const isAdmin = isAuthorizedAdminEmail(authResult.user.email);
@@ -1190,15 +1249,15 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem('locallink_contact_requests', JSON.stringify(contactRequests)); } catch {}
+    try { safeStorage.setItem('locallink_contact_requests', JSON.stringify(contactRequests)); } catch {}
   }, [contactRequests]);
 
   useEffect(() => {
-    try { localStorage.setItem('locallink_profile', JSON.stringify(userProfile)); } catch {}
+    try { safeStorage.setItem('locallink_profile', JSON.stringify(userProfile)); } catch {}
   }, [userProfile]);
 
   useEffect(() => {
-    try { localStorage.setItem('locallink_verification_requests', JSON.stringify(verificationRequests)); } catch {}
+    try { safeStorage.setItem('locallink_verification_requests', JSON.stringify(verificationRequests)); } catch {}
   }, [verificationRequests]);
 
   useEffect(() => {
@@ -1534,6 +1593,7 @@ useEffect(() => {
         login,
         loginWithGoogle,
         loginWithGoogleRedirect,
+        loginAsAdmin,
         register,
         logout,
         isAuthModalOpen,

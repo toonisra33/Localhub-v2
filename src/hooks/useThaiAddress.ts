@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { safeStorage } from '../lib/safeStorage';
 
 export interface ThaiAddress {
   district: string; // Tambon / Sub-district
@@ -171,9 +172,9 @@ export function useThaiAddress() {
     const controller = new AbortController();
 
     const fetchData = async () => {
-      // Check localStorage cache first
+      // Check safeStorage cache first
       try {
-        const cached = localStorage.getItem('localhub_thai_address_data');
+        const cached = safeStorage.getItem('localhub_thai_address_data');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
@@ -182,7 +183,7 @@ export function useThaiAddress() {
           }
         }
       } catch {
-        // Ignore localStorage error
+        // Ignore cache error
       }
 
       try {
@@ -198,7 +199,7 @@ export function useThaiAddress() {
           if (Array.isArray(json) && json.length > 0 && isMounted) {
             setData(json);
             try {
-              localStorage.setItem('localhub_thai_address_data', JSON.stringify(json));
+              safeStorage.setItem('localhub_thai_address_data', JSON.stringify(json));
             } catch {
               // Ignore cache storage quota limit
             }

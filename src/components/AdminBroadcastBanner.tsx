@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { isAuthorizedAdminEmail } from '../lib/firebase';
+import { safeStorage } from '../lib/safeStorage';
 import { openExternalLink } from '../utils/linkHandler';
 
 export function AdminBroadcastBanner() {
@@ -39,7 +40,7 @@ export function AdminBroadcastBanner() {
   const [isFullScreen, setIsFullScreen] = useState(() => {
     if (!activeBroadcast) return false;
     const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
-    return localStorage.getItem(key) !== 'true';
+    return safeStorage.getItem(key) !== 'true';
   });
 
   const isLeaving = deviceRemainingSeconds <= 1;
@@ -48,7 +49,7 @@ export function AdminBroadcastBanner() {
   React.useEffect(() => {
     if (activeBroadcast) {
       const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
-      const isMinimized = localStorage.getItem(key) === 'true';
+      const isMinimized = safeStorage.getItem(key) === 'true';
       setIsFullScreen(!isMinimized);
       if (!isMinimized) {
         setIsExpanded(true); // Auto expand when in full screen
@@ -61,7 +62,7 @@ export function AdminBroadcastBanner() {
     setIsFullScreen(false);
     setIsExpanded(false);
     const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
-    localStorage.setItem(key, 'true');
+    safeStorage.setItem(key, 'true');
   };
   const isRealAdmin = isLoggedIn && role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
 

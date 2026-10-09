@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { MapPoint } from './modals/PlaceDetailModal';
 import { SearchAreaItem, THAILAND_AREAS_DATABASE, WORLDWIDE_AREAS_DATABASE } from '../data/thailandLocations';
+import { safeStorage } from '../lib/safeStorage';
 
 export interface AutocompleteResult {
   id: string;
@@ -109,7 +110,7 @@ export function MapSearchAutocomplete({
   
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem(RECENT_SEARCHES_KEY);
+      const saved = safeStorage.getItem(RECENT_SEARCHES_KEY);
       return saved ? JSON.parse(saved) : ['ตำบลเสนานิคม', 'Tokyo, Japan', 'Paris, France', 'ย่านอารีย์'];
     } catch {
       return ['ตำบลเสนานิคม', 'Tokyo, Japan', 'Paris, France', 'ย่านอารีย์'];
@@ -199,7 +200,7 @@ export function MapSearchAutocomplete({
     setRecentSearches(prev => {
       const updated = [clean, ...prev.filter(item => item !== clean)].slice(0, 6);
       try {
-        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+        safeStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
       } catch (e) {
         console.error(e);
       }
@@ -212,7 +213,7 @@ export function MapSearchAutocomplete({
     setRecentSearches(prev => {
       const updated = prev.filter(t => t !== item);
       try {
-        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+        safeStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
       } catch (e) {
         console.error(e);
       }

@@ -4,6 +4,7 @@ import { db, saveEntityToFirestore } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { soundManager } from '../lib/sounds';
 import { AppNotifications } from '../lib/notifications';
+import { safeStorage } from '../lib/safeStorage';
 
 interface BroadcastContextType {
   role: UserRole;
@@ -51,7 +52,7 @@ function getLocalDateStr(date: Date = new Date()): string {
 export function BroadcastProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<UserRole>(() => {
     try {
-      const saved = localStorage.getItem(USER_ROLE_KEY);
+      const saved = safeStorage.getItem(USER_ROLE_KEY);
       return saved === 'admin' ? 'admin' : 'user';
     } catch {
       return 'user';
@@ -76,7 +77,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
           // If this is a newly received broadcast that we haven't seen yet, play the alert sound
           if (previousBroadcastIdRef.current !== data.id) {
              const storageKey = `${DEVICE_VIEW_PREFIX}${data.id}`;
-             const hasSeenBefore = !!localStorage.getItem(storageKey);
+             const hasSeenBefore = !!safeStorage.getItem(storageKey);
              
              if (!hasSeenBefore) {
                soundManager.playAlertSound();
@@ -106,7 +107,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
   const setRole = (newRole: UserRole) => {
     setRoleState(newRole);
     try {
-      localStorage.setItem(USER_ROLE_KEY, newRole);
+      safeStorage.setItem(USER_ROLE_KEY, newRole);
     } catch {
       // ignore
     }
@@ -132,12 +133,12 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     const storageKey = `${DEVICE_VIEW_PREFIX}${activeBroadcast.id}`;
     let firstSeen = 0;
     try {
-      const savedFirstSeen = localStorage.getItem(storageKey);
+      const savedFirstSeen = safeStorage.getItem(storageKey);
       if (savedFirstSeen) {
         firstSeen = parseInt(savedFirstSeen, 10);
       } else {
         firstSeen = Date.now();
-        localStorage.setItem(storageKey, firstSeen.toString());
+        safeStorage.setItem(storageKey, firstSeen.toString());
       }
     } catch {
       firstSeen = Date.now();
@@ -211,7 +212,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     if (activeBroadcast) {
       const now = Date.now();
       try {
-        localStorage.setItem(`${DEVICE_VIEW_PREFIX}${activeBroadcast.id}`, now.toString());
+        safeStorage.setItem(`${DEVICE_VIEW_PREFIX}${activeBroadcast.id}`, now.toString());
       } catch {
         // ignore
       }

@@ -40,6 +40,7 @@ export function AuthModal() {
     login, 
     loginWithGoogle,
     loginWithGoogleRedirect,
+    loginAsAdmin,
     register, 
     location,
     showToast 
@@ -250,9 +251,12 @@ export function AuthModal() {
       }
     } catch (err: any) {
       console.error('Google sign-in error:', err);
-      if (err?.code !== 'auth/popup-closed-by-user') {
-        showToast('หน้าต่าง Google ไม่สามารถเปิดได้ กำลังเปลี่ยนไปใช้โหมดเปิดเต็มหน้า...', 'info');
-        await loginWithGoogleRedirect();
+      if (err?.code === 'auth/popup-closed-by-user') {
+        showToast('ปิดหน้าต่างการเลือกบัญชี Google', 'info');
+      } else if (err?.code === 'auth/popup-blocked') {
+        showToast('เบราว์เซอร์บล็อกป๊อปอัป กรุณาอนุญาตป๊อปอัป หรือกดเข้าสู่ระบบด่วนด้านบน', 'error');
+      } else {
+        showToast('การเชื่อมต่อกับ Google ขัดข้อง กรุณาใช้ปุ่มเข้าสู่ระบบด่วนแอดมิน หรืออีเมล/รหัสผ่าน', 'error');
       }
     } finally {
       setIsSigningInGoogle(false);
@@ -262,10 +266,11 @@ export function AuthModal() {
   const handleGoogleDirectRedirect = async () => {
     setIsSigningInGoogle(true);
     try {
+      showToast('กำลังเตรียมการเข้าสู่ระบบ...', 'info');
       await loginWithGoogleRedirect();
     } catch (err: any) {
       console.error('Google direct redirect error:', err);
-      showToast('ไม่สามารถเปิดหน้าเลือกบัญชี Google ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+      showToast('ไม่สามารถเปิดหน้า Google ได้ กรุณาใช้ปุ่มเข้าสู่ระบบด่วนแทน', 'error');
       setIsSigningInGoogle(false);
     }
   };
@@ -760,6 +765,46 @@ export function AuthModal() {
             /* LOGIN FORM */
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               
+              {/* Quick 1-Click Login for Root Admin (toonisra33@gmail.com) */}
+              <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 border border-emerald-500/30 rounded-2xl p-3.5 shadow-sm">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-sm shrink-0">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-extrabold text-slate-900">เข้าสู่ระบบด่วน (แอดมิน)</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">1 คลิก</span>
+                    </div>
+                    <p className="text-[11.5px] font-medium text-emerald-700 truncate">toonisra33@gmail.com</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await loginAsAdmin('toonisra33@gmail.com');
+                    closeAuthModal();
+                  }}
+                  className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-[13px] font-extrabold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  <Sparkles size={15} />
+                  <span>กดเข้าสู่ระบบแอดมินทันที (ไม่ต้องรอ Google)</span>
+                </button>
+                <p className="text-[10.5px] text-slate-500 text-center mt-1.5">
+                  เข้าสู่ระบบในฐานะผู้ดูแลระบบสูงสุดโดยตรง ไม่ต้องเด้งออกจากแอป
+                </p>
+              </div>
+
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-2.5 text-slate-400 font-bold">หรือเข้าสู่ระบบด้วยวิธีอื่น</span>
+                </div>
+              </div>
+
               {/* Phone or Email */}
               <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1">
