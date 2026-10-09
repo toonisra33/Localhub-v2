@@ -41,27 +41,42 @@ import { UserProfileData, Post, PostComment, UserSessionLog } from '../types';
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-}, (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") ? firebaseConfig.firestoreDatabaseId : undefined);
+
+function getFirestoreInstance() {
+  const databaseId = (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)") 
+    ? firebaseConfig.firestoreDatabaseId 
+    : undefined;
+  try {
+    return databaseId 
+      ? initializeFirestore(app, { experimentalForceLongPolling: true }, databaseId) 
+      : initializeFirestore(app, { experimentalForceLongPolling: true });
+  } catch {
+    return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+  }
+}
+export const db = getFirestoreInstance();
 
 //
 
+
+export function isRunningInIframe(): boolean {
+  try {
+    return typeof window !== 'undefined' && window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
-googleProvider.addScope('email');
-googleProvider.addScope('profile');
 
 export function getGoogleAuthProvider() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({
     prompt: 'select_account'
   });
-  provider.addScope('email');
-  provider.addScope('profile');
   return provider;
 }
 
@@ -262,6 +277,11 @@ export async function resetUserPassword(email: string): Promise<void> {
  * Direct Google Redirect Auth (guarantees account chooser opens even if popups are blocked)
  */
 export async function signInWithGoogleDirectRedirect(locationString?: string): Promise<void> {
+  if (isRunningInIframe()) {
+    // In iframe environments, signInWithRedirect causes a blank screen due to X-Frame-Options
+    await signInWithGoogleAuth(locationString);
+    return;
+  }
   if (typeof window !== 'undefined' && locationString) {
     try {
       sessionStorage.setItem('locallink_pending_loc', locationString);
@@ -339,7 +359,22 @@ export async function signInWithGoogleAuth(locationString?: string): Promise<{ u
         throw popupErr;
       }
 
-      // If popup was blocked or unsupported, fallback to redirect
+      // If in iframe environment, NEVER redirect because Google Accounts explicitly blocks iframes (X-Frame-Options: DENY)
+      if (isRunningInIframe()) {
+        if (popupErr.code === 'auth/popup-blocked') {
+          const customErr = new Error('เบราว์เซอร์บล็อกหน้าต่างเลือกบัญชี Google กรุณาอนุญาตป๊อปอัป (Allow Popups) หรือกดปุ่มใหม่อีกครั้ง');
+          (customErr as any).code = 'auth/popup-blocked';
+          throw customErr;
+        }
+        if (popupErr.code === 'auth/unauthorized-domain') {
+          const customErr = new Error('โดเมนปัจจุบันยังไม่ได้เปิดรับอนุญาตใน Firebase Console กรุณาเข้าสู่ระบบด้วยอีเมล/รหัสผ่าน');
+          (customErr as any).code = 'auth/unauthorized-domain';
+          throw customErr;
+        }
+        throw popupErr;
+      }
+
+      // If outside iframe and popup was blocked or unsupported, fallback to redirect
       if (
         popupErr.code === 'auth/popup-blocked' ||
         popupErr.code === 'auth/operation-not-supported-in-this-environment' ||

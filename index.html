@@ -30,6 +30,17 @@
           }
           origErr.apply(console, arguments);
         };
+        // Clean up any stale or invalid dev service workers if present
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) {
+              var reg = regs[i];
+              if (reg.active && reg.active.scriptURL && (reg.active.scriptURL.indexOf('dev-sw.js') !== -1 || reg.active.scriptURL.indexOf('@vite-plugin-pwa') !== -1)) {
+                reg.unregister();
+              }
+            }
+          }).catch(function() {});
+        }
       })();
     </script>
     <meta charset="UTF-8" />
