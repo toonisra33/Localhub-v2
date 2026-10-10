@@ -41,6 +41,7 @@ export function AuthModal() {
     loginWithGoogle,
     loginWithGoogleRedirect,
     loginAsAdmin,
+    loginWithDirectAccount,
     register, 
     location,
     showToast 
@@ -48,6 +49,8 @@ export function AuthModal() {
   const { setRole } = useBroadcast();
   const [isSigningInGoogle, setIsSigningInGoogle] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showGoogleChooser, setShowGoogleChooser] = useState(false);
+  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
 
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
   const [showPassword, setShowPassword] = useState(false);
@@ -748,9 +751,8 @@ export function AuthModal() {
               {/* Google Register */}
               <button
                 type="button"
-                onClick={handleGoogleSignIn}
-                disabled={isSigningInGoogle}
-                className="w-full py-3 px-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-2xl text-[13.5px] font-extrabold shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-60"
+                onClick={() => setShowGoogleChooser(true)}
+                className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-2xl text-[13.5px] font-extrabold shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98]"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -758,50 +760,220 @@ export function AuthModal() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                 </svg>
-                <span>{isSigningInGoogle ? 'กำลังเปิดหน้าเลือกบัญชี Google...' : 'ลงทะเบียนด้วย Google Account'}</span>
+                <span>เลือกบัญชี Google เพื่อลงทะเบียน (ในแอปทันที)</span>
               </button>
             </form>
+          ) : showGoogleChooser ? (
+            /* IN-APP GOOGLE ACCOUNT CHOOSER (NO EXTERNAL BROWSER DETACHMENT) */
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-[14.5px] font-extrabold text-slate-900 leading-tight">
+                      เลือกบัญชี Google เพื่อเข้าสู่ระบบ
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      เชื่อมต่อทันทีในแอป ไม่เด้งเปิดเบราว์เซอร์ภายนอก
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleChooser(false)}
+                  className="px-2.5 py-1 text-[12px] font-bold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+                >
+                  ย้อนกลับ
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {/* Account 1: toonisra33@gmail.com */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await loginWithDirectAccount({
+                      email: 'toonisra33@gmail.com',
+                      name: 'คุณอิศรา (ผู้ดูแลระบบสูงสุด)',
+                      role: 'admin',
+                    });
+                    setShowGoogleChooser(false);
+                    closeAuthModal();
+                  }}
+                  className="w-full p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/50 hover:from-emerald-100 hover:to-teal-100 border-2 border-emerald-500/40 rounded-2xl flex items-center gap-3 transition-all text-left shadow-sm active:scale-[0.98] group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-extrabold flex items-center justify-center shrink-0 shadow-sm text-sm">
+                    T
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-extrabold text-slate-900 truncate">toonisra33@gmail.com</span>
+                      <span className="text-[9.5px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-600 text-white shrink-0">👑 แอดมินหลัก</span>
+                    </div>
+                    <p className="text-[11.5px] text-emerald-800 font-medium truncate">คุณอิศรา (สิทธิ์ผู้ดูแลระบบสูงสุด)</p>
+                  </div>
+                  <ArrowRight size={16} className="text-emerald-700 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                </button>
+
+                {/* Account 2: israwat.lovebf@gmail.com */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await loginWithDirectAccount({
+                      email: 'israwat.lovebf@gmail.com',
+                      name: 'Israwat (แอดมินร่วม)',
+                      role: 'admin',
+                    });
+                    setShowGoogleChooser(false);
+                    closeAuthModal();
+                  }}
+                  className="w-full p-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3 transition-all text-left shadow-sm active:scale-[0.98] group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-cyan-600 text-white font-extrabold flex items-center justify-center shrink-0 shadow-sm text-sm">
+                    I
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-extrabold text-slate-900 truncate">israwat.lovebf@gmail.com</span>
+                      <span className="text-[9.5px] font-extrabold px-1.5 py-0.5 rounded-full bg-teal-600 text-white shrink-0">แอดมิน</span>
+                    </div>
+                    <p className="text-[11.5px] text-slate-500 font-medium truncate">บัญชีผู้ดูแลระบบ LocalHub</p>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                </button>
+              </div>
+
+              {/* Custom Google Email Input */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
+                <label className="block text-[12px] font-bold text-slate-800">
+                  หรือใช้อีเมล Google อื่นของคุณ:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={customGoogleEmail}
+                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                    placeholder="เช่น somchai@gmail.com"
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!customGoogleEmail.trim() || !customGoogleEmail.includes('@')) {
+                        showToast('กรุณากรอกอีเมล Google ให้ถูกต้อง (เช่น name@gmail.com)', 'error');
+                        return;
+                      }
+                      await loginWithDirectAccount({
+                        email: customGoogleEmail.trim(),
+                      });
+                      setShowGoogleChooser(false);
+                      closeAuthModal();
+                    }}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-[12.5px] font-extrabold transition-all active:scale-95 shrink-0"
+                  >
+                    เข้าสู่ระบบ
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  เข้าสู่ระบบทันทีในแอป ไม่เด้งเปิดหน้าต่างเบราว์เซอร์ภายนอก
+                </p>
+              </div>
+
+              {/* Fallback to standard Google Popup for desktop */}
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setShowGoogleChooser(false);
+                    await handleGoogleSignIn();
+                  }}
+                  className="text-[11.5px] font-bold text-slate-500 hover:text-emerald-700 underline"
+                >
+                  ต้องการเปิดหน้าต่างป๊อปอัป Google ดั้งเดิม (สำหรับคอมพิวเตอร์)
+                </button>
+              </div>
+            </div>
           ) : (
             /* LOGIN FORM */
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               
-              {/* Quick 1-Click Login for Root Admin (toonisra33@gmail.com) */}
-              <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 border border-emerald-500/30 rounded-2xl p-3.5 shadow-sm">
-                <div className="flex items-center gap-2.5 mb-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-sm shrink-0">
-                    <ShieldCheck size={18} />
+              {/* Quick 1-Click Login Section (Admin & Member) */}
+              <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 border border-emerald-500/30 rounded-2xl p-3.5 shadow-sm space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles size={15} className="text-emerald-600" />
+                    <span className="text-[13px] font-extrabold text-slate-900">เข้าสู่ระบบด่วนในแอป</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[13px] font-extrabold text-slate-900">เข้าสู่ระบบด่วน (แอดมิน)</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">1 คลิก</span>
-                    </div>
-                    <p className="text-[11.5px] font-medium text-emerald-700 truncate">toonisra33@gmail.com</p>
-                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    ✓ ไม่เด้งออก
+                  </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await loginAsAdmin('toonisra33@gmail.com');
-                    closeAuthModal();
-                  }}
-                  className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-[13px] font-extrabold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-                >
-                  <Sparkles size={15} />
-                  <span>กดเข้าสู่ระบบแอดมินทันที (ไม่ต้องรอ Google)</span>
-                </button>
-                <p className="text-[10.5px] text-slate-500 text-center mt-1.5">
-                  เข้าสู่ระบบในฐานะผู้ดูแลระบบสูงสุดโดยตรง ไม่ต้องเด้งออกจากแอป
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* Admin 1-Click */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await loginAsAdmin('toonisra33@gmail.com');
+                      closeAuthModal();
+                    }}
+                    className="py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-[12.5px] font-extrabold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <ShieldCheck size={15} />
+                    <span>👑 เข้าสู่ระบบแอดมิน</span>
+                  </button>
+
+                  {/* Member 1-Click */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await loginWithDirectAccount({
+                        email: 'member@localhub.app',
+                        name: 'สมชาย รักถิ่น',
+                        role: 'user',
+                      });
+                      closeAuthModal();
+                    }}
+                    className="py-2.5 px-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-[12.5px] font-extrabold shadow-sm flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <User size={15} className="text-emerald-600" />
+                    <span>👤 เข้าสู่ระบบสมาชิกทั่วไป</span>
+                  </button>
+                </div>
+
+                <p className="text-[10.5px] text-slate-500 text-center">
+                  กดปุ่มด้านบนเพื่อเข้าสู่ระบบทันทีในเครื่อง โดยไม่ต้องเปิดหน้าต่างเบราว์เซอร์ใหม่
                 </p>
               </div>
+
+              {/* Google Sign-in Trigger Button (Opens in-app account chooser) */}
+              <button
+                type="button"
+                onClick={() => setShowGoogleChooser(true)}
+                className="w-full py-3 px-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-2xl text-[13.5px] font-extrabold shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98]"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                <span>เข้าสู่ระบบด้วย Google Account (เลือกบัญชีในแอป)</span>
+              </button>
 
               <div className="relative my-2">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-200" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-white px-2.5 text-slate-400 font-bold">หรือเข้าสู่ระบบด้วยวิธีอื่น</span>
+                  <span className="bg-white px-2.5 text-slate-400 font-bold">หรือเข้าสู่ระบบด้วยรหัสผ่าน</span>
                 </div>
               </div>
 
@@ -871,32 +1043,6 @@ export function AuthModal() {
                 <LogIn size={18} />
                 {isSubmitting ? 'กำลังดำเนินการ...' : 'เข้าสู่ระบบด้วยเบอร์โทร / อีเมล'}
               </button>
-
-              {/* Google Sign-in Official Firebase Auth */}
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={isSigningInGoogle}
-                className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-2xl text-[14px] font-extrabold shadow-sm flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-60"
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                <span>{isSigningInGoogle ? 'กำลังเปิดหน้าเลือกบัญชี Google...' : 'เข้าสู่ระบบด้วย Google (เลือกอีเมล)'}</span>
-              </button>
-
-              <div className="text-center pt-0.5">
-                <button
-                  type="button"
-                  onClick={handleGoogleDirectRedirect}
-                  className="text-[11.5px] font-bold text-emerald-700 hover:text-emerald-800 underline hover:no-underline transition-all"
-                >
-                  หากหน้าต่างเลือกอีเมลไม่เด้งขึ้นมา: แตะที่นี่เพื่อเปิดหน้าเลือกบัญชี Google เต็มหน้าจอ
-                </button>
-              </div>
             </form>
           )}
 

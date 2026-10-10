@@ -359,33 +359,11 @@ export async function signInWithGoogleAuth(locationString?: string): Promise<{ u
         throw popupErr;
       }
 
-      // If in iframe environment, NEVER redirect because Google Accounts explicitly blocks iframes (X-Frame-Options: DENY)
-      if (isRunningInIframe()) {
-        if (popupErr.code === 'auth/popup-blocked') {
-          const customErr = new Error('เบราว์เซอร์บล็อกหน้าต่างเลือกบัญชี Google กรุณาอนุญาตป๊อปอัป (Allow Popups) หรือกดปุ่มใหม่อีกครั้ง');
-          (customErr as any).code = 'auth/popup-blocked';
-          throw customErr;
-        }
-        if (popupErr.code === 'auth/unauthorized-domain') {
-          const customErr = new Error('โดเมนปัจจุบันยังไม่ได้เปิดรับอนุญาตใน Firebase Console กรุณาเข้าสู่ระบบด้วยอีเมล/รหัสผ่าน');
-          (customErr as any).code = 'auth/unauthorized-domain';
-          throw customErr;
-        }
-        throw popupErr;
-      }
-
-      // If outside iframe and popup was blocked or unsupported, fallback to redirect
-      if (
-        popupErr.code === 'auth/popup-blocked' ||
-        popupErr.code === 'auth/operation-not-supported-in-this-environment' ||
-        popupErr.code === 'auth/cancelled-popup-request' ||
-        popupErr.code === 'auth/internal-error'
-      ) {
-        console.log('Redirecting to Google via signInWithRedirect...');
-        await signInWithRedirect(auth, provider);
-        return { isRedirecting: true };
-      }
-      throw popupErr;
+      // Never use signInWithRedirect on mobile or iframes because it bounces users out into external browser
+      // and drops credentials due to partitioned cookie policies.
+      const friendlyErr = new Error('เบราว์เซอร์บล็อกหน้าต่าง Google กรุณาใช้ปุ่ม "👑 เข้าสู่ระบบด่วน 1 คลิก" ด้านบน หรือใช้อีเมล/รหัสผ่าน');
+      (friendlyErr as any).code = 'auth/popup-blocked';
+      throw friendlyErr;
     }
   } catch (error) {
     console.error('Google Auth Error:', error);

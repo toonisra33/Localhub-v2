@@ -2,46 +2,33 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { registerSW } from 'virtual:pwa-register';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-const container = document.getElementById('root');
-if (container) {
-  createRoot(container).render(
-    <StrictMode>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    </StrictMode>
-  );
-}
-
-// Safely handle PWA service worker: Do NOT register inside iframes or dev environments to prevent preview locks
-try {
-  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-    const isIframe = window.self !== window.top;
-    if (isIframe) {
-      // In an iframe (AI Studio preview), unregister any service workers to keep live updates working
-      navigator.serviceWorker.getRegistrations().then((regs) => {
-        regs.forEach((r) => r.unregister());
-      }).catch(() => {});
+function renderApp() {
+  const container = document.getElementById('root');
+  if (container) {
+    try {
+      createRoot(container).render(
+        <StrictMode>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </StrictMode>
+      );
+    } catch (err) {
+      console.error('Failed to render React app:', err);
+    }
+  } else {
+    // If root is not ready yet, retry when DOMContentLoaded fires
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', renderApp, { once: true });
     } else {
-      registerSW({
-        immediate: false,
-        onRegisteredSW(_swUrl, registration) {
-          if (registration) {
-            setInterval(() => {
-              try { registration.update(); } catch {}
-            }, 60 * 60 * 1000); // Check update every hour
-          }
-        },
-        onRegisterError(err) {
-          console.warn('PWA registration notice:', err);
-        }
-      });
+      setTimeout(renderApp, 50);
     }
   }
-} catch (e) {
-  console.warn('PWA registration skipped:', e);
 }
+
+renderApp();
+
+
 

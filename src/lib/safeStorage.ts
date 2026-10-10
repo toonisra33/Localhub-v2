@@ -44,6 +44,34 @@ class SafeStorage {
     } catch {}
     this.memStorage.clear();
   }
+
+  getSessionItem(key: string): string | null {
+    try {
+      if (typeof window !== 'undefined' && 'sessionStorage' in window) {
+        return window.sessionStorage.getItem(key);
+      }
+    } catch {}
+    return this.memStorage.get(`session_${key}`) ?? null;
+  }
+
+  setSessionItem(key: string, value: string): void {
+    try {
+      if (typeof window !== 'undefined' && 'sessionStorage' in window) {
+        window.sessionStorage.setItem(key, value);
+        return;
+      }
+    } catch {}
+    this.memStorage.set(`session_${key}`, value);
+  }
+
+  removeSessionItem(key: string): void {
+    try {
+      if (typeof window !== 'undefined' && 'sessionStorage' in window) {
+        window.sessionStorage.removeItem(key);
+      }
+    } catch {}
+    this.memStorage.delete(`session_${key}`);
+  }
 }
 
 export const safeStorage = new SafeStorage();

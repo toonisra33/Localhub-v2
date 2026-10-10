@@ -47,6 +47,21 @@ async function startServer() {
   const PORT = 3000;
   app.use(express.json());
 
+  // Allow iframe embedding and CORS
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Content-Security-Policy', "frame-ancestors * 'self' blob: data:;");
+    res.removeHeader('X-Frame-Options');
+    if (req.path === '/' || req.path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    next();
+  });
+
   // API Route for Gemini
   app.post("/api/generate-caption", async (req, res) => {
     try {
@@ -166,27 +181,14 @@ async function startServer() {
     }
   });
 
-  // Always serve dist/assets statically if built, preventing HTML fallback syntax error on chunk URLs
-  const distAssetsPath = path.join(process.cwd(), 'dist', 'assets');
-  if (fs.existsSync(distAssetsPath)) {
-    app.use('/assets', express.static(distAssetsPath));
-  }
-
-  // Handle any missing JS chunk requests to prevent Vite returning index.html as a script
+  // Handle missing JS chunk requests safely (NO infinite reload loop)
   app.get('/assets/*.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache');
-    res.send(`
-      console.warn("Stale chunk requested, reloading page to get latest bundle...");
-      if (typeof window !== 'undefined') {
-        setTimeout(function() {
-          window.location.reload();
-        }, 100);
-      }
-    `);
+    res.send('// Chunk not found: ' + req.path + '\nconsole.warn("Asset chunk not found: ' + req.path + '");');
   });
 
-  // Force-cleanup rogue service workers in AI Studio preview
+  // Force-cleanup rogue service workers in AI Studio preview (without triggering iframe reload loop)
   app.get(['/sw.js', '/workbox-*.js'], (req, res) => {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -196,26 +198,23 @@ async function startServer() {
         event.waitUntil(
           caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
             .then(() => self.registration.unregister())
-            .then(() => self.clients.matchAll())
-            .then((clients) => {
-              clients.forEach((client) => client.navigate(client.url));
-            })
         );
       });
     `);
   });
 
-  // Serve built production dist if available (guarantees preview in AI Studio matches published system)
+  const isProduction = process.env.NODE_ENV === 'production';
   const distPath = path.join(process.cwd(), 'dist');
-  const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
 
-  if (hasDist) {
+  if (isProduction && fs.existsSync(path.join(distPath, 'index.html'))) {
     app.use(express.static(distPath, { dotfiles: 'allow' }));
     app.get('*', (req, res) => {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   } else {
-    // Vite middleware fallback if dist is not yet generated
+    // In development mode, Vite middleware compiles and hot-serves all code directly from src/
     const vite = await createViteServer({
       server: { middlewareMode: true, hmr: false },
       appType: "spa",

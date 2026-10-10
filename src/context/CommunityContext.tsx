@@ -146,6 +146,7 @@ interface CommunityContextType {
   loginWithGoogle: () => Promise<boolean>;
   loginWithGoogleRedirect: () => Promise<void>;
   loginAsAdmin: (targetEmail?: string) => Promise<boolean>;
+  loginWithDirectAccount: (account: { email: string; name?: string; phone?: string; role?: 'admin' | 'user'; avatar?: string }) => Promise<boolean>;
   register: (data: { name: string; phone: string; email?: string; password?: string; address: string; villageOrCondo?: string; avatar?: string; bio?: string; occupation?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
@@ -197,7 +198,7 @@ const CommunityContext = createContext<CommunityContextType | undefined>(undefin
 export function CommunityProvider({ children }: { children: ReactNode }) {
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     try {
-      const saved = sessionStorage.getItem('locallink_active_tab');
+      const saved = safeStorage.getSessionItem('locallink_active_tab');
       return (saved as Tab) || 'home';
     } catch {
       return 'home';
@@ -206,7 +207,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      sessionStorage.setItem('locallink_active_tab', activeTab);
+      safeStorage.setSessionItem('locallink_active_tab', activeTab);
     } catch (e) {
       console.error('Failed to save active tab', e);
     }
@@ -1110,6 +1111,79 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
     }
   };
 
+  const loginWithDirectAccount = async (account: {
+    email: string;
+    name?: string;
+    phone?: string;
+    role?: 'admin' | 'user';
+    avatar?: string;
+  }): Promise<boolean> => {
+    try {
+      const email = account.email.trim();
+      const isAdmin = isAuthorizedAdminEmail(email) || account.role === 'admin';
+      const role = isAdmin ? 'admin' : 'user';
+      const name = account.name || (isAdmin ? 'คุณอิศรา (ผู้ดูแลระบบ)' : email.split('@')[0]);
+      const uid = `user_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+      const profileData: UserProfileData = {
+        id: uid,
+        uid: uid,
+        name: name,
+        email: email,
+        phone: account.phone || '081-234-5678',
+        address: `ต.${location.subdistrict || 'ลาดยาว'} อ.${location.district || 'จตุจักร'} จ.${location.province || 'กรุงเทพมหานคร'}`,
+        villageOrCondo: isAdmin ? 'ศูนย์บัญชาการชุมชน LocalHub' : (location.village || 'ชุมชนท้องถิ่น'),
+        bio: isAdmin ? 'ผู้ดูแลระบบและพัฒนาชุมชน LocalHub ประจำพื้นที่' : 'สมาชิกชุมชน LocalHub',
+        avatar: account.avatar || (isAdmin
+          ? `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=ffffff&bold=true`
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3b82f6&color=ffffff&bold=true`),
+        role: role,
+        isVerified: isAdmin,
+        reputationScore: isAdmin ? 100 : 75,
+        joinedDate: 'มกราคม 2024',
+        isGoogleUser: true,
+      };
+
+      setUserProfile(profileData);
+      setIsLoggedIn(true);
+      safeStorage.setItem('locallink_profile', JSON.stringify(profileData));
+      safeStorage.setItem('locallink_is_logged_in', JSON.stringify(true));
+
+      try {
+        if (db) {
+          const userRef = doc(db, 'users', profileData.uid);
+          await setDoc(userRef, {
+            ...profileData,
+            lastLoginAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        }
+      } catch (e) {
+        console.warn('Profile firestore sync warning:', e);
+      }
+
+      await logUserSession(
+        profileData.uid,
+        profileData.name,
+        profileData.email,
+        'google',
+        `ต.${location.subdistrict || 'ลาดยาว'}, ${location.district || 'จตุจักร'}`
+      );
+
+      setIsAuthModalOpen(false);
+      if (isAdmin) {
+        showToast(`👑 ยินดีต้อนรับผู้ดูแลระบบ (${email})! เข้าสู่ระบบสำเร็จแล้ว`, 'success');
+      } else {
+        showToast(`👋 ยินดีต้อนรับ ${name}! เข้าสู่ระบบสำเร็จแล้ว`, 'success');
+      }
+      return true;
+    } catch (err) {
+      console.error('Direct account login error:', err);
+      showToast('เกิดข้อผิดพลาดในการเข้าสู่ระบบ', 'error');
+      return false;
+    }
+  };
+
   const register = async (data: { name: string; phone: string; email?: string; password?: string; address: string; villageOrCondo?: string; avatar?: string; bio?: string; occupation?: string }): Promise<boolean> => {
     if (!data.email || !data.password) {
       showToast('กรุณากรอกอีเมลและรหัสผ่าน', 'error');
@@ -1594,6 +1668,7 @@ useEffect(() => {
         loginWithGoogle,
         loginWithGoogleRedirect,
         loginAsAdmin,
+        loginWithDirectAccount,
         register,
         logout,
         isAuthModalOpen,

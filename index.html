@@ -2,24 +2,22 @@
 <html lang="en">
   <head>
     <script>
-      (function() {
-        // 1. Force unregister any and all service workers in preview / development environment
+      // Clean up rogue service workers and stale caches to prevent blank screen in preview
+      try {
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(function(regs) {
-            for (var i = 0; i < regs.length; i++) {
-              regs[i].unregister();
-            }
+            for (var i = 0; i < regs.length; i++) regs[i].unregister();
           }).catch(function() {});
         }
-        // 2. Clear any stale CacheStorage to prevent 404 syntax errors
         if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (var i = 0; i < names.length; i++) {
-              caches.delete(names[i]);
-            }
+          caches.keys().then(function(keys) {
+            for (var j = 0; j < keys.length; j++) caches.delete(keys[j]);
           }).catch(function() {});
         }
-        // 3. Suppress harmless Vite HMR WebSocket errors in AI Studio reverse-proxy preview
+      } catch (e) {}
+
+      // Suppress harmless Vite HMR WebSocket errors in AI Studio reverse-proxy preview
+      (function() {
         var isWsError = function(msg) {
           if (!msg) return false;
           var s = typeof msg === 'string' ? msg : (msg.message || '');
@@ -39,13 +37,6 @@
             e.stopImmediatePropagation();
           }
         }, true);
-        var origErr = console.error;
-        console.error = function() {
-          for (var i = 0; i < arguments.length; i++) {
-            if (isWsError(arguments[i])) return;
-          }
-          origErr.apply(console, arguments);
-        };
       })();
     </script>
     <meta charset="UTF-8" />
@@ -84,18 +75,6 @@
         <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.02em;">LocalHub</h1>
         <p style="font-size: 13px; color: #94a3b8; margin: 0 0 20px 0;">กำลังโหลดข้อมูลชุมชนและแผนที่...</p>
         <div style="width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #10b981; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-        <div id="loading-timeout-actions" style="display: none; margin-top: 24px; flex-direction: column; gap: 8px; align-items: center;">
-          <p style="font-size: 12px; color: #cbd5e1; max-width: 260px; line-height: 1.5;">หากหน้านี้ค้างเกินไป อาจเกิดจากแคชในเบราว์เซอร์หรือการบล็อกคุกกี้บุคคลที่สาม</p>
-          <button onclick="if('caches' in window){caches.keys().then(function(k){k.forEach(function(c){caches.delete(c)})}).then(function(){location.reload(true)})}else{location.reload(true)}" style="padding: 8px 18px; border-radius: 9999px; background: #10b981; color: white; border: none; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(16,185,129,0.3);">
-            ล้างแคชและโหลดใหม่
-          </button>
-        </div>
-        <script>
-          setTimeout(function() {
-            var el = document.getElementById('loading-timeout-actions');
-            if (el) el.style.display = 'flex';
-          }, 3500);
-        </script>
         <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
       </div>
     </div>
