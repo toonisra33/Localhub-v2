@@ -339,17 +339,19 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             </div>
           </div>
 
-          {/* Reset Demo */}
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={handleResetDemoData}
-              className="w-full py-2.5 rounded-2xl border border-rose-200 text-rose-600 bg-rose-50/50 hover:bg-rose-50 font-bold text-[12px] flex items-center justify-center gap-2 transition-colors"
-            >
-              <RefreshCw size={14} />
-              ล้างแคชและรีเซ็ตข้อมูลทดสอบ (Reset Demo Data)
-            </button>
-          </div>
+          {/* Reset Demo (Strictly Authorized Admin Only) */}
+          {isAuthorizedAdmin && (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={handleResetDemoData}
+                className="w-full py-2.5 rounded-2xl border border-rose-200 text-rose-600 bg-rose-50/50 hover:bg-rose-50 font-bold text-[12px] flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <RefreshCw size={14} />
+                ล้างแคชและรีเซ็ตข้อมูลทดสอบ (Reset Demo Data - เฉพาะแอดมิน)
+              </button>
+            </div>
+          )}
 
         </div>
 

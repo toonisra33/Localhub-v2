@@ -1,6 +1,7 @@
-import { X, Bell, CheckCheck, Trash2, Radio, AlertTriangle, MessageSquare, ShoppingBag, Heart, Share2, FileText } from 'lucide-react';
+import { X, Bell, CheckCheck, Trash2, Radio, AlertTriangle, MessageSquare, ShoppingBag, Heart, Share2, FileText, ShieldAlert } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { AppNotifications } from '../../lib/notifications';
+import { isAuthorizedAdminEmail } from '../../lib/firebase';
 
 interface NotificationCenterModalProps {
   onClose: () => void;
@@ -13,8 +14,12 @@ export function NotificationCenterModal({ onClose }: NotificationCenterModalProp
     markNotificationRead, 
     markAllNotificationsAsRead, 
     clearAllNotifications, 
-    showToast 
+    showToast,
+    userProfile,
+    isLoggedIn
   } = useCommunity();
+
+  const isRealAdmin = isLoggedIn && userProfile?.role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
 
   const handleMarkAllRead = () => {
     markAllNotificationsAsRead();
@@ -100,21 +105,26 @@ export function NotificationCenterModal({ onClose }: NotificationCenterModalProp
           </div>
         </div>
 
-        {/* Test Alert Bar */}
-        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11.5px]">
-          <span className="text-slate-500 font-medium">ระบบเสียง & ข้อความเด้งหน้าจอ</span>
-          <button
-            type="button"
-            onClick={() => {
-              AppNotifications.sendTestNotification();
-              showToast('🚨 ส่งสัญญาณทดสอบเสียงเตือนและข้อความเด้งบนมือถือแล้ว!', 'info');
-            }}
-            className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg font-extrabold flex items-center gap-1 transition-colors cursor-pointer"
-          >
-            <Bell size={12} className="text-red-600 animate-pulse" />
-            <span>ทดสอบเสียงและแจ้งเตือน</span>
-          </button>
-        </div>
+        {/* Test Alert Bar (Strictly Admin Only) */}
+        {isRealAdmin && (
+          <div className="px-4 py-2 bg-rose-50 border-b border-rose-100 flex items-center justify-between text-[11.5px]">
+            <span className="text-rose-700 font-bold flex items-center gap-1">
+              <ShieldAlert size={13} className="text-rose-600" />
+              <span>ทดสอบระบบแจ้งเตือน (เฉพาะแอดมิน)</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                AppNotifications.sendTestNotification();
+                showToast('🚨 ส่งสัญญาณทดสอบเสียงเตือนและข้อความเด้งบนมือถือแล้ว!', 'info');
+              }}
+              className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs active:scale-95"
+            >
+              <Bell size={12} className="text-white" />
+              <span>ทดสอบเสียงและแจ้งเตือน</span>
+            </button>
+          </div>
+        )}
 
         {/* Notifications List */}
         <div className="p-4 overflow-y-auto space-y-2.5 flex-1 bg-slate-50/50">
