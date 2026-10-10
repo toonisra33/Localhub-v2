@@ -33,10 +33,16 @@ import {
   User,
   Phone,
   Check,
-  Maximize2
+  Maximize2,
+  Bookmark,
+  History,
+  Copy,
+  Save,
+  BookmarkCheck
 } from 'lucide-react';
 
 import { isAuthorizedAdminEmail } from '../lib/firebase';
+import { AdminBroadcast } from '../types';
 
 export function AdminBroadcastModal() {
   const { 
@@ -47,7 +53,14 @@ export function AdminBroadcastModal() {
     sendBroadcast, 
     cancelBroadcast,
     resetDeviceTimerForDemo,
-    deviceRemainingSeconds
+    deviceRemainingSeconds,
+    broadcastHistory,
+    deleteHistoryItem,
+    savedBroadcasts,
+    saveBroadcastTemplate,
+    removeSavedBroadcast,
+    moveHistoryToSaved,
+    reBroadcastItem
   } = useBroadcast();
 
   const { 
@@ -62,7 +75,8 @@ export function AdminBroadcastModal() {
 
   const isRealAdmin = isLoggedIn && role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
 
-  const [adminTab, setAdminTab] = useState<'create' | 'requests'>('create');
+  const [adminTab, setAdminTab] = useState<'create' | 'history' | 'saved' | 'requests'>('create');
+  const [saveAsTemplateChecked, setSaveAsTemplateChecked] = useState(false);
 
   // Template presets for realistic quick testing across all categories (Marketing, News, Emergency)
   const presets = [
@@ -325,7 +339,94 @@ export function AdminBroadcastModal() {
     }
   };
 
-    const handleSend = async (e: React.FormEvent) => {
+  const handleLoadItemToForm = (item: AdminBroadcast) => {
+    setTitle(item.title || '');
+    setMessage(item.message || '');
+    setCategory(item.category || 'announcement');
+    setSeverity(item.severity || 'normal');
+    setTargetArea(item.targetArea || '');
+    setContactNumber(item.contactNumber || '');
+    if (item.mediaType && item.mediaUrl) {
+      setSelectedMediaType(item.mediaType);
+      setMediaUrl(item.mediaUrl);
+      setMediaFileName(item.mediaFileName || 'attachment');
+      setVideoDuration(item.videoDurationSeconds || 0);
+    } else {
+      setSelectedMediaType('none');
+      setMediaUrl('');
+      setMediaFileName('');
+      setVideoDuration(0);
+    }
+    if (item.actionUrl) {
+      setEnableLink(true);
+      setActionText(item.actionText || '');
+      setActionUrl(item.actionUrl || '');
+    } else {
+      setEnableLink(false);
+      setActionText('');
+      setActionUrl('');
+    }
+    if (item.checkIn) {
+      setCheckIn(item.checkIn);
+    } else {
+      setCheckIn(null);
+    }
+    setAdminTab('create');
+    showToast('📥 ดึงข้อมูลบรอดแคสต์ลงในฟอร์มเรียบร้อยแล้ว พร้อมแก้ไขและส่ง', 'info');
+  };
+
+  const handleSaveDraftAsTemplate = async () => {
+    if (!title.trim()) {
+      showToast('กรุณาระบุหัวข้อสำหรับบันทึกเป็นต้นแบบ', 'error');
+      return;
+    }
+    if (!message.trim()) {
+      showToast('กรุณาระบุรายละเอียดข้อความ', 'error');
+      return;
+    }
+    try {
+      await saveBroadcastTemplate({
+        title: title.trim(),
+        message: message.trim(),
+        category,
+        severity,
+        targetArea: targetArea.trim() || undefined,
+        contactNumber: contactNumber.trim() || undefined,
+        mediaType: selectedMediaType === 'none' ? undefined : selectedMediaType,
+        mediaUrl: selectedMediaType !== 'none' && mediaUrl ? mediaUrl : undefined,
+        mediaFileName: selectedMediaType !== 'none' && mediaFileName ? mediaFileName : undefined,
+        videoDurationSeconds: selectedMediaType === 'video' ? videoDuration : undefined,
+        actionText: (enableLink && actionUrl.trim()) ? (actionText.trim() || 'ไปยังลิงก์') : undefined,
+        actionUrl: (enableLink && actionUrl.trim()) ? actionUrl.trim() : undefined,
+        checkIn: checkIn || undefined,
+      });
+      showToast('⭐ บันทึกเป็นต้นแบบบรอดแคสต์เรียบร้อยแล้ว (ไม่ถูกนับรวมใน 10 รายการย้อนหลัง)', 'success');
+      setAdminTab('saved');
+    } catch (e: any) {
+      showToast('เกิดข้อผิดพลาดในการบันทึกต้นแบบ', 'error');
+    }
+  };
+
+  const handleQuickReBroadcast = async (item: AdminBroadcast) => {
+    try {
+      await reBroadcastItem(item);
+      showToast(`⚡ รีซ้ำบรอดแคสต์ "${item.title}" เรียบร้อยแล้ว!`, 'success');
+      setOpenAdminModal(false);
+    } catch (e: any) {
+      showToast('เกิดข้อผิดพลาดในการรีซ้ำบรอดแคสต์', 'error');
+    }
+  };
+
+  const handleMoveToSavedTemplate = async (item: AdminBroadcast) => {
+    try {
+      await moveHistoryToSaved(item);
+      showToast('⭐ บันทึกไว้ใช้ครั้งต่อไปสำเร็จ! (รายการนี้จะไม่ถูกนับรวมใน 10 รายการย้อนหลัง)', 'success');
+    } catch (e: any) {
+      showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Only title and message are strictly required
@@ -356,6 +457,23 @@ export function AdminBroadcastModal() {
         actionText: finalActionText,
         actionUrl: finalActionUrl,
       });
+
+      if (saveAsTemplateChecked) {
+        await saveBroadcastTemplate({
+          title: title.trim(),
+          message: message.trim(),
+          category,
+          severity,
+          targetArea: targetArea.trim() || undefined,
+          contactNumber: contactNumber.trim() || undefined,
+          mediaType: selectedMediaType === 'none' ? undefined : selectedMediaType,
+          mediaUrl: selectedMediaType !== 'none' && mediaUrl ? mediaUrl : undefined,
+          mediaFileName: selectedMediaType !== 'none' && mediaFileName ? mediaFileName : undefined,
+          videoDurationSeconds: selectedMediaType === 'video' ? videoDuration : undefined,
+          actionText: finalActionText,
+          actionUrl: finalActionUrl,
+        });
+      }
 
       setStatusFeedback('ส่งบรอดแคสสำเร็จ! ข้อความจะล็อกบนหน้าจอด้านบนสุดทุกเครื่อง 15 นาที');
       setTimeout(() => {
@@ -492,32 +610,68 @@ export function AdminBroadcastModal() {
             </div>
           )}
 
-          {/* Sub Tabs: Create vs Resident Requests */}
-          <div className="flex items-center bg-gray-200/80 p-1 rounded-2xl">
+          {/* Sub Tabs: Create vs History (10 limit) vs Saved (Templates) vs Resident Requests */}
+          <div className="flex items-center bg-gray-200/90 p-1 rounded-2xl gap-1 overflow-x-auto">
             <button
               type="button"
               onClick={() => setAdminTab('create')}
-              className={`flex-1 py-2 rounded-xl text-[12.5px] font-extrabold flex items-center justify-center gap-2 transition-all ${
+              className={`flex-1 min-w-[85px] py-2 px-2 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 adminTab === 'create'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Radio size={14} className={adminTab === 'create' ? 'text-red-600' : ''} />
-              <span>สร้างบรอดแคสต์ใหม่</span>
+              <Radio size={13} className={adminTab === 'create' ? 'text-red-600' : ''} />
+              <span>สร้างใหม่</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAdminTab('history')}
+              className={`flex-1 min-w-[120px] py-2 px-2 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer relative ${
+                adminTab === 'history'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <History size={13} className={adminTab === 'history' ? 'text-blue-600' : ''} />
+              <span>ย้อนหลัง 10 รายการ</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                broadcastHistory.length >= 10 ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'
+              }`}>
+                {broadcastHistory.length}/10
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAdminTab('saved')}
+              className={`flex-1 min-w-[95px] py-2 px-2 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer relative ${
+                adminTab === 'saved'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Bookmark size={13} className={adminTab === 'saved' ? 'text-amber-500' : ''} />
+              <span>บันทึกไว้</span>
+              {savedBroadcasts.length > 0 && (
+                <span className="bg-amber-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                  {savedBroadcasts.length}
+                </span>
+              )}
             </button>
 
             <button
               type="button"
               onClick={() => setAdminTab('requests')}
-              className={`flex-1 py-2 rounded-xl text-[12.5px] font-extrabold flex items-center justify-center gap-2 transition-all relative ${
+              className={`flex-1 min-w-[105px] py-2 px-2 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer relative ${
                 adminTab === 'requests'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Inbox size={14} className={adminTab === 'requests' ? 'text-indigo-600' : ''} />
-              <span>ข้อความจากลูกบ้าน</span>
+              <Inbox size={13} className={adminTab === 'requests' ? 'text-indigo-600' : ''} />
+              <span>ข้อความลูกบ้าน</span>
               {contactRequests.length > 0 && (
                 <span className="bg-red-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
                   {contactRequests.length}
@@ -526,7 +680,7 @@ export function AdminBroadcastModal() {
             </button>
           </div>
 
-          {adminTab === 'requests' ? (
+          {adminTab === 'requests' && (
             /* Resident PR Requests Tab */
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -640,8 +794,295 @@ export function AdminBroadcastModal() {
                 </div>
               )}
             </div>
-          ) : (
-            /* Form to create a new broadcast */
+          )}
+
+          {/* History Tab: Max 10 recent broadcasts */}
+          {adminTab === 'history' && (
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h4 className="font-extrabold text-[14px] text-gray-900 flex items-center gap-1.5">
+                    <History size={16} className="text-blue-600" />
+                    <span>ประวัติบรอดแคสต์ 10 รายการย้อนหลัง</span>
+                  </h4>
+                  <p className="text-[11.5px] text-gray-500 leading-snug mt-0.5">
+                    บันทึกสูงสุด 10 รายการล่าสุด สามารถกดรีซ้ำเพื่อส่งใหม่ หรือกด 'บันทึกไว้' เพื่อย้ายเป็นต้นแบบถาวร (รายการที่ถูกบันทึกจะไม่ถูกนับรวมในโควตา 10 รายการย้อนหลัง)
+                  </p>
+                </div>
+                <span className="text-[11px] font-bold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-xl whitespace-nowrap shrink-0">
+                  {broadcastHistory.length} / 10 รายการ
+                </span>
+              </div>
+
+              {broadcastHistory.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
+                  <History size={36} className="text-gray-300 mx-auto mb-2" />
+                  <p className="font-bold text-gray-700 text-[13px]">ยังไม่มีประวัติการส่งบรอดแคสต์</p>
+                  <p className="text-[11.5px] text-gray-400 mt-1 max-w-xs mx-auto">
+                    เมื่อส่งบรอดแคสต์ ระบบจะบันทึกประวัติย้อนหลัง 10 รายการล่าสุดให้อัตโนมัติที่นี่
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {broadcastHistory.map((item, index) => {
+                    const isCurrentlyActive = activeBroadcast?.id === item.id && activeBroadcast?.isActive;
+                    const dateDisplay = item.broadcastDateStr || new Date(item.broadcastAt).toLocaleDateString('th-TH');
+                    const timeDisplay = new Date(item.broadcastAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+                    return (
+                      <div 
+                        key={item.id}
+                        className={`bg-white rounded-2xl border p-4 shadow-sm space-y-2.5 transition-all ${
+                          isCurrentlyActive ? 'border-red-400 ring-2 ring-red-100' : 'border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        {/* Header Badges */}
+                        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-slate-400 font-mono">
+                              #{index + 1}
+                            </span>
+                            <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${
+                              item.category === 'emergency' ? 'bg-red-50 text-red-700 border border-red-200' :
+                              item.category === 'marketing' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                              item.category === 'news' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                              'bg-gray-100 text-gray-700 border border-gray-200'
+                            }`}>
+                              {item.category === 'emergency' ? '🚨 ด่วน/ฉุกเฉิน' :
+                               item.category === 'marketing' ? '🛍️ สินค้า/บริการ' :
+                               item.category === 'news' ? '📰 ข่าวสาร' : '📢 ประชาสัมพันธ์'}
+                            </span>
+
+                            {isCurrentlyActive && (
+                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-600 text-white flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                กำลังออกอากาศ
+                              </span>
+                            )}
+
+                            {item.mediaType && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 flex items-center gap-1">
+                                {item.mediaType === 'video' ? <VideoIcon size={10} /> : <ImageIcon size={10} />}
+                                <span>{item.mediaType === 'video' ? 'มีวิดีโอ' : 'มีภาพ'}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <span className="text-[10.5px] text-gray-400">
+                            {dateDisplay} {timeDisplay} น.
+                          </span>
+                        </div>
+
+                        {/* Title & Message */}
+                        <div>
+                          <h5 className="font-extrabold text-[13.5px] text-gray-900 leading-snug break-words">
+                            {item.title}
+                          </h5>
+                          <p className="text-[12px] text-gray-600 leading-relaxed mt-1 break-words line-clamp-3">
+                            {item.message}
+                          </p>
+                        </div>
+
+                        {/* Extra metadata */}
+                        {(item.targetArea || item.contactNumber || item.actionUrl) && (
+                          <div className="flex items-center gap-2 text-[11px] text-gray-500 flex-wrap pt-1 border-t border-gray-100">
+                            {item.targetArea && (
+                              <span className="flex items-center gap-0.5">
+                                📍 <span>{item.targetArea}</span>
+                              </span>
+                            )}
+                            {item.contactNumber && (
+                              <span className="flex items-center gap-0.5 text-emerald-600 font-bold">
+                                📞 <span>{item.contactNumber}</span>
+                              </span>
+                            )}
+                            {item.actionUrl && (
+                              <span className="flex items-center gap-0.5 text-blue-600">
+                                🔗 <span>{item.actionText || 'มีลิงก์แนบ'}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Actions Row */}
+                        <div className="flex items-center gap-1.5 pt-2 border-t border-gray-100 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleQuickReBroadcast(item)}
+                            className="flex-1 min-w-[120px] py-2 px-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl text-[11.5px] font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+                          >
+                            <RotateCcw size={13} />
+                            <span>รีซ้ำทันที</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleLoadItemToForm(item)}
+                            className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-[11.5px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Copy size={13} />
+                            <span>ดึงมาแก้ไข</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleMoveToSavedTemplate(item)}
+                            title="บันทึกเก็บไว้ใช้ครั้งต่อไป (รายการนี้จะไม่ถูกนับรวมใน 10 รายการย้อนหลัง)"
+                            className="py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-[11.5px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Bookmark size={13} className="text-amber-600" />
+                            <span>บันทึกไว้</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteHistoryItem(item.id)}
+                            title="ลบออกจากประวัติ"
+                            className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Saved Templates Tab: Unlimited, NOT counted in 10 past broadcasts */}
+          {adminTab === 'saved' && (
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h4 className="font-extrabold text-[14px] text-gray-900 flex items-center gap-1.5">
+                    <Bookmark size={16} className="text-amber-500" />
+                    <span>บรอดแคสต์ที่บันทึกไว้ (Templates)</span>
+                  </h4>
+                  <p className="text-[11.5px] text-gray-500 leading-snug mt-0.5">
+                    บรอดแคสต์ต้นแบบที่บันทึกไว้สำหรับใช้งานในครั้งต่อไป (รายการที่บันทึกจะไม่ถูกนับรวมใน 10 รายการย้อนหลัง)
+                  </p>
+                </div>
+                <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-xl whitespace-nowrap shrink-0">
+                  {savedBroadcasts.length} รายการ
+                </span>
+              </div>
+
+              {savedBroadcasts.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
+                  <Bookmark size={36} className="text-gray-300 mx-auto mb-2" />
+                  <p className="font-bold text-gray-700 text-[13px]">ยังไม่มีบรอดแคสต์ที่บันทึกไว้</p>
+                  <p className="text-[11.5px] text-gray-400 mt-1 max-w-xs mx-auto">
+                    คุณสามารถบันทึกได้โดยกดปุ่ม "⭐ บันทึกไว้" จากแท็บประวัติย้อนหลัง หรือสร้างใหม่แล้วกด "บันทึกเป็นต้นแบบ"
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {savedBroadcasts.map((item) => {
+                    return (
+                      <div 
+                        key={item.id}
+                        className="bg-white rounded-2xl border border-amber-200/80 hover:border-amber-400 p-4 shadow-sm space-y-2.5 transition-all"
+                      >
+                        {/* Header Badges */}
+                        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                              <Bookmark size={10} className="text-amber-600" />
+                              <span>ต้นแบบบันทึกไว้</span>
+                            </span>
+
+                            <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${
+                              item.category === 'emergency' ? 'bg-red-50 text-red-700 border border-red-200' :
+                              item.category === 'marketing' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                              item.category === 'news' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                              'bg-gray-100 text-gray-700 border border-gray-200'
+                            }`}>
+                              {item.category === 'emergency' ? '🚨 ด่วน/ฉุกเฉิน' :
+                               item.category === 'marketing' ? '🛍️ สินค้า/บริการ' :
+                               item.category === 'news' ? '📰 ข่าวสาร' : '📢 ประชาสัมพันธ์'}
+                            </span>
+
+                            {item.mediaType && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 flex items-center gap-1">
+                                {item.mediaType === 'video' ? <VideoIcon size={10} /> : <ImageIcon size={10} />}
+                                <span>{item.mediaType === 'video' ? 'วิดีโอ' : 'รูปภาพ'}</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Title & Message */}
+                        <div>
+                          <h5 className="font-extrabold text-[13.5px] text-gray-900 leading-snug break-words">
+                            {item.title}
+                          </h5>
+                          <p className="text-[12px] text-gray-600 leading-relaxed mt-1 break-words line-clamp-3">
+                            {item.message}
+                          </p>
+                        </div>
+
+                        {/* Extra metadata */}
+                        {(item.targetArea || item.contactNumber || item.actionUrl) && (
+                          <div className="flex items-center gap-2 text-[11px] text-gray-500 flex-wrap pt-1 border-t border-gray-100">
+                            {item.targetArea && (
+                              <span className="flex items-center gap-0.5">
+                                📍 <span>{item.targetArea}</span>
+                              </span>
+                            )}
+                            {item.contactNumber && (
+                              <span className="flex items-center gap-0.5 text-emerald-600 font-bold">
+                                📞 <span>{item.contactNumber}</span>
+                              </span>
+                            )}
+                            {item.actionUrl && (
+                              <span className="flex items-center gap-0.5 text-blue-600">
+                                🔗 <span>{item.actionText || 'มีลิงก์แนบ'}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Actions Row */}
+                        <div className="flex items-center gap-1.5 pt-2 border-t border-gray-100 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleQuickReBroadcast(item)}
+                            className="flex-1 min-w-[130px] py-2 px-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl text-[11.5px] font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Send size={13} />
+                            <span>ออกอากาศทันที</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleLoadItemToForm(item)}
+                            className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-[11.5px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Copy size={13} />
+                            <span>ดึงมาแก้ไข</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => removeSavedBroadcast(item.id)}
+                            title="ลบต้นแบบนี้"
+                            className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Form to create a new broadcast */}
+          {adminTab === 'create' && (
             <div className="space-y-4">
             
             {/* Quick Presets across Marketing, News, Emergency */}
@@ -1189,15 +1630,49 @@ export function AdminBroadcastModal() {
               </ul>
             </div>
 
-            {/* Submit Button */}
-            <div className="pt-2">
+            {/* Save as Template Checkbox */}
+            <div className="bg-amber-50/80 border border-amber-200 p-3 rounded-2xl flex items-center justify-between gap-3">
+              <label htmlFor="save-tpl-chk" className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="save-tpl-chk"
+                  checked={saveAsTemplateChecked}
+                  onChange={e => setSaveAsTemplateChecked(e.target.checked)}
+                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer"
+                />
+                <span className="text-[12px] font-bold text-amber-900">
+                  ⭐ บันทึกเก็บไว้เป็นต้นแบบด้วย (ไม่ถูกนับรวมใน 10 รายการย้อนหลัง)
+                </span>
+              </label>
+              
               <button
-                type="button" onClick={handleSend}
+                type="button"
+                onClick={handleSaveDraftAsTemplate}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold rounded-xl shadow-sm transition-all whitespace-nowrap active:scale-95 cursor-pointer"
+              >
+                บันทึกต้นแบบทันที
+              </button>
+            </div>
+
+            {/* Submit & Save Buttons */}
+            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={handleSaveDraftAsTemplate}
+                className="w-full sm:w-auto py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer border border-slate-200"
+              >
+                <Bookmark size={16} className="text-amber-600" />
+                <span>บันทึกเป็นต้นแบบ</span>
+              </button>
+
+              <button
+                type="button" 
+                onClick={handleSend}
                 disabled={selectedMediaType === 'video' && videoDuration > 600}
-                className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-700 hover:to-rose-800 disabled:opacity-50 text-white py-3.5 px-5 rounded-2xl font-bold text-[14px] flex items-center justify-center gap-2 shadow-lg shadow-red-500/25 transition-all"
+                className="flex-1 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-700 hover:to-rose-800 disabled:opacity-50 text-white py-3.5 px-5 rounded-2xl font-bold text-[14px] flex items-center justify-center gap-2 shadow-lg shadow-red-500/25 transition-all cursor-pointer"
               >
                 <Send size={18} />
-                ส่งบรอดแคสสู่ทุกอุปกรณ์ทันที (Broadcast Now)
+                <span>ส่งบรอดแคสสู่ทุกอุปกรณ์ทันที</span>
               </button>
             </div>
           </div>

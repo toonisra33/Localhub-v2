@@ -35,32 +35,13 @@ export function AdminBroadcastBanner() {
   const { openMediaViewer, isLoggedIn, userProfile, jumpToMapLocation } = useCommunity();
   
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isFullScreen, setIsFullScreen] = useState(() => {
-    if (!activeBroadcast) return false;
-    const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
-    return safeStorage.getItem(key) !== 'true';
-  });
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const isLeaving = deviceRemainingSeconds <= 1;
 
-  // Sync fullscreen state if broadcast changes
-  React.useEffect(() => {
-    if (activeBroadcast) {
-      const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
-      const isMinimized = safeStorage.getItem(key) === 'true';
-      setIsFullScreen(!isMinimized);
-      if (!isMinimized) {
-        setIsExpanded(true);
-      }
-    }
-  }, [activeBroadcast]);
-
   const handleMinimize = () => {
-    if (!activeBroadcast) return;
     setIsFullScreen(false);
     setIsExpanded(false);
-    const key = `locallink_broadcast_fullscreen_${activeBroadcast.id}`;
-    safeStorage.setItem(key, 'true');
   };
 
   const isRealAdmin = isLoggedIn && role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
@@ -370,35 +351,35 @@ export function AdminBroadcastBanner() {
   return (
     <div className="fixed top-1.5 sm:top-2.5 left-2 right-2 z-[100] pointer-events-none flex justify-center">
       <div 
-        className={`pointer-events-auto transition-all duration-300 w-full max-w-md sm:max-w-xl rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-xl ${theme.wrapper} ${
+        className={`pointer-events-auto transition-all duration-300 w-full max-w-sm sm:max-w-md md:max-w-lg rounded-2xl shadow-xl overflow-hidden backdrop-blur-xl border border-white/20 ${theme.wrapper} ${
           isLeaving ? 'opacity-0 -translate-y-full max-h-0' : 'opacity-100 translate-y-0'
         }`}
       >
         {/* Top Badges Row */}
         <div className="flex items-center justify-between gap-1 px-3 pt-2 pb-0.5 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[10.5px] font-extrabold uppercase border ${theme.badge} whitespace-nowrap shrink-0`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] sm:text-[10px] font-extrabold uppercase border ${theme.badge} whitespace-nowrap shrink-0`}>
               <Radio size={10} className="animate-pulse" />
               <span>{theme.categoryLabel}</span>
             </span>
 
             {activeBroadcast.mediaType && (
-              <span className="inline-flex items-center gap-1 text-[9.5px] font-bold text-white/90 bg-white/15 px-1.5 py-0.5 rounded-md whitespace-nowrap shrink-0">
+              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[9.5px] font-bold text-white/90 bg-white/15 px-1.5 py-0.5 rounded-md whitespace-nowrap shrink-0">
                 {activeBroadcast.mediaType === 'video' ? <VideoIcon size={9} /> : <ImageIcon size={9} />}
                 <span>{activeBroadcast.mediaType === 'video' ? 'วิดีโอ' : 'รูปภาพ'}</span>
               </span>
             )}
 
             {activeBroadcast.targetArea && (
-              <span className="hidden sm:inline-flex items-center gap-0.5 text-[9.5px] font-medium text-white/90 bg-black/25 px-1.5 py-0.5 rounded-md whitespace-nowrap shrink-0">
+              <span className="hidden xs:inline-flex items-center gap-0.5 text-[9px] font-medium text-white/90 bg-black/25 px-1.5 py-0.5 rounded-md whitespace-nowrap shrink-0">
                 <MapPin size={9} />
-                <span className="max-w-[100px] truncate">{activeBroadcast.targetArea}</span>
+                <span className="max-w-[90px] sm:max-w-[130px] truncate">{activeBroadcast.targetArea}</span>
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="inline-flex items-center gap-1 text-[9.5px] font-bold text-white/90 bg-white/15 px-1.5 py-0.5 rounded-full border border-white/20 whitespace-nowrap shrink-0">
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-white/90 bg-white/15 px-1.5 py-0.5 rounded-full border border-white/20 whitespace-nowrap shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
               <span>สด</span>
             </span>
@@ -406,28 +387,28 @@ export function AdminBroadcastBanner() {
             {isRealAdmin && (
               <div 
                 title="ตัวจับเวลาแอดมิน" 
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9.5px] font-mono font-extrabold border ${theme.timerBadge} shadow-inner whitespace-nowrap shrink-0`}
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold border ${theme.timerBadge} shadow-inner whitespace-nowrap shrink-0`}
               >
                 <Clock size={9} className="text-amber-300" />
-                <span>แอดมิน: {formattedTime}</span>
+                <span>{formattedTime}</span>
               </div>
             )}
           </div>
         </div>
 
         {/* Main Content & Quick Actions Row */}
-        <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-0.5">
+        <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-0.5 min-w-0">
           <div 
             onClick={() => setIsExpanded(!isExpanded)} 
             className="flex-1 min-w-0 cursor-pointer select-none"
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <CategoryIcon size={14} className={`${theme.iconColor} shrink-0`} />
-              <h3 className="font-extrabold text-[13px] sm:text-[14px] leading-tight truncate text-white drop-shadow-sm">
+              <h3 className="font-extrabold text-[12.5px] sm:text-[13.5px] leading-tight truncate text-white drop-shadow-sm">
                 {activeBroadcast.title}
               </h3>
             </div>
-            <p className="text-[11px] sm:text-[11.5px] text-white/90 truncate leading-snug mt-0.5">
+            <p className="text-[10.5px] sm:text-[11px] text-white/90 truncate leading-snug mt-0.5 break-words">
               {activeBroadcast.message}
             </p>
           </div>
@@ -441,7 +422,7 @@ export function AdminBroadcastBanner() {
                   e.stopPropagation();
                   openExternalLink(activeBroadcast.actionUrl!);
                 }}
-                className={`hidden xs:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10.5px] font-bold transition-all ${theme.actionButton}`}
+                className={`hidden xs:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${theme.actionButton}`}
               >
                 <ExternalLink size={11} />
                 <span className="max-w-[70px] truncate">{activeBroadcast.actionText || 'เปิด'}</span>
@@ -472,7 +453,7 @@ export function AdminBroadcastBanner() {
 
         {/* Collapsible Drawer (When expanded inside top banner) */}
         {isExpanded && (
-          <div className="max-h-[55vh] overflow-y-auto overscroll-contain px-3 py-2.5 border-t border-white/15 space-y-2.5 bg-black/15 text-[11.5px] animate-in fade-in duration-200">
+          <div className="max-h-[50vh] sm:max-h-[60vh] overflow-y-auto overscroll-contain px-3 py-2.5 border-t border-white/15 space-y-2.5 bg-black/20 text-[11px] sm:text-[11.5px] animate-in fade-in duration-200">
             {/* Image Preview */}
             {activeBroadcast.mediaType === 'image' && activeBroadcast.mediaUrl && (
               <div 
@@ -482,14 +463,14 @@ export function AdminBroadcastBanner() {
                   title: activeBroadcast.title,
                   subtitle: `บรอดแคสจาก: ${activeBroadcast.adminName}`
                 })}
-                className="rounded-xl overflow-hidden border border-white/20 shadow-sm bg-black/60 relative cursor-pointer flex items-center justify-center max-h-40"
+                className="rounded-xl overflow-hidden border border-white/20 shadow-sm bg-black/60 relative cursor-pointer flex items-center justify-center max-h-36 sm:max-h-44"
               >
                 <img 
                   src={activeBroadcast.mediaUrl} 
                   alt={activeBroadcast.title} 
-                  className="w-full h-36 object-cover transition-transform duration-300"
+                  className="w-full h-32 sm:h-40 object-cover transition-transform duration-300"
                 />
-                <div className="absolute bottom-1.5 left-1.5 bg-black/80 px-2 py-0.5 rounded text-[10px] text-white flex items-center gap-1">
+                <div className="absolute bottom-1.5 left-1.5 bg-black/80 px-2 py-0.5 rounded text-[9.5px] text-white flex items-center gap-1">
                   <ImageIcon size={10} className="text-purple-300" />
                   <span>แตะดูภาพเต็มจอ</span>
                 </div>
@@ -503,13 +484,13 @@ export function AdminBroadcastBanner() {
                   src={activeBroadcast.mediaUrl} 
                   controls 
                   playsInline
-                  className="w-full max-h-36 object-contain bg-black"
+                  className="w-full max-h-36 sm:max-h-44 object-contain bg-black"
                 />
               </div>
             )}
 
-            {/* Full Message Text */}
-            <div className="bg-black/25 p-2 rounded-xl border border-white/10 text-white/95 leading-relaxed whitespace-pre-wrap break-words text-[12px]">
+            {/* Full Message Text - strictly contained, break-words and break-all so no text overflows */}
+            <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 text-white/95 leading-relaxed whitespace-pre-wrap break-words break-all text-[11.5px] sm:text-[12px]">
               {activeBroadcast.message}
             </div>
 

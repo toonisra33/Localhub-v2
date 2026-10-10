@@ -26,6 +26,9 @@ export interface AdminBroadcast {
   pinned: boolean;
   isActive: boolean;
   checkIn?: CheckInLocation;
+  isSaved?: boolean;
+  savedAt?: number;
+  templateName?: string;
 }
 
 export interface Location {
