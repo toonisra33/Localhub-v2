@@ -96,7 +96,7 @@ jobs:
             "enableSiteSettingsShortcut": true,
             "isChromeOSOnly": false,
             "fullScopeUrl": "https://localhub-69fbe.web.app/",
-            "minSdkVersion": 21,
+            "minSdkVersion": 24,
             "orientation": "default",
             "fingerprints": []
           }
@@ -107,11 +107,22 @@ jobs:
             const fs = require('fs');
             async function build() {
               const data = JSON.parse(fs.readFileSync('./twa-manifest.json', 'utf8'));
+              data.minSdkVersion = 24;
               if (process.env.ANDROID_KEY_ALIAS) data.signingKey.alias = process.env.ANDROID_KEY_ALIAS;
               const manifest = new TwaManifest(data);
               const generator = new TwaGenerator();
               await generator.createTwaProject('./', manifest);
               console.log('Android TWA Project generated successfully!');
+
+              // Guarantee minSdk 24 in app/build.gradle
+              const gradlePath = './app/build.gradle';
+              if (fs.existsSync(gradlePath)) {
+                let gradle = fs.readFileSync(gradlePath, 'utf8');
+                gradle = gradle.replace(/minSdkVersion\s+\d+/g, 'minSdkVersion 24');
+                gradle = gradle.replace(/minSdk\s+\d+/g, 'minSdk 24');
+                fs.writeFileSync(gradlePath, gradle);
+                console.log('Verified app/build.gradle minSdkVersion = 24');
+              }
             }
             build().catch(err => { console.error(err); process.exit(1); });
           "
