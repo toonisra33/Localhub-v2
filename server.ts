@@ -180,12 +180,6 @@ async function startServer() {
     }
   });
 
-  // Handle missing JS chunk requests safely (NO infinite reload loop)
-  app.get('/assets/*.js', (req, res) => {
-    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-store, no-cache');
-    res.send('// Chunk not found: ' + req.path + '\nconsole.warn("Asset chunk not found: ' + req.path + '");');
-  });
 
   // Force-cleanup rogue service workers in AI Studio preview (without triggering iframe reload loop)
   app.get(['/sw.js', '/workbox-*.js'], (req, res) => {

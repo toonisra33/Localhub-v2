@@ -936,10 +936,12 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
       
+      const isAdmin = isAuthorizedAdminEmail(user.email);
       let profileData = { ...userProfile };
       
       if (userSnap.exists()) {
         const data = userSnap.data();
+        const userIsAdmin = isAdmin || data.role === 'admin';
         profileData = {
           ...profileData,
           id: user.uid,
@@ -951,9 +953,22 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
           address: data.address || '',
           villageOrCondo: data.villageOrCondo || '',
           bio: data.bio || '',
-          role: data.role || (isAuthorizedAdminEmail(user.email) ? 'admin' : 'user'),
-          isVerified: false,
-          reputationScore: data.reputationScore || 50,
+          role: userIsAdmin ? 'admin' : 'user',
+          isVerified: userIsAdmin ? true : (data.isVerified || false),
+          reputationScore: userIsAdmin ? 100 : (data.reputationScore || 50),
+          isGoogleUser: false
+        };
+      } else {
+        profileData = {
+          ...profileData,
+          id: user.uid,
+          uid: user.uid,
+          name: user.displayName || user.email?.split('@')[0] || 'สมาชิก',
+          email: user.email || '',
+          avatar: user.photoURL || 'https://ui-avatars.com/api/?name=U&background=random',
+          role: isAdmin ? 'admin' : 'user',
+          isVerified: isAdmin,
+          reputationScore: isAdmin ? 100 : 50,
           isGoogleUser: false
         };
       }

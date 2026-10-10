@@ -359,9 +359,8 @@ export async function signInWithGoogleAuth(locationString?: string): Promise<{ u
         throw popupErr;
       }
 
-      // Never use signInWithRedirect on mobile or iframes because it bounces users out into external browser
-      // and drops credentials due to partitioned cookie policies.
-      const friendlyErr = new Error('เบราว์เซอร์บล็อกหน้าต่าง Google กรุณาใช้ปุ่ม "👑 เข้าสู่ระบบด่วน 1 คลิก" ด้านบน หรือใช้อีเมล/รหัสผ่าน');
+      // Do not use signInWithRedirect because on mobile/standalone it bounces users out into external browser
+      const friendlyErr = new Error('เบราว์เซอร์บล็อกหน้าต่าง Google กรุณาอนุญาตป๊อปอัป หรือเข้าสู่ระบบด้วยอีเมล/รหัสผ่าน');
       (friendlyErr as any).code = 'auth/popup-blocked';
       throw friendlyErr;
     }
