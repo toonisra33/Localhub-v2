@@ -11,49 +11,92 @@ interface PostDetailCommentsModalProps {
 }
 
 export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsModalProps) {
-  const { toggleLikePost, addComment, deletePost, showToast, userProfile, openMediaViewer } = useCommunity();
+  const { posts, toggleLikePost, addComment, deletePost, showToast, userProfile, openMediaViewer, sharePost } = useCommunity();
+  const currentPost = posts.find(p => p.id === post.id) || post;
   const [commentInput, setCommentInput] = useState('');
   const [isCopied, setIsCopied] = useState(false);
-  const [comments, setComments] = useState<PostComment[]>(post.commentList || []);
+  const [comments, setComments] = useState<PostComment[]>(() => {
+    return currentPost.commentList && currentPost.commentList.length > 0 
+      ? currentPost.commentList 
+      : [];
+  });
+
+  // Keep synced with parent post commentList
+  useEffect(() => {
+    if (currentPost.commentList && currentPost.commentList.length > 0) {
+      setComments(prev => {
+        const prevIds = new Set(prev.map(c => c.id));
+        const toAdd = currentPost.commentList!.filter(c => !prevIds.has(c.id));
+        if (toAdd.length === 0) return prev;
+        return [...prev, ...toAdd];
+      });
+    }
+  }, [currentPost.commentList]);
 
   useEffect(() => {
+    if (!db) return;
     const q = query(collection(db, 'posts', post.id, 'comments'), orderBy('createdAt', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (snapshot.empty) return;
       const fetchedComments: PostComment[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
         fetchedComments.push({
           id: doc.id,
           author: {
-            name: data.authorName || 'สมาชิกชุมชน',
-            avatar: data.authorAvatar || 'https://ui-avatars.com/api/?name=U&background=random',
+            name: data.author?.name || data.authorName || 'สมาชิกชุมชน',
+            avatar: data.author?.avatar || data.authorAvatar || 'https://ui-avatars.com/api/?name=U&background=random',
+            isVerified: data.author?.isVerified || false,
           },
           authorUid: data.authorUid,
-          content: data.content,
+          content: data.content || data.text || '',
           time: data.createdAt?.seconds 
             ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) 
             : 'เมื่อสักครู่',
           createdAt: data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now()
         });
       });
-      setComments(fetchedComments);
-    }, (error) => { console.warn("Firestore comments error:", error); 
+      setComments(prev => {
+        const fetchedIds = new Set(fetchedComments.map(c => c.id));
+        const unsynced = prev.filter(c => !fetchedIds.has(c.id));
+        return [...fetchedComments, ...unsynced];
+      });
+    }, (error) => {
+      console.warn("Firestore comments error:", error); 
     });
 
     return () => unsubscribe();
   }, [post.id]);
 
-  const handleSendComment = (e: React.FormEvent) => {
+  const handleSendComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentInput.trim()) return;
-    addComment(post.id, commentInput.trim());
+    const trimmed = commentInput.trim();
+    if (!trimmed) return;
+
+    // Immediately show new comment in modal UI so user sees it instantly
+    const optimisticComment: PostComment = {
+      id: `cmt_${Date.now()}`,
+      author: {
+        name: userProfile?.name || 'สมาชิกชุมชน',
+        avatar: userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'U')}&background=random`,
+        isVerified: userProfile?.isVerified || false,
+      },
+      authorUid: userProfile?.id,
+      content: trimmed,
+      time: 'เมื่อสักครู่',
+      createdAt: Date.now()
+    };
+
+    setComments(prev => [...prev, optimisticComment]);
     setCommentInput('');
+
+    // Save via CommunityContext
+    await addComment(post.id, trimmed);
   };
 
   const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href);
+    sharePost(post.id);
     setIsCopied(true);
-    showToast('🔗 คัดลอกลิงก์โพสต์เรียบร้อยแล้ว');
     setTimeout(() => setIsCopied(false), 2000);
   };
 
@@ -64,7 +107,7 @@ export function PostDetailCommentsModal({ post, onClose }: PostDetailCommentsMod
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-150 bg-white z-10 shrink-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-[16px] font-extrabold text-slate-900 leading-tight">ความคิดเห็น ({post.comments})</h2>
+            <h2 className="text-[16px] font-extrabold text-slate-900 leading-tight">ความคิดเห็น ({Math.max(currentPost.comments, comments.length)})</h2>
           </div>
 
           <button

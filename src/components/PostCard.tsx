@@ -39,7 +39,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onOpenComments, 
   onDelete 
 }) => {
-  const { showToast, openMediaViewer, jumpToMapLocation, location, openPublicProfile, userProfile, isLoggedIn, togglePinPost } = useCommunity();
+  const { showToast, openMediaViewer, jumpToMapLocation, location, openPublicProfile, userProfile, isLoggedIn, togglePinPost, sharePost } = useCommunity();
   const { role } = useBroadcast();
   
   const displayDistance = React.useMemo(() => {
@@ -54,9 +54,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   const isRealAdmin = isLoggedIn && role === 'admin' && isAuthorizedAdminEmail(userProfile?.email);
 
   const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href);
+    sharePost(post.id);
     setIsCopied(true);
-    showToast('🔗 คัดลอกลิงก์โพสต์เรียบร้อยแล้ว');
     setTimeout(() => setIsCopied(false), 2000);
   };
 

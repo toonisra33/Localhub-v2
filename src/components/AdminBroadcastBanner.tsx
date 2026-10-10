@@ -17,12 +17,15 @@ import {
   Megaphone,
   Image as ImageIcon,
   Video as VideoIcon,
-  Maximize2
+  Maximize2,
+  CheckCircle2
 } from 'lucide-react';
 
 import { isAuthorizedAdminEmail } from '../lib/firebase';
 import { safeStorage } from '../lib/safeStorage';
 import { openExternalLink } from '../utils/linkHandler';
+import { soundManager } from '../lib/sounds';
+import { AppNotifications } from '../lib/notifications';
 
 export function AdminBroadcastBanner() {
   const { 
@@ -32,10 +35,82 @@ export function AdminBroadcastBanner() {
     role, 
     setOpenAdminModal 
   } = useBroadcast();
-  const { openMediaViewer, isLoggedIn, userProfile, jumpToMapLocation } = useCommunity();
+  const { openMediaViewer, isLoggedIn, userProfile, jumpToMapLocation, showToast } = useCommunity();
   
-  const [isExpanded, setIsExpanded] = useState(false);
+  // By default, broadcast unfolds on screen when arriving like a mobile message
+  const [isExpanded, setIsExpanded] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isAcknowledged, setIsAcknowledged] = useState<boolean>(() => {
+    if (!activeBroadcast) return false;
+    return !!safeStorage.getItem(`locallink_broadcast_ack_${activeBroadcast.id}`);
+  });
+
+  const lastRemindedCycleRef = React.useRef<number>(0);
+
+  // Sync state on activeBroadcast change
+  React.useEffect(() => {
+    if (activeBroadcast) {
+      const ack = !!safeStorage.getItem(`locallink_broadcast_ack_${activeBroadcast.id}`);
+      setIsAcknowledged(ack);
+      lastRemindedCycleRef.current = 0;
+      // Automatically unfolds open on user screen like a mobile message
+      setIsExpanded(true);
+    }
+  }, [activeBroadcast?.id]);
+
+  // 3-Minute Repeat Alert & Unfolding (โชว์ทุกๆ 3 นาที คลี่เปิดออก พร้อมเสียง จนกว่าจะกดย่อหน้าอีกครั้ง หรือจนกว่าจะหมดเวลา 15 นาที)
+  // ยกเว้นกรณีที่ผู้ใช้งานกดลิงค์ที่แนบไว้ 1 ครั้ง หรือกดดูเนื้อหา ระบบจะไม่เตือนทุก 3 นาที
+  React.useEffect(() => {
+    if (!activeBroadcast || !isBroadcastVisible || isAcknowledged) return;
+
+    // Elapsed time from 15 mins (900 seconds)
+    const elapsed = 900 - deviceRemainingSeconds;
+    if (elapsed <= 0) return;
+
+    // Cycle every 3 minutes (180s)
+    const currentCycle = Math.floor(elapsed / 180);
+
+    // Cycles 1 (3m), 2 (6m), 3 (9m), 4 (12m)
+    if (currentCycle > 0 && currentCycle < 5 && currentCycle > lastRemindedCycleRef.current) {
+      lastRemindedCycleRef.current = currentCycle;
+
+      // 1. Unfold banner open
+      setIsExpanded(true);
+
+      // 2. Play alert chime/siren
+      soundManager.playBroadcastAlertSound(activeBroadcast.severity);
+
+      // 3. Send system mobile notification
+      AppNotifications.sendBroadcastNotification({
+        id: `${activeBroadcast.id}_repeat_${currentCycle}`,
+        title: `🚨 [แจ้งเตือนบรอดแคสต์] ${activeBroadcast.title}`,
+        message: activeBroadcast.message,
+        category: activeBroadcast.category,
+        severity: activeBroadcast.severity,
+        targetArea: activeBroadcast.targetArea
+      });
+    }
+  }, [deviceRemainingSeconds, activeBroadcast, isBroadcastVisible, isAcknowledged]);
+
+  const markAcknowledged = () => {
+    setIsAcknowledged(true);
+    if (activeBroadcast) {
+      try {
+        safeStorage.setItem(`locallink_broadcast_ack_${activeBroadcast.id}`, 'true');
+      } catch {}
+    }
+    showToast('✓ รับทราบประกาศแล้ว (จะไม่เตือนซ้ำทุก 3 นาที)', 'info');
+  };
+
+  const handleActionLink = (url: string) => {
+    markAcknowledged();
+    openExternalLink(url);
+  };
+
+  const handleViewMedia = (opts: any) => {
+    markAcknowledged();
+    openMediaViewer(opts);
+  };
 
   const isLeaving = deviceRemainingSeconds <= 1;
 
@@ -200,7 +275,7 @@ export function AdminBroadcastBanner() {
             {/* Attached Image (Properly constrained, never pushes box off-screen) */}
             {activeBroadcast.mediaType === 'image' && activeBroadcast.mediaUrl && (
               <div 
-                onClick={() => openMediaViewer({
+                onClick={() => handleViewMedia({
                   url: activeBroadcast.mediaUrl!,
                   type: 'image',
                   title: activeBroadcast.title,
@@ -233,6 +308,7 @@ export function AdminBroadcastBanner() {
                   src={activeBroadcast.mediaUrl} 
                   controls 
                   playsInline
+                  onPlay={markAcknowledged}
                   className="w-full max-h-44 sm:max-h-52 object-contain bg-black"
                 />
                 <div className="bg-black/85 px-2.5 py-1 text-[10.5px] text-white/90 flex items-center justify-between">
@@ -241,7 +317,7 @@ export function AdminBroadcastBanner() {
                     <span>วิดีโอประกอบข้อมูล</span>
                   </div>
                   <button
-                    onClick={() => openMediaViewer({
+                    onClick={() => handleViewMedia({
                       url: activeBroadcast.mediaUrl!,
                       type: 'video',
                       title: activeBroadcast.title,
@@ -287,7 +363,7 @@ export function AdminBroadcastBanner() {
               {activeBroadcast.actionUrl && (
                 <button
                   type="button"
-                  onClick={() => openExternalLink(activeBroadcast.actionUrl!)}
+                  onClick={() => handleActionLink(activeBroadcast.actionUrl!)}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-extrabold text-[12px] transition-all active:scale-95 shadow-sm ${theme.actionButton}`}
                 >
                   <ExternalLink size={13} />
@@ -295,9 +371,27 @@ export function AdminBroadcastBanner() {
                 </button>
               )}
 
+              {/* Acknowledge Button */}
+              {!isAcknowledged ? (
+                <button
+                  type="button"
+                  onClick={markAcknowledged}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-extrabold text-[11.5px] bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm border border-emerald-400/30 transition-all active:scale-95 cursor-pointer"
+                >
+                  <CheckCircle2 size={13} className="text-emerald-200" />
+                  <span>รับทราบแล้ว (หยุดเตือนซ้ำ)</span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40">
+                  <CheckCircle2 size={12} className="text-emerald-400" />
+                  <span>รับทราบแล้ว</span>
+                </span>
+              )}
+
               {activeBroadcast.contactNumber && (
                 <a
                   href={`tel:${activeBroadcast.contactNumber}`}
+                  onClick={markAcknowledged}
                   className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-2 rounded-xl shadow-sm transition-colors text-[11.5px]"
                 >
                   <Phone size={13} />
@@ -309,6 +403,7 @@ export function AdminBroadcastBanner() {
                 <button
                   type="button"
                   onClick={() => {
+                    markAcknowledged();
                     jumpToMapLocation(
                       activeBroadcast.checkIn!.latitude, 
                       activeBroadcast.checkIn!.longitude, 
@@ -379,6 +474,26 @@ export function AdminBroadcastBanner() {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            {!isAcknowledged ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  markAcknowledged();
+                }}
+                title="กดรับทราบเพื่อหยุดเสียงและการเตือนซ้ำทุก 3 นาที"
+                className="inline-flex items-center gap-1 text-[9px] font-extrabold text-white bg-white/25 hover:bg-white/35 px-1.5 py-0.5 rounded-full border border-white/35 active:scale-95 transition-all cursor-pointer"
+              >
+                <CheckCircle2 size={9} className="text-emerald-300" />
+                <span>รับทราบ</span>
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-300 bg-emerald-950/60 px-1.5 py-0.5 rounded-full border border-emerald-500/40">
+                <CheckCircle2 size={9} />
+                <span>รับทราบแล้ว</span>
+              </span>
+            )}
+
             <span className="inline-flex items-center gap-1 text-[9px] font-bold text-white/90 bg-white/15 px-1.5 py-0.5 rounded-full border border-white/20 whitespace-nowrap shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
               <span>สด</span>
@@ -420,7 +535,7 @@ export function AdminBroadcastBanner() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  openExternalLink(activeBroadcast.actionUrl!);
+                  handleActionLink(activeBroadcast.actionUrl!);
                 }}
                 className={`hidden xs:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${theme.actionButton}`}
               >
@@ -457,7 +572,7 @@ export function AdminBroadcastBanner() {
             {/* Image Preview */}
             {activeBroadcast.mediaType === 'image' && activeBroadcast.mediaUrl && (
               <div 
-                onClick={() => openMediaViewer({
+                onClick={() => handleViewMedia({
                   url: activeBroadcast.mediaUrl!,
                   type: 'image',
                   title: activeBroadcast.title,
@@ -484,6 +599,7 @@ export function AdminBroadcastBanner() {
                   src={activeBroadcast.mediaUrl} 
                   controls 
                   playsInline
+                  onPlay={markAcknowledged}
                   className="w-full max-h-36 sm:max-h-44 object-contain bg-black"
                 />
               </div>
@@ -499,7 +615,7 @@ export function AdminBroadcastBanner() {
               {activeBroadcast.actionUrl && (
                 <button
                   type="button"
-                  onClick={() => openExternalLink(activeBroadcast.actionUrl!)}
+                  onClick={() => handleActionLink(activeBroadcast.actionUrl!)}
                   className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl font-bold text-[11.5px] ${theme.actionButton}`}
                 >
                   <ExternalLink size={12} />
@@ -507,9 +623,27 @@ export function AdminBroadcastBanner() {
                 </button>
               )}
 
+              {/* Acknowledge Button */}
+              {!isAcknowledged ? (
+                <button
+                  type="button"
+                  onClick={markAcknowledged}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-extrabold text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm border border-emerald-400/30 transition-all active:scale-95 cursor-pointer"
+                >
+                  <CheckCircle2 size={12} className="text-emerald-200" />
+                  <span>รับทราบแล้ว</span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10.5px] font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40">
+                  <CheckCircle2 size={11} className="text-emerald-400" />
+                  <span>รับทราบแล้ว</span>
+                </span>
+              )}
+
               {activeBroadcast.contactNumber && (
                 <a
                   href={`tel:${activeBroadcast.contactNumber}`}
+                  onClick={markAcknowledged}
                   className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-2.5 py-1.5 rounded-xl text-[11px]"
                 >
                   <Phone size={12} />
@@ -521,6 +655,7 @@ export function AdminBroadcastBanner() {
                 <button
                   type="button"
                   onClick={() => {
+                    markAcknowledged();
                     jumpToMapLocation(
                       activeBroadcast.checkIn!.latitude, 
                       activeBroadcast.checkIn!.longitude, 
@@ -539,7 +674,7 @@ export function AdminBroadcastBanner() {
               <button
                 type="button"
                 onClick={() => setIsExpanded(false)}
-                className="ml-auto px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-[10.5px] font-bold"
+                className="ml-auto px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-[10.5px] font-bold cursor-pointer"
               >
                 ย่อลง
               </button>

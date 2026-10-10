@@ -485,10 +485,11 @@ export async function togglePostPinInFirestore(postId: string, isPinned: boolean
 /**
  * Add comment to post in Firestore
  */
-export async function addCommentToFirestore(postId: string, comment: PostComment): Promise<void> {
+export async function addCommentToFirestore(postId: string, comment: any): Promise<void> {
   const path = `posts/${postId}/comments/${comment.id}`;
   try {
     const commentRef = doc(db, 'posts', postId, 'comments', comment.id);
+    const contentText = comment.content || comment.text || '';
     const dataToSave = cleanData({
       id: comment.id,
       postId: postId,
@@ -499,22 +500,23 @@ export async function addCommentToFirestore(postId: string, comment: PostComment
         isVerified: comment.author?.isVerified || false,
         reputationScore: comment.author?.reputationScore || 0
       },
-      authorName: comment.author?.name || 'ไม่ระบุตัวตน', // backward compatibility
-      authorAvatar: comment.author?.avatar || '', // backward compatibility
-      content: comment.content,
+      authorName: comment.author?.name || 'ไม่ระบุตัวตน',
+      authorAvatar: comment.author?.avatar || '',
+      content: contentText,
+      text: contentText,
       createdAt: serverTimestamp()
     });
     
     await setDoc(commentRef, dataToSave);
 
-    // Increment comment count on parent post
+    // Increment comment count on parent post with merge: true so non-existent docs do not fail
     const postRef = doc(db, 'posts', postId);
-    await updateDoc(postRef, {
+    await setDoc(postRef, {
       comments: increment(1),
       updatedAt: serverTimestamp()
-    });
+    }, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    console.warn('Firestore addComment warning (fallback to local state):', error);
   }
 }
 

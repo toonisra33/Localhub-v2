@@ -46,6 +46,9 @@ interface BroadcastContextType {
 
   // Re-broadcast execution
   reBroadcastItem: (broadcast: AdminBroadcast) => Promise<void>;
+
+  // Testing & Verification
+  testBroadcastAlert: () => void;
 }
 
 const DEVICE_VIEW_PREFIX = 'locallink_device_view_';
@@ -109,17 +112,25 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
           setActiveBroadcast(data);
           
           if (previousBroadcastIdRef.current !== data.id) {
-             const storageKey = `${DEVICE_VIEW_PREFIX}${data.id}`;
-             const hasSeenBefore = !!safeStorage.getItem(storageKey);
-             
-             if (!hasSeenBefore) {
-               soundManager.playAlertSound();
-               AppNotifications.send(`⚠️ แจ้งเตือนฉุกเฉิน: ${data.title}`, {
-                 body: data.message,
-                 requireInteraction: true,
-               });
-             }
-             previousBroadcastIdRef.current = data.id;
+            previousBroadcastIdRef.current = data.id;
+
+            const storageKey = `${DEVICE_VIEW_PREFIX}${data.id}`;
+            const hasSeenBefore = !!safeStorage.getItem(storageKey);
+            
+            if (!hasSeenBefore) {
+              // 1. Immediately sound high-priority emergency broadcast alert siren
+              soundManager.playBroadcastAlertSound(data.severity);
+
+              // 2. Pop up native mobile system notification like SMS / Emergency Alert
+              AppNotifications.sendBroadcastNotification({
+                id: data.id,
+                title: data.title,
+                message: data.message,
+                category: data.category,
+                severity: data.severity,
+                targetArea: data.targetArea
+              });
+            }
           }
           return;
         }
@@ -414,6 +425,12 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const testBroadcastAlert = () => {
+    soundManager.unlockAudio();
+    soundManager.playBroadcastAlertSound('urgent');
+    AppNotifications.sendTestNotification();
+  };
+
   return (
     <BroadcastContext.Provider
       value={{
@@ -434,6 +451,7 @@ export function BroadcastProvider({ children }: { children: ReactNode }) {
         removeSavedBroadcast,
         moveHistoryToSaved,
         reBroadcastItem,
+        testBroadcastAlert,
       }}
     >
       {children}

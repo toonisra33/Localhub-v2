@@ -16,6 +16,7 @@ import { BroadcastProvider, useBroadcast } from './context/BroadcastContext';
 import { CommunityProvider, useCommunity } from './context/CommunityContext';
 import { ToastContainer } from './components/modals/ToastContainer';
 import { AppNotifications } from './lib/notifications';
+import { NotificationPermissionBanner } from './components/NotificationPermissionBanner';
 import { AuthModal } from './components/modals/AuthModal';
 import { PublicProfileModal } from './components/modals/PublicProfileModal';
 import { LocationPermissionModal } from './components/modals/LocationPermissionModal';
@@ -82,6 +83,9 @@ function AppContent() {
       
       {/* Toast Notification Container */}
       <ToastContainer />
+
+      {/* Mobile & Web Notification Permission Banner */}
+      <NotificationPermissionBanner />
 
       {/* Top Floating Admin Broadcast Alert Box (Fixed on top of screen, stays locked during scroll for 3 mins) */}
       <AdminBroadcastBanner />

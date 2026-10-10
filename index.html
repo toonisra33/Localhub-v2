@@ -2,19 +2,7 @@
 <html lang="en">
   <head>
     <script>
-      // Clean up rogue service workers and stale caches to prevent blank screen in preview
-      try {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            for (var i = 0; i < regs.length; i++) regs[i].unregister();
-          }).catch(function() {});
-        }
-        if ('caches' in window) {
-          caches.keys().then(function(keys) {
-            for (var j = 0; j < keys.length; j++) caches.delete(keys[j]);
-          }).catch(function() {});
-        }
-      } catch (e) {}
+
 
       // Suppress harmless Vite HMR WebSocket errors in AI Studio reverse-proxy preview
       (function() {

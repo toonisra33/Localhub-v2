@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useRe
 import { 
   Alert, 
   Post, 
+  PostComment,
   Product, 
   Location, 
   AppNotification, 
@@ -108,7 +109,14 @@ interface CommunityContextType {
   toggleLikePost: (postId: string) => Promise<void>;
   togglePinPost: (postId: string, isPinned: boolean) => Promise<void>;
   addComment: (postId: string, content: string) => Promise<void>;
+  sharePost: (postId: string) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
+  addInAppNotification: (notif: {
+    title: string;
+    message: string;
+    type: 'alert' | 'broadcast' | 'community' | 'market' | 'social';
+    link?: string;
+  }) => void;
 
   // User Sessions & Access Audit Logs
   userSessions: UserSessionLog[];
@@ -288,6 +296,13 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   });
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    try {
+      const saved = safeStorage.getItem('locallink_notifications');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
     return initialNotifications;
   });
 
@@ -546,6 +561,41 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addInAppNotification = (notif: {
+    title: string;
+    message: string;
+    type: 'alert' | 'broadcast' | 'community' | 'market' | 'social';
+    link?: string;
+  }) => {
+    const newNotif: AppNotification = {
+      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      title: notif.title,
+      message: notif.message,
+      time: 'เมื่อสักครู่',
+      read: false,
+      type: notif.type,
+      link: notif.link,
+      createdAt: Date.now()
+    };
+
+    setNotifications(prev => {
+      const updated = [newNotif, ...prev.filter(p => p.id !== newNotif.id)];
+      try {
+        safeStorage.setItem('locallink_notifications', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+      return updated;
+    });
+
+    // Sound chime like Facebook
+    soundManager.playAlertSound();
+
+    // Pop up native system notification
+    AppNotifications.send(notif.title, {
+      body: notif.message,
+      requireInteraction: false
+    });
+  };
+
   const addPost = async (content: string, category: string, images?: string[], customLocation?: Location, checkIn?: CheckInLocation, videoUrl?: string) => {
     const id = `post_${Date.now()}`;
     const newPost: Post = {
@@ -565,12 +615,22 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       location: customLocation || location || null,
       checkIn: checkIn || null,
       likes: 0,
-      comments: 0
+      comments: 0,
+      commentList: []
     };
     
     // Optimistic UI update
     setPosts(prev => [newPost, ...prev]);
     
+    // Facebook notification: เพื่อนในระบบมีการโพสต์ข้อมูล
+    const postSnippet = content ? `"${content.slice(0, 35)}..."` : 'ข้อมูลใหม่';
+    addInAppNotification({
+      title: '📢 เพื่อนในระบบโพสต์ข้อมูลใหม่',
+      message: `${userProfile.name} ได้โพสต์ข้อมูลใหม่: ${postSnippet}`,
+      type: 'community',
+      link: `post:${newPost.id}`
+    });
+
     // Save to Firestore
     try {
       await savePostToFirestore({
@@ -586,39 +646,36 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   const toggleLikePost = async (postId: string) => {
     const userId = auth.currentUser?.uid || userProfile?.id || 'anonymous';
-    if (userId === 'anonymous') {
-      showToast('กรุณาเข้าสู่ระบบก่อนกดถูกใจ', 'error');
-      openAuthModal();
-      return;
-    }
+    const userName = userProfile?.name || 'เพื่อนในชุมชน';
+    const targetPost = posts.find(p => p.id === postId);
+    const willBeLiked = !targetPost?.isLikedByMe;
 
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
-      const isLiked = p.isLikedByMe;
       return {
         ...p,
-        likes: isLiked ? p.likes - 1 : p.likes + 1,
-        isLikedByMe: !isLiked
+        likes: willBeLiked ? p.likes + 1 : Math.max(0, p.likes - 1),
+        isLikedByMe: willBeLiked
       };
     }));
 
+    // Facebook notification: เมื่อเพื่อนมีการกดไลค์โพสต์ของเรา
+    if (willBeLiked && targetPost) {
+      const postSnippet = targetPost.content ? `"${targetPost.content.slice(0, 30)}..."` : 'โพสต์';
+      addInAppNotification({
+        title: '❤️ เพื่อนถูกใจโพสต์ของคุณ',
+        message: `${userName} ได้ถูกใจโพสต์ของคุณ: ${postSnippet}`,
+        type: 'social',
+        link: `post:${postId}`
+      });
+    }
+
     try {
-      const post = posts.find(p => p.id === postId);
-      if (post) {
-        await togglePostLikeInFirestore(postId, userId, post.isLikedByMe);
+      if (targetPost) {
+        await togglePostLikeInFirestore(postId, userId, targetPost.isLikedByMe);
       }
     } catch (error) {
-      console.error('Error toggling like:', error);
-      // Revert state on error
-      setPosts(prev => prev.map(p => {
-        if (p.id !== postId) return p;
-        const isLiked = p.isLikedByMe;
-        return {
-          ...p,
-          likes: isLiked ? p.likes - 1 : p.likes + 1,
-          isLikedByMe: !isLiked
-        };
-      }));
+      console.warn('Error toggling like:', error);
     }
   };
 
@@ -642,44 +699,80 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   };
 
   const addComment = async (postId: string, text: string) => {
-    const userId = auth.currentUser?.uid || userProfile?.id || 'anonymous';
-    if (userId === 'anonymous') {
-      showToast('กรุณาเข้าสู่ระบบก่อนแสดงความคิดเห็น', 'error');
-      openAuthModal();
-      return;
-    }
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const userName = userProfile?.name || 'สมาชิกชุมชน';
+    const userId = auth.currentUser?.uid || userProfile?.id || `user_${Date.now()}`;
 
     const commentId = `cmt_${Date.now()}`;
-    const newComment = {
+    const newComment: PostComment = {
       id: commentId,
       postId: postId,
       authorUid: userId,
       author: {
-        name: userProfile.name,
-        avatar: userProfile.avatar,
-        isVerified: userProfile.isVerified,
+        name: userName,
+        avatar: userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random`,
+        isVerified: userProfile?.isVerified || false,
+        reputationScore: userProfile?.reputationScore || 0
       },
-      text: text,
+      content: trimmed,
+      time: 'เมื่อสักครู่',
       createdAt: Date.now()
     };
 
+    const targetPost = posts.find(p => p.id === postId);
+
+    // 1. Immediately display comment in posts state and update comment count
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
-      return { ...p, comments: p.comments + 1 };
+      const currentList = p.commentList || [];
+      return { 
+        ...p, 
+        comments: (p.comments || 0) + 1,
+        commentList: [...currentList, newComment]
+      };
     }));
 
+    // 2. Facebook notification: เมื่อเพื่อนมีการกด comment บนโพสต์
+    const postSnippet = targetPost?.content ? `"${targetPost.content.slice(0, 30)}..."` : 'โพสต์';
+    addInAppNotification({
+      title: '💬 ความคิดเห็นใหม่บนโพสต์',
+      message: `${userName} แสดงความคิดเห็นบน ${postSnippet}: "${trimmed.slice(0, 35)}"`,
+      type: 'social',
+      link: `post:${postId}`
+    });
+
+    showToast('เพิ่มความคิดเห็นเรียบร้อยแล้ว', 'success');
+
+    // 3. Save to Firestore asynchronously
     try {
-      await addCommentToFirestore(postId, newComment as any);
-      showToast('เพิ่มความคิดเห็นเรียบร้อยแล้ว', 'success');
+      await addCommentToFirestore(postId, newComment);
     } catch (error) {
-      console.error('Error adding comment:', error);
-      showToast('เกิดข้อผิดพลาดในการเพิ่มความคิดเห็น', 'error');
-      // Revert state
-      setPosts(prev => prev.map(p => {
-        if (p.id !== postId) return p;
-        return { ...p, comments: p.comments - 1 };
-      }));
+      console.warn('Firestore comment sync warning:', error);
     }
+  };
+
+  const sharePost = async (postId: string) => {
+    const targetPost = posts.find(p => p.id === postId);
+    const userName = userProfile?.name || 'สมาชิกชุมชน';
+
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(window.location.href);
+      }
+    } catch {}
+
+    // Facebook notification: เมื่อเพื่อนกดแชร์โพสต์ของเรา
+    const postSnippet = targetPost?.content ? `"${targetPost.content.slice(0, 30)}..."` : 'โพสต์';
+    addInAppNotification({
+      title: '🔄 เพื่อนได้แชร์โพสต์ของคุณ',
+      message: `${userName} ได้แชร์โพสต์ของคุณไปยังชุมชน: ${postSnippet}`,
+      type: 'social',
+      link: `post:${postId}`
+    });
+
+    showToast('🔗 คัดลอกลิงก์และแชร์โพสต์เรียบร้อยแล้ว');
   };
 
   const deletePost = async (postId: string) => {
@@ -799,15 +892,30 @@ const submitContactRequest = async (data: Omit<AdminContactRequest, 'id' | 'crea
   const unreadNotificationsCount = (notifications || []).filter(n => !n.read).length;
 
   const markNotificationRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setNotifications(prev => {
+      const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);
+      try {
+        safeStorage.setItem('locallink_notifications', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const markAllNotificationsAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }));
+      try {
+        safeStorage.setItem('locallink_notifications', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const clearAllNotifications = () => {
     setNotifications([]);
+    try {
+      safeStorage.setItem('locallink_notifications', JSON.stringify([]));
+    } catch {}
     showToast('ล้างการแจ้งเตือนทั้งหมดแล้ว', 'info');
   };
 
@@ -1581,37 +1689,40 @@ useEffect(() => {
 
     return () => unsub();
   }, [isLoggedIn, userProfile?.role, userProfile?.id]);
-useEffect(() => {
-    if (!isLoggedIn || !userProfile?.id) {
-      setNotifications([]);
+  useEffect(() => {
+    if (!isLoggedIn || !userProfile?.id || !db) {
       return;
     }
     
-    const q = query(collection(db, 'notifications'), where('recipientUid', '==', userProfile.id), orderBy('createdAt', 'desc'), limit(50));
+    // Avoid composite query error by querying by recipientUid only
+    const q = query(collection(db, 'notifications'), where('recipientUid', '==', userProfile.id), limit(50));
     const unsub = onSnapshot(q, (snapshot) => {
-      const fetchedNotifs = [];
+      if (snapshot.empty) return;
+      const fetchedNotifs: AppNotification[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
         fetchedNotifs.push({
           id: doc.id,
-          ...data,
+          title: data.title,
+          message: data.message,
           time: data.createdAt?.toMillis ? new Date(data.createdAt.toMillis()).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : 'เมื่อสักครู่',
+          read: data.read || false,
+          type: data.type || 'community',
+          link: data.link,
+          recipientUid: data.recipientUid,
+          senderUid: data.senderUid,
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now(),
         });
       });
       
-      // Play sound for new notifications that just arrived
       setNotifications(prev => {
-        if (prev.length > 0 && fetchedNotifs.length > 0) {
-          const newNotifs = fetchedNotifs.filter(n => !prev.find(p => p.id === n.id));
-          if (newNotifs.some(n => !n.read)) {
-            soundManager.playAlertSound();
-            AppNotifications.send(`การแจ้งเตือนใหม่`, {
-              body: newNotifs[0].message,
-              requireInteraction: false,
-            });
-          }
-        }
-        return fetchedNotifs;
+        const remoteIds = new Set(fetchedNotifs.map(n => n.id));
+        const localsOnly = prev.filter(n => !remoteIds.has(n.id));
+        const combined = [...fetchedNotifs, ...localsOnly].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        try {
+          safeStorage.setItem('locallink_notifications', JSON.stringify(combined.slice(0, 50)));
+        } catch {}
+        return combined;
       });
       
     }, (error) => {
@@ -1657,7 +1768,9 @@ useEffect(() => {
         toggleLikePost,
         togglePinPost,
         addComment,
+        sharePost,
         deletePost,
+        addInAppNotification,
         userSessions,
         targetMapLocation,
         setTargetMapLocation,

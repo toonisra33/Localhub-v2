@@ -181,19 +181,20 @@ async function startServer() {
   });
 
 
-  // Force-cleanup rogue service workers in AI Studio preview (without triggering iframe reload loop)
-  app.get(['/sw.js', '/workbox-*.js'], (req, res) => {
+  // Explicit route for LocalHub Broadcast & Notification Service Worker
+  app.get('/sw.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.send(`
-      self.addEventListener('install', () => self.skipWaiting());
-      self.addEventListener('activate', (event) => {
-        event.waitUntil(
-          caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
-            .then(() => self.registration.unregister())
-        );
-      });
-    `);
+    res.setHeader('Service-Worker-Allowed', '/');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    const swPath = path.join(process.cwd(), 'public', 'sw.js');
+    const distSwPath = path.join(process.cwd(), 'dist', 'sw.js');
+    if (fs.existsSync(swPath)) {
+      res.sendFile(swPath);
+    } else if (fs.existsSync(distSwPath)) {
+      res.sendFile(distSwPath);
+    } else {
+      res.status(404).send('// Service worker not found');
+    }
   });
 
   const isProduction = process.env.NODE_ENV === 'production';

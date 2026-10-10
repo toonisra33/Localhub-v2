@@ -1,6 +1,6 @@
-import React from 'react';
-import { X, Bell, CheckCheck, Trash2, Radio, AlertTriangle, MessageSquare, ShoppingBag } from 'lucide-react';
+import { X, Bell, CheckCheck, Trash2, Radio, AlertTriangle, MessageSquare, ShoppingBag, Heart, Share2, FileText } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
+import { AppNotifications } from '../../lib/notifications';
 
 interface NotificationCenterModalProps {
   onClose: () => void;
@@ -16,21 +16,26 @@ export function NotificationCenterModal({ onClose }: NotificationCenterModalProp
     showToast 
   } = useCommunity();
 
-  // Automatically mark all notifications as read when the user enters/views the notification center
-  React.useEffect(() => {
-    if (unreadNotificationsCount > 0) {
-      markAllNotificationsAsRead();
-    }
-  }, []);
-
   const handleMarkAllRead = () => {
     markAllNotificationsAsRead();
     showToast('อ่านการแจ้งเตือนทั้งหมดแล้ว', 'info');
   };
 
-  const getIcon = (type: string) => {
+  const getIcon = (type: string, title?: string) => {
+    if (title?.includes('ถูกใจ') || title?.includes('ไลค์')) {
+      return <Heart size={16} className="text-rose-500 fill-rose-500" />;
+    }
+    if (title?.includes('แชร์')) {
+      return <Share2 size={16} className="text-blue-500" />;
+    }
+    if (title?.includes('ความคิดเห็น') || title?.includes('comment')) {
+      return <MessageSquare size={16} className="text-indigo-500" />;
+    }
+    if (title?.includes('โพสต์')) {
+      return <FileText size={16} className="text-emerald-500" />;
+    }
     switch (type) {
-      case 'broadcast': return <Radio size={16} className="text-red-500" />;
+      case 'broadcast': return <Radio size={16} className="text-red-500 animate-pulse" />;
       case 'alert': return <AlertTriangle size={16} className="text-amber-500" />;
       case 'market': return <ShoppingBag size={16} className="text-emerald-500" />;
       default: return <MessageSquare size={16} className="text-blue-500" />;
@@ -95,6 +100,22 @@ export function NotificationCenterModal({ onClose }: NotificationCenterModalProp
           </div>
         </div>
 
+        {/* Test Alert Bar */}
+        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11.5px]">
+          <span className="text-slate-500 font-medium">ระบบเสียง & ข้อความเด้งหน้าจอ</span>
+          <button
+            type="button"
+            onClick={() => {
+              AppNotifications.sendTestNotification();
+              showToast('🚨 ส่งสัญญาณทดสอบเสียงเตือนและข้อความเด้งบนมือถือแล้ว!', 'info');
+            }}
+            className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg font-extrabold flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <Bell size={12} className="text-red-600 animate-pulse" />
+            <span>ทดสอบเสียงและแจ้งเตือน</span>
+          </button>
+        </div>
+
         {/* Notifications List */}
         <div className="p-4 overflow-y-auto space-y-2.5 flex-1 bg-slate-50/50">
           {notifications.length === 0 ? (
@@ -114,7 +135,7 @@ export function NotificationCenterModal({ onClose }: NotificationCenterModalProp
               >
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
-                    {getIcon(item.type)}
+                    {getIcon(item.type, item.title)}
                   </div>
 
                   <div className="flex-1 min-w-0">

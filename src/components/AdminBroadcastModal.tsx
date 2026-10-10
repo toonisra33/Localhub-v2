@@ -38,7 +38,9 @@ import {
   History,
   Copy,
   Save,
-  BookmarkCheck
+  BookmarkCheck,
+  Bell,
+  Volume2
 } from 'lucide-react';
 
 import { isAuthorizedAdminEmail } from '../lib/firebase';
@@ -60,7 +62,8 @@ export function AdminBroadcastModal() {
     saveBroadcastTemplate,
     removeSavedBroadcast,
     moveHistoryToSaved,
-    reBroadcastItem
+    reBroadcastItem,
+    testBroadcastAlert
   } = useBroadcast();
 
   const { 
@@ -609,6 +612,31 @@ export function AdminBroadcastModal() {
               {statusFeedback}
             </div>
           )}
+
+          {/* Test Signal & Mobile Notification Bar */}
+          <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-3 rounded-2xl flex items-center justify-between gap-3 shadow-md border border-slate-800">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-red-600/30 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30">
+                <Volume2 size={16} className="animate-pulse" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[12px] font-extrabold text-white truncate">สัญญาณเสียง & ข้อความเด้งบนมือถือ</p>
+                <p className="text-[10.5px] text-slate-300 truncate">ทดสอบเสียงไซเรนเตือนภัยและข้อความเด้งหน้าจอ</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                testBroadcastAlert();
+                showToast('🚨 ส่งสัญญาณทดสอบเสียงเตือนและข้อความเด้งบนมือถือแล้ว!', 'info');
+              }}
+              className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <Bell size={13} />
+              <span>ทดสอบสัญญาณเตือน</span>
+            </button>
+          </div>
 
           {/* Sub Tabs: Create vs History (10 limit) vs Saved (Templates) vs Resident Requests */}
           <div className="flex items-center bg-gray-200/90 p-1 rounded-2xl gap-1 overflow-x-auto">

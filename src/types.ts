@@ -63,6 +63,7 @@ export interface Alert {
 
 export interface PostComment {
   id: string;
+  postId?: string;
   author: {
     name: string;
     avatar: string;
