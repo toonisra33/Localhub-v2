@@ -170,30 +170,37 @@ export class AppNotifications {
   }
 
   /**
-   * Generic notification sender
+   * Generic notification sender - Vibration only, silent: true (No sound for general notifications)
    */
   static async send(title: string, options?: NotificationOptions): Promise<void> {
+    // 1. Mobile vibration
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate([150, 80, 150]);
+      } catch {}
+    }
+
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
+
+    const notifOptions: any = {
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      silent: true, // No sound for general notifications
+      vibrate: [150, 80, 150],
+      ...options
+    };
 
     try {
       if ('serviceWorker' in navigator) {
         const reg = this.swRegistration || (await navigator.serviceWorker.getRegistration('/'));
         if (reg && 'showNotification' in reg) {
-          await reg.showNotification(title, {
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
-            ...options
-          });
+          await reg.showNotification(title, notifOptions);
           return;
         }
       }
 
-      const notif = new Notification(title, {
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        ...options
-      });
+      const notif = new Notification(title, notifOptions);
       notif.onclick = function () {
         window.focus();
         this.close();

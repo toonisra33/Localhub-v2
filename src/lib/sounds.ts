@@ -165,10 +165,18 @@ class SoundNotification {
   }
 
   /**
-   * Compatibility alias for existing alert calls
+   * Trigger mobile tactile vibration only (no audio sound)
+   */
+  vibrate(pattern: number[] = [150, 80, 150]) {
+    this.triggerVibration(pattern);
+  }
+
+  /**
+   * General notifications: Vibrate only, NO AUDIO SOUND
+   * (Audio siren/chime is strictly reserved for Admin Broadcast)
    */
   playAlertSound() {
-    this.playBroadcastAlertSound('urgent');
+    this.triggerVibration([150, 80, 150]);
   }
 
   /**

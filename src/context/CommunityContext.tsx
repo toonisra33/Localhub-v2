@@ -586,12 +586,16 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       return updated;
     });
 
-    // Sound chime like Facebook
-    soundManager.playAlertSound();
+    // 1. เครื่องสั่นอย่างเดียว ไม่ใช้เสียง (เสียงดังเฉพาะเวลา admin broadcast เท่านั้น)
+    soundManager.vibrate([150, 80, 150]);
 
-    // Pop up native system notification
+    // 2. แถบเด้งแจ้งเตือนบนหน้าจอ (On-screen banner)
+    showToast(`${notif.title}: ${notif.message.length > 50 ? notif.message.slice(0, 50) + '...' : notif.message}`, 'info');
+
+    // 3. ระบบแจ้งเตือนของมือถือ (silent = true สั่นอย่างเดียวไม่มีเสียง)
     AppNotifications.send(notif.title, {
       body: notif.message,
+      silent: true,
       requireInteraction: false
     });
   };
@@ -743,8 +747,6 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       link: `post:${postId}`
     });
 
-    showToast('เพิ่มความคิดเห็นเรียบร้อยแล้ว', 'success');
-
     // 3. Save to Firestore asynchronously
     try {
       await addCommentToFirestore(postId, newComment);
@@ -767,12 +769,10 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     const postSnippet = targetPost?.content ? `"${targetPost.content.slice(0, 30)}..."` : 'โพสต์';
     addInAppNotification({
       title: '🔄 เพื่อนได้แชร์โพสต์ของคุณ',
-      message: `${userName} ได้แชร์โพสต์ของคุณไปยังชุมชน: ${postSnippet}`,
+      message: `${userName} ได้แชร์โพสต์ของคุณ: ${postSnippet}`,
       type: 'social',
       link: `post:${postId}`
     });
-
-    showToast('🔗 คัดลอกลิงก์และแชร์โพสต์เรียบร้อยแล้ว');
   };
 
   const deletePost = async (postId: string) => {
