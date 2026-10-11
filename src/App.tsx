@@ -25,6 +25,7 @@ import { CreateMarketItemModal } from './components/modals/CreateMarketItemModal
 import { ReportAlertModal } from './components/modals/ReportAlertModal';
 import { ContactAdminModal } from './components/modals/ContactAdminModal';
 import { ToastContainer } from './components/modals/ToastContainer';
+import { PWAInstallBanner } from './components/pwa/PWAInstallBanner';
 
 function AppContent() {
   const {
@@ -43,6 +44,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 lg:pb-8 selection:bg-blue-500 selection:text-white">
+      {/* PWA Home Screen Installation Banner */}
+      <PWAInstallBanner />
+
       {/* Toast Notification Container */}
       <ToastContainer />
 

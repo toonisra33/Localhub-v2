@@ -8,6 +8,7 @@ import {
   MarketItem,
   AlertReport
 } from '../types';
+import { sendSystemNotification } from '../utils/notificationService';
 
 export interface ToastInfo {
   id: string;
@@ -612,6 +613,16 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
     setAlerts(prev => [newAlert, ...prev]);
     showToast('รายงานเหตุการณ์ถูกส่งไปยังศูนย์ประสานงานแล้ว', 'success');
+
+    // Trigger system-level background notification
+    sendSystemNotification({
+      title: `🚨 เตือนภัย: ${newAlert.title}`,
+      message: `${newAlert.description} (${newAlert.province} ${newAlert.district ? '• ' + newAlert.district : ''})`,
+      type: 'alert',
+      severity: newAlert.severity === 'critical' ? 'urgent' : newAlert.severity === 'high' ? 'high' : 'normal',
+      targetArea: `${newAlert.province} ${newAlert.district ? '• ' + newAlert.district : ''}`,
+      link: 'alerts'
+    }).catch(e => console.warn('Alert notification error:', e));
   };
 
   const unreadNotifCount = notifications.filter(n => !n.isRead).length;

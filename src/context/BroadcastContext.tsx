@@ -6,6 +6,7 @@ import {
   BroadcastTargetScope,
   BroadcastTargetLevel
 } from '../types';
+import { sendSystemNotification, initBackgroundSyncListener } from '../utils/notificationService';
 
 export interface BroadcastInput {
   title: string;
@@ -228,6 +229,17 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setBroadcasts(prev => [newBc, ...prev]);
 
+    // Send native system background notification (Android WebAPK native banner)
+    sendSystemNotification({
+      title: `📢 บรอดแคสต์: ${newBc.title}`,
+      message: newBc.message,
+      type: 'broadcast',
+      severity: newBc.severity,
+      targetArea: newBc.targetArea,
+      link: `broadcast:${newBc.id}`,
+      image: newBc.mediaUrl
+    }).catch(e => console.warn('Background notification error:', e));
+
     // Play tone if urgent/high
     if (data.severity === 'urgent' || data.severity === 'high') {
       playSoundAlert(data.severity);
@@ -266,6 +278,17 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setBroadcasts(prev => [rebroadcasted, ...prev]);
     // remove from dismissed
     setDismissedIds(prev => prev.filter(id => id !== broadcast.id));
+
+    // Send native system background notification for re-broadcast
+    sendSystemNotification({
+      title: `📢 [ส่งซ้ำ] ${rebroadcasted.title}`,
+      message: rebroadcasted.message,
+      type: 'broadcast',
+      severity: rebroadcasted.severity,
+      targetArea: rebroadcasted.targetArea,
+      link: `broadcast:${rebroadcasted.id}`,
+      image: rebroadcasted.mediaUrl
+    }).catch(e => console.warn('Background notification error:', e));
 
     if (broadcast.severity === 'urgent' || broadcast.severity === 'high') {
       playSoundAlert(broadcast.severity);
