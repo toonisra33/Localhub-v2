@@ -7,8 +7,30 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Listen for messages from web pages (e.g. Broadcasts, Alerts)
+// Listen for messages from web pages (e.g. Broadcasts, Alerts, Test Signals)
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'BROADCAST_TEST_SIGNAL') {
+    const payload = event.data.payload || {};
+    const title = payload.title || '🚨 [ทดสอบระบบ] สัญญาณแจ้งเตือนฉุกเฉินทุกอุปกรณ์';
+    const testOptions = {
+      body: payload.message || 'ผู้ดูแลระบบกำลังทดสอบระบบเสียงไซเรนและการสั่นสะเทือนบนอุปกรณ์ทั้งหมด',
+      icon: '/pwa-192x192.png',
+      badge: '/pwa-192x192.png',
+      vibrate: payload.vibrationPattern || [500, 200, 500, 200, 1000],
+      tag: 'localhub-test-alert-' + (payload.id || Date.now()),
+      renotify: true,
+      requireInteraction: true,
+      actions: [
+        { action: 'open', title: '📱 เปิดดูการทดสอบ' },
+        { action: 'close', title: 'ปิด' }
+      ],
+      data: { url: '/#broadcasts' }
+    };
+
+    event.waitUntil(self.registration.showNotification(title, testOptions));
+    return;
+  }
+
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, options } = event.data;
     const defaultOptions = {

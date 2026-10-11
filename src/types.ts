@@ -126,3 +126,19 @@ export interface AlertReport {
   status: 'active' | 'resolved' | 'investigating';
   coordinates?: { lat: number; lng: number };
 }
+
+export type TestSoundType = 'siren' | 'urgent' | 'high' | 'announcement';
+
+export interface SignalTestPayload {
+  id: string;
+  type: 'admin_local' | 'all_devices';
+  title: string;
+  message: string;
+  severity: BroadcastSeverity;
+  soundType: TestSoundType;
+  timestamp: number;
+  initiatedBy: string;
+  vibrationPattern?: number[];
+  soundDurationSec?: number;
+}
+

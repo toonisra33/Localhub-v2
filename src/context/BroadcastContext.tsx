@@ -1,12 +1,22 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   AdminBroadcast,
   BroadcastCategory,
   BroadcastSeverity,
   BroadcastTargetScope,
-  BroadcastTargetLevel
+  BroadcastTargetLevel,
+  SignalTestPayload,
+  TestSoundType
 } from '../types';
-import { sendSystemNotification, initBackgroundSyncListener } from '../utils/notificationService';
+import {
+  sendSystemNotification,
+  playSynthesizedAlarm,
+  stopSynthesizedAlarm,
+  triggerDeviceVibration,
+  stopDeviceVibration,
+  broadcastTestSignalToAllDevices,
+  initTestSignalListener
+} from '../utils/notificationService';
 
 export interface BroadcastInput {
   title: string;
@@ -41,6 +51,15 @@ interface BroadcastContextType {
   setSoundEnabled: (val: boolean) => void;
   playSoundAlert: (severity?: BroadcastSeverity) => void;
   deleteBroadcast: (id: string) => void;
+
+  // Signal Testing System
+  activeTestSignal: SignalTestPayload | null;
+  isTestingLocalAdmin: boolean;
+  isTestingAllDevices: boolean;
+  testLocalDeviceSignal: (soundType?: TestSoundType, durationSec?: number) => void;
+  stopLocalDeviceTest: () => void;
+  testAllDevicesSignal: (title?: string, message?: string, soundType?: TestSoundType) => void;
+  dismissTestSignal: () => void;
 }
 
 const INITIAL_BROADCASTS: AdminBroadcast[] = [
@@ -129,6 +148,14 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isAdminModalOpen, setOpenAdminModal] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
+  // Signal Testing System States
+  const [activeTestSignal, setActiveTestSignal] = useState<SignalTestPayload | null>(null);
+  const [isTestingLocalAdmin, setIsTestingLocalAdmin] = useState<boolean>(false);
+  const [isTestingAllDevices, setIsTestingAllDevices] = useState<boolean>(false);
+
+  const localTestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentSoundStopperRef = useRef<(() => void) | null>(null);
+
   // Save broadcasts to localStorage
   useEffect(() => {
     try {
@@ -150,38 +177,120 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const playSoundAlert = useCallback((severity: BroadcastSeverity = 'urgent') => {
     if (!soundEnabled) return;
     try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-
-      const playBeep = (freq: number, start: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = severity === 'urgent' ? 'sawtooth' : 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0.25, ctx.currentTime + start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + duration);
-      };
-
-      if (severity === 'urgent') {
-        playBeep(880, 0, 0.2);
-        playBeep(1100, 0.25, 0.2);
-        playBeep(880, 0.5, 0.3);
-      } else if (severity === 'high') {
-        playBeep(660, 0, 0.25);
-        playBeep(880, 0.28, 0.35);
-      } else {
-        playBeep(523.25, 0, 0.2);
-        playBeep(659.25, 0.2, 0.3);
-      }
+      const soundType: TestSoundType =
+        severity === 'urgent' ? 'siren' : severity === 'high' ? 'high' : 'announcement';
+      playSynthesizedAlarm(soundType, 3);
     } catch (err) {
       console.warn('Audio feedback failed:', err);
     }
   }, [soundEnabled]);
+
+  // ==========================================
+  // SIGNAL TEST 1: Admin Local Device Only Test
+  // ==========================================
+  const stopLocalDeviceTest = useCallback(() => {
+    if (localTestTimerRef.current) {
+      clearTimeout(localTestTimerRef.current);
+      localTestTimerRef.current = null;
+    }
+    if (currentSoundStopperRef.current) {
+      currentSoundStopperRef.current();
+      currentSoundStopperRef.current = null;
+    }
+    stopSynthesizedAlarm();
+    stopDeviceVibration();
+    setIsTestingLocalAdmin(false);
+  }, []);
+
+  const testLocalDeviceSignal = useCallback(
+    (soundType: TestSoundType = 'siren', durationSec: number = 5) => {
+      // Ensure any running test is stopped
+      stopLocalDeviceTest();
+
+      setIsTestingLocalAdmin(true);
+
+      // 1. Play audio synthesized on THIS device only
+      const audioControl = playSynthesizedAlarm(soundType, durationSec);
+      currentSoundStopperRef.current = audioControl.stop;
+
+      // 2. Hardware vibration on THIS device only (No broadcast channel / No localStorage sync)
+      triggerDeviceVibration([400, 150, 400, 150, 800]);
+
+      // Auto-stop after duration
+      localTestTimerRef.current = setTimeout(() => {
+        setIsTestingLocalAdmin(false);
+        stopDeviceVibration();
+      }, durationSec * 1000);
+    },
+    [stopLocalDeviceTest]
+  );
+
+  // ==========================================
+  // SIGNAL TEST 2: All Devices Broadcast Test
+  // ==========================================
+  const dismissTestSignal = useCallback(() => {
+    stopSynthesizedAlarm();
+    stopDeviceVibration();
+    if (currentSoundStopperRef.current) {
+      currentSoundStopperRef.current();
+      currentSoundStopperRef.current = null;
+    }
+    setActiveTestSignal(null);
+    setIsTestingAllDevices(false);
+  }, []);
+
+  const testAllDevicesSignal = useCallback(
+    (
+      title?: string,
+      message?: string,
+      soundType: TestSoundType = 'siren'
+    ) => {
+      const now = Date.now();
+      const payload: SignalTestPayload = {
+        id: `signal_test_${now}`,
+        type: 'all_devices',
+        title: title?.trim() || '🚨 [ทดสอบระบบ] สัญญาณแจ้งเตือนฉุกเฉินทุกอุปกรณ์',
+        message:
+          message?.trim() ||
+          'ผู้ดูแลระบบ (Admin) กำลังทดสอบระบบส่งสัญญาณเตือนภัย เสียงไซเรน และการสั่นสะเทือนพร้อมกันทุกอุปกรณ์ที่ติดตั้งแอพพลิเคชั่น',
+        severity: 'urgent',
+        soundType,
+        timestamp: now,
+        initiatedBy: 'ผู้ดูแลระบบ (Admin LocalHub)',
+        vibrationPattern: [500, 200, 500, 200, 1000],
+        soundDurationSec: 6
+      };
+
+      setIsTestingAllDevices(true);
+      setActiveTestSignal(payload);
+
+      // 1. Broadcast to all devices via BroadcastChannel, StorageEvent, and Service Worker
+      broadcastTestSignalToAllDevices(payload);
+
+      // 2. Play audio & vibration on this originating device
+      const audioControl = playSynthesizedAlarm(payload.soundType, 6);
+      currentSoundStopperRef.current = audioControl.stop;
+      triggerDeviceVibration(payload.vibrationPattern);
+    },
+    []
+  );
+
+  // ==========================================
+  // Multi-Device Test Signal Listener
+  // ==========================================
+  useEffect(() => {
+    const cleanup = initTestSignalListener((incomingSignal) => {
+      // Incoming signal from another device or tab
+      setActiveTestSignal(incomingSignal);
+      const audioControl = playSynthesizedAlarm(incomingSignal.soundType || 'siren', 6);
+      currentSoundStopperRef.current = audioControl.stop;
+      triggerDeviceVibration(incomingSignal.vibrationPattern || [500, 200, 500, 200, 1000]);
+    });
+
+    return () => {
+      cleanup();
+    };
+  }, []);
 
   const sendBroadcast = async (data: BroadcastInput): Promise<AdminBroadcast> => {
     const now = Date.now();
@@ -322,6 +431,13 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSoundEnabled,
         playSoundAlert,
         deleteBroadcast,
+        activeTestSignal,
+        isTestingLocalAdmin,
+        isTestingAllDevices,
+        testLocalDeviceSignal,
+        stopLocalDeviceTest,
+        testAllDevicesSignal,
+        dismissTestSignal,
       }}
     >
       {children}

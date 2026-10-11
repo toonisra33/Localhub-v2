@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { BroadcastProvider } from './context/BroadcastContext';
+import { BroadcastProvider, useBroadcast } from './context/BroadcastContext';
 import { CommunityProvider, useCommunity } from './context/CommunityContext';
+import { Volume2 } from 'lucide-react';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
 import { Navbar } from './components/Navbar';
 import { DesktopSidebar } from './components/DesktopSidebar';
@@ -25,6 +26,7 @@ import { CreateMarketItemModal } from './components/modals/CreateMarketItemModal
 import { ReportAlertModal } from './components/modals/ReportAlertModal';
 import { ContactAdminModal } from './components/modals/ContactAdminModal';
 import { ToastContainer } from './components/modals/ToastContainer';
+import { AllDevicesTestAlertModal } from './components/modals/AllDevicesTestAlertModal';
 import { PWAInstallBanner } from './components/pwa/PWAInstallBanner';
 
 function AppContent() {
@@ -35,6 +37,7 @@ function AppContent() {
     isContactAdminModalOpen,
     closeContactAdminModal
   } = useCommunity();
+  const { isTestingLocalAdmin, stopLocalDeviceTest } = useBroadcast();
 
   // Local modal states
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
@@ -44,6 +47,25 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 lg:pb-8 selection:bg-blue-500 selection:text-white">
+      {/* Floating Local Admin Test Status Pill */}
+      {isTestingLocalAdmin && (
+        <aside aria-label="สถานะการทดสอบสัญญาณ" className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-emerald-500/60 flex items-center gap-3 backdrop-blur-md animate-bounce-subtle">
+          <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl animate-pulse">
+            <Volume2 className="w-4 h-4" />
+          </span>
+          <div className="text-xs">
+            <div className="font-bold text-emerald-400">กำลังทดสอบสัญญาณเสียง & ระบบสั่น (เฉพาะเครื่องนี้)</div>
+            <div className="text-[10px] text-slate-400">ไม่มีการส่งสัญญาณออกไปยังเครื่องของประชาชน</div>
+          </div>
+          <button
+            onClick={stopLocalDeviceTest}
+            className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition ml-2 shrink-0"
+          >
+            หยุด
+          </button>
+        </aside>
+      )}
+
       {/* PWA Home Screen Installation Banner */}
       <PWAInstallBanner />
 
@@ -96,6 +118,7 @@ function AppContent() {
       <MobileNav />
 
       {/* Modals */}
+      <AllDevicesTestAlertModal />
       <AdminBroadcastModal />
 
       <NotificationCenterModal
