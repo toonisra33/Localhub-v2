@@ -1,4 +1,4 @@
-export type Tab = 'feed' | 'broadcasts' | 'market' | 'alerts' | 'map' | 'profile';
+export type Tab = 'feed' | 'broadcasts' | 'market' | 'alerts' | 'map' | 'weather' | 'profile';
 
 export type BroadcastCategory = 'news' | 'marketing' | 'announcement' | 'emergency' | 'weather' | 'traffic';
 export type BroadcastSeverity = 'urgent' | 'high' | 'normal' | 'special';
@@ -64,10 +64,61 @@ export interface Post {
   comments: PostComment[];
   shares: number;
   images?: string[];
+  videoUrl?: string;
+  videoThumbnail?: string;
+  videoDuration?: number;
+  mediaFileName?: string;
+  mediaFileSize?: number;
+  mediaType?: 'image' | 'video' | 'mixed';
   tags?: string[];
   price?: number;
   contactNumber?: string;
   pinned?: boolean;
+}
+
+export interface WeatherCurrent {
+  temperature: number;
+  apparentTemperature: number;
+  relativeHumidity: number;
+  precipitation: number;
+  rain: number;
+  weatherCode: number;
+  weatherText: string;
+  weatherIcon: string;
+  isRaining: boolean;
+  rainIntensity: 'none' | 'light' | 'moderate' | 'heavy';
+  windSpeed: number;
+  isDay: boolean;
+  updatedAt: string;
+  locationName: string;
+  source: 'gps' | 'province' | 'manual';
+  latitude: number;
+  longitude: number;
+}
+
+export interface WeatherHourly {
+  time: string[];
+  temperature: number[];
+  precipitationProbability: number[];
+  precipitation: number[];
+  weatherCode: number[];
+}
+
+export interface WeatherDaily {
+  time: string[];
+  weatherCode: number[];
+  tempMax: number[];
+  tempMin: number[];
+  precipitationSum: number[];
+  precipitationProbabilityMax: number[];
+}
+
+export interface WeatherData {
+  current: WeatherCurrent;
+  hourly: WeatherHourly;
+  daily: WeatherDaily;
+  pm25?: number;
+  aqiStatus?: string;
 }
 
 export interface Location {

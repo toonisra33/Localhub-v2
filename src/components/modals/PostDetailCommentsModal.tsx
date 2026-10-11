@@ -89,14 +89,43 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
             {post.content}
           </p>
 
+          {/* Video Attachment Player */}
+          {post.videoUrl && (
+            <div className="rounded-2xl overflow-hidden bg-black border border-slate-700 shadow-md">
+              <video
+                src={post.videoUrl}
+                poster={post.videoThumbnail}
+                controls
+                autoPlay={false}
+                playsInline
+                preload="metadata"
+                className="w-full max-h-96 object-contain bg-black"
+              />
+              <div className="p-2.5 bg-slate-900 text-slate-300 text-xs flex items-center justify-between border-t border-slate-800">
+                <span className="font-semibold text-purple-300">
+                  🎥 วิดีโอแนบในโพสต์ {post.mediaFileName ? `(${post.mediaFileName})` : ''}
+                </span>
+                {post.videoDuration && (
+                  <span className="text-[11px] text-slate-400">
+                    ความยาว: {post.videoDuration} วินาที
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Images */}
           {post.images && post.images.length > 0 && (
-            <div className="rounded-xl overflow-hidden border border-slate-200 max-h-80">
-              <img
-                src={post.images[0]}
-                alt="Post attachment"
-                className="w-full h-full object-cover"
-              />
+            <div className={`gap-2.5 ${post.images.length > 1 ? 'grid grid-cols-1 sm:grid-cols-2' : ''}`}>
+              {post.images.map((img, idx) => (
+                <div key={idx} className="rounded-xl overflow-hidden border border-slate-200 max-h-80 shadow-2xs">
+                  <img
+                    src={img}
+                    alt={`Post attachment ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
             </div>
           )}
 

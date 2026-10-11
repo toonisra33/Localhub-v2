@@ -165,11 +165,21 @@ export const AdminBroadcastBanner: React.FC = () => {
 
               {activeBroadcast.mediaUrl && (
                 <div className="flex-shrink-0">
-                  <img
-                    src={activeBroadcast.mediaUrl}
-                    alt="Broadcast attachment"
-                    className="w-32 h-20 object-cover rounded-lg border border-white/20 shadow"
-                  />
+                  {activeBroadcast.mediaType === 'video' ? (
+                    <video
+                      src={activeBroadcast.mediaUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="w-48 max-h-28 object-contain rounded-lg border border-white/20 shadow bg-black"
+                    />
+                  ) : (
+                    <img
+                      src={activeBroadcast.mediaUrl}
+                      alt="Broadcast attachment"
+                      className="w-32 h-20 object-cover rounded-lg border border-white/20 shadow"
+                    />
+                  )}
                 </div>
               )}
             </div>

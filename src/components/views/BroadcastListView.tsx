@@ -276,14 +276,24 @@ export const BroadcastListView: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Media Image if present */}
+                {/* Media Image / Video if present */}
                 {item.mediaUrl && (
-                  <div className="rounded-xl overflow-hidden border border-slate-200 max-h-72">
-                    <img
-                      src={item.mediaUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="rounded-xl overflow-hidden border border-slate-200 max-h-80 bg-black">
+                    {item.mediaType === 'video' ? (
+                      <video
+                        src={item.mediaUrl}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="w-full max-h-80 object-contain bg-black"
+                      />
+                    ) : (
+                      <img
+                        src={item.mediaUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                   </div>
                 )}
 

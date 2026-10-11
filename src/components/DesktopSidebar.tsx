@@ -7,19 +7,24 @@ import {
   Compass,
   User,
   Shield,
-  HelpCircle
+  HelpCircle,
+  Activity,
+  CloudSun
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
+import { useBroadcast } from '../context/BroadcastContext';
 import { Tab } from '../types';
 
 export const DesktopSidebar: React.FC = () => {
   const { activeTab, setActiveTab, openContactAdminModal, isAdmin } = useCommunity();
+  const { setOpenSignalTestModal } = useBroadcast();
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
     { id: 'feed', label: 'ฟีดชุมชน', icon: <MessageSquare className="w-5 h-5" /> },
     { id: 'broadcasts', label: 'บรอดแคสต์ทางการ', icon: <Radio className="w-5 h-5" />, badge: 'LIVE' },
-    { id: 'market', label: 'ตลาดนัดชุมชน', icon: <ShoppingBag className="w-5 h-5" /> },
+    { id: 'weather', label: 'พยากรณ์อากาศสด', icon: <CloudSun className="w-5 h-5" />, badge: 'สด' },
     { id: 'alerts', label: 'รายงานเหตุฉุกเฉิน', icon: <AlertTriangle className="w-5 h-5" /> },
+    { id: 'market', label: 'ตลาดนัดชุมชน', icon: <ShoppingBag className="w-5 h-5" /> },
     { id: 'map', label: 'แผนที่เรดาร์', icon: <Compass className="w-5 h-5" /> },
     { id: 'profile', label: 'บัญชี & สิทธิ์', icon: <User className="w-5 h-5" /> },
   ];
@@ -75,6 +80,26 @@ export const DesktopSidebar: React.FC = () => {
           ขอส่งบรอดแคสต์
         </button>
       </div>
+
+      {/* Admin Signal Test card */}
+      {isAdmin && (
+        <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-3xl p-4 space-y-2.5">
+          <div className="flex items-center gap-2 text-red-900 font-extrabold text-xs">
+            <Activity className="w-4 h-4 text-red-600 animate-pulse" />
+            <span>ทดสอบสัญญาณเตือนภัย</span>
+          </div>
+          <p className="text-[11px] text-slate-600 leading-tight">
+            ทดสอบเสียงไซเรน & ระบบสั่นสะเทือน ทั้งเฉพาะเครื่องนี้หรือทุกอุปกรณ์
+          </p>
+          <button
+            onClick={() => setOpenSignalTestModal(true)}
+            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>เปิดแผงทดสอบสัญญาณ</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

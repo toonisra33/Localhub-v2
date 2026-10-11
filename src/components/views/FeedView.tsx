@@ -11,17 +11,26 @@ import {
   Sparkles,
   Tag,
   Radio,
-  Clock
+  Clock,
+  Activity,
+  Play,
+  Sliders,
+  FileVideo,
+  CloudSun
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
+import { useBroadcast } from '../../context/BroadcastContext';
+import { WeatherWidget } from '../WeatherWidget';
 import { Post } from '../../types';
 
 interface FeedViewProps {
   onOpenCreatePost: () => void;
+  onOpenWeather?: () => void;
 }
 
-export const FeedView: React.FC<FeedViewProps> = ({ onOpenCreatePost }) => {
-  const { posts, location, likePost, openPostDetail, showToast } = useCommunity();
+export const FeedView: React.FC<FeedViewProps> = ({ onOpenCreatePost, onOpenWeather }) => {
+  const { posts, location, likePost, openPostDetail, showToast, isAdmin } = useCommunity();
+  const { testLocalDeviceSignal, testAllDevicesSignal, setOpenSignalTestModal } = useBroadcast();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -60,6 +69,63 @@ export const FeedView: React.FC<FeedViewProps> = ({ onOpenCreatePost }) => {
 
   return (
     <div className="space-y-4">
+      {/* Live Accurate Weather Widget */}
+      <WeatherWidget onOpenFullForecast={onOpenWeather} />
+
+      {/* Admin Signal Test Quick Access Card in Feed */}
+      {isAdmin && (
+        <div className="p-3.5 bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 border-2 border-red-500/50 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 bg-red-600 text-white rounded-xl shadow-xs animate-pulse">
+              <Activity className="w-4 h-4" />
+            </span>
+            <div>
+              <div className="text-xs font-black tracking-tight text-white flex items-center gap-1.5">
+                <span>⚡ ทดสอบสัญญาณเตือนภัย & ระบบสั่น (Admin Signal Test)</span>
+                <span className="px-1.5 py-0.2 rounded-md bg-red-500/30 text-red-300 text-[10px] font-bold">
+                  โหมดผู้ดูแลระบบ
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300">
+                เลือกทดสอบเฉพาะเครื่องนี้ หรือทดสอบส่งสัญญาณพร้อมกันทุกอุปกรณ์
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              onClick={() => {
+                testLocalDeviceSignal('siren', 5);
+                showToast('▶️ ทดสอบเสียงและระบบสั่นเฉพาะเครื่องนี้ (ไม่ส่งออกไปยังอุปกรณ์อื่น)', 'info');
+              }}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span>ทดสอบเครื่องนี้</span>
+            </button>
+
+            <button
+              onClick={() => {
+                testAllDevicesSignal();
+                showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
+              }}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+            >
+              <Radio className="w-3.5 h-3.5 animate-pulse" />
+              <span>ทดสอบทุกอุปกรณ์</span>
+            </button>
+
+            <button
+              onClick={() => setOpenSignalTestModal(true)}
+              className="p-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl text-xs font-bold transition"
+              title="เปิดคอนโซลตั้งค่าทดสอบ"
+            >
+              <Sliders className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Banner / Create Post bar */}
       <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-1">
@@ -185,14 +251,40 @@ export const FeedView: React.FC<FeedViewProps> = ({ onOpenCreatePost }) => {
                 </p>
               </div>
 
+              {/* Video preview / player */}
+              {post.videoUrl && (
+                <div
+                  className="rounded-2xl overflow-hidden bg-black border border-slate-200 relative group/video max-h-72"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <video
+                    src={post.videoUrl}
+                    poster={post.videoThumbnail}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="w-full max-h-72 object-contain bg-black"
+                  />
+                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1 pointer-events-none">
+                    <FileVideo className="w-3 h-3 text-purple-400" />
+                    <span>วิดีโอคลิป {post.videoDuration ? `• ${post.videoDuration} วิ` : ''}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Images preview */}
-              {post.images && post.images.length > 0 && (
-                <div className="rounded-xl overflow-hidden border border-slate-100 max-h-64">
+              {post.images && post.images.length > 0 && !post.videoUrl && (
+                <div className="rounded-xl overflow-hidden border border-slate-100 max-h-64 relative">
                   <img
                     src={post.images[0]}
                     alt="Post media"
                     className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-300"
                   />
+                  {post.images.length > 1 && (
+                    <span className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold">
+                      +{post.images.length - 1} รูป
+                    </span>
+                  )}
                 </div>
               )}
 

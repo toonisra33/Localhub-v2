@@ -14,11 +14,14 @@ import {
 import { useCommunity } from '../../context/CommunityContext';
 import { AlertReport } from '../../types';
 
+import { WeatherWidget } from '../WeatherWidget';
+
 interface AlertsViewProps {
   onOpenReportAlert: () => void;
+  onOpenWeather?: () => void;
 }
 
-export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert }) => {
+export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert, onOpenWeather }) => {
   const { alerts, location, showToast } = useCommunity();
   const [filterType, setFilterType] = useState<string>('all');
 
@@ -30,6 +33,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert }) => 
   const getAlertIcon = (type: AlertReport['type']) => {
     switch (type) {
       case 'flood': return <CloudRain className="w-5 h-5 text-blue-500" />;
+      case 'weather': return <CloudRain className="w-5 h-5 text-sky-500" />;
       case 'accident': return <Car className="w-5 h-5 text-amber-500" />;
       case 'fire': return <Flame className="w-5 h-5 text-red-500" />;
       case 'power_cut': return <Zap className="w-5 h-5 text-yellow-500" />;
@@ -52,6 +56,9 @@ export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert }) => 
 
   return (
     <div className="space-y-4">
+      {/* Live Accurate Weather Status in Alerts View */}
+      <WeatherWidget compact onOpenFullForecast={onOpenWeather} />
+
       {/* Alert Center Header */}
       <div className="p-5 bg-gradient-to-r from-rose-900 via-red-900 to-rose-950 text-white rounded-2xl shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -78,6 +85,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert }) => 
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         {[
           { id: 'all', label: 'ทั้งหมด' },
+          { id: 'weather', label: '🌤️ สภาพอากาศ' },
           { id: 'flood', label: '🌊 น้ำท่วม' },
           { id: 'accident', label: '🚗 อุบัติเหตุ' },
           { id: 'fire', label: '🔥 ไฟไหม้' },

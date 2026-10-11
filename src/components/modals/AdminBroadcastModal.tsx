@@ -23,7 +23,10 @@ import {
   Play,
   Square,
   Activity,
-  Sliders
+  Sliders,
+  Camera,
+  FileVideo,
+  Loader2
 } from 'lucide-react';
 import { useBroadcast, BroadcastInput } from '../../context/BroadcastContext';
 import { useCommunity } from '../../context/CommunityContext';
@@ -42,6 +45,7 @@ import {
   getNotificationPermission,
   requestNotificationPermission
 } from '../../utils/notificationService';
+import { saveMediaFile, generateVideoThumbnail, formatBytes } from '../../utils/mediaStorage';
 
 export const AdminBroadcastModal: React.FC = () => {
   const {
@@ -84,15 +88,62 @@ export const AdminBroadcastModal: React.FC = () => {
   const [targetSubdistrict, setTargetSubdistrict] = useState('');
   const [customArea, setCustomArea] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+  const [mediaFileName, setMediaFileName] = useState('');
+  const [mediaFileSize, setMediaFileSize] = useState(0);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [actionUrl, setActionUrl] = useState('');
   const [actionText, setActionText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const adminCameraInputRef = React.useRef<HTMLInputElement>(null);
+  const adminGalleryInputRef = React.useRef<HTMLInputElement>(null);
+  const adminVideoInputRef = React.useRef<HTMLInputElement>(null);
 
   if (!isAdminModalOpen) return null;
 
   // Find districts for chosen province
   const currentProvinceData = THAI_PROVINCES.find(p => p.name === targetProvince);
   const districtOptions = currentProvinceData ? currentProvinceData.districts : [];
+
+  const handleAdminPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsUploadingMedia(true);
+    try {
+      const file = files[0];
+      const saved = await saveMediaFile(file, file.name);
+      setMediaUrl(saved.objectUrl);
+      setMediaType('image');
+      setMediaFileName(file.name);
+      setMediaFileSize(file.size);
+      showToast('แนบรูปภาพสำหรับการบรอดแคสต์เรียบร้อย!', 'success');
+    } catch {
+      showToast('ไม่สามารถอัปโหลดรูปภาพได้', 'error');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
+  const handleAdminVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsUploadingMedia(true);
+    try {
+      const file = files[0];
+      const thumb = await generateVideoThumbnail(file);
+      const saved = await saveMediaFile(file, file.name, thumb);
+      setMediaUrl(saved.objectUrl);
+      setMediaType('video');
+      setMediaFileName(file.name);
+      setMediaFileSize(file.size);
+      showToast(`แนบคลิปวิดีโอ (${formatBytes(file.size)}) เรียบร้อย!`, 'success');
+    } catch {
+      showToast('ไม่สามารถอัปโหลดวิดีโอได้', 'error');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,7 +181,8 @@ export const AdminBroadcastModal: React.FC = () => {
         targetSubdistrict: targetScope === 'specific' && targetSubdistrict ? targetSubdistrict : undefined,
         targetArea: finalTargetArea,
         mediaUrl: mediaUrl.trim() || undefined,
-        mediaType: mediaUrl.trim() ? 'image' : undefined,
+        mediaType: mediaUrl.trim() ? mediaType : undefined,
+        mediaFileName: mediaFileName || undefined,
         actionUrl: actionUrl.trim() || undefined,
         actionText: actionText.trim() || undefined,
       };
@@ -393,29 +445,152 @@ export const AdminBroadcastModal: React.FC = () => {
                 )}
               </div>
 
-              {/* Media URL & Action Button */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">ลิงก์รูปภาพประกอบ (URL)</label>
+              {/* Media Attachment (Photo & Video Upload) */}
+              <div className="p-3.5 rounded-2xl border border-indigo-200 bg-indigo-50/50 space-y-3">
+                <input
+                  ref={adminCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleAdminPhotoUpload}
+                />
+                <input
+                  ref={adminGalleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAdminPhotoUpload}
+                />
+                <input
+                  ref={adminVideoInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,video/*"
+                  className="hidden"
+                  onChange={handleAdminVideoUpload}
+                />
+
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-indigo-600" />
+                    <span>สื่อประกอบประกาศ (รูปภาพ / วิดีโอ)</span>
+                  </label>
+                  <span className="text-[10px] text-indigo-700">เข้ากล้องตรงหรืออัปโหลดคลิป</span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => adminCameraInputRef.current?.click()}
+                    disabled={isUploadingMedia}
+                    className="p-2 bg-white hover:bg-indigo-100 border border-indigo-200 rounded-xl text-indigo-700 flex flex-col items-center justify-center transition active:scale-95 shadow-2xs"
+                  >
+                    <Camera className="w-4 h-4 mb-0.5" />
+                    <span className="text-[11px] font-bold">ถ่ายภาพสด</span>
+                    <span className="text-[9px] text-slate-500">กล้องตรง</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => adminGalleryInputRef.current?.click()}
+                    disabled={isUploadingMedia}
+                    className="p-2 bg-white hover:bg-indigo-100 border border-indigo-200 rounded-xl text-indigo-700 flex flex-col items-center justify-center transition active:scale-95 shadow-2xs"
+                  >
+                    <ImageIcon className="w-4 h-4 mb-0.5" />
+                    <span className="text-[11px] font-bold">คลังภาพ</span>
+                    <span className="text-[9px] text-slate-500">แกลเลอรี</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => adminVideoInputRef.current?.click()}
+                    disabled={isUploadingMedia}
+                    className="p-2 bg-white hover:bg-purple-100 border border-purple-200 rounded-xl text-purple-700 flex flex-col items-center justify-center transition active:scale-95 shadow-2xs"
+                  >
+                    <FileVideo className="w-4 h-4 mb-0.5" />
+                    <span className="text-[11px] font-bold">คลิปวิดีโอ</span>
+                    <span className="text-[9px] text-slate-500">ไม่มีจำกัด</span>
+                  </button>
+                </div>
+
+                {isUploadingMedia && (
+                  <div className="p-2.5 bg-indigo-100 rounded-xl text-indigo-800 text-xs flex items-center gap-2 animate-pulse">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                    <span>กำลังประมวลผลไฟล์สื่อ...</span>
+                  </div>
+                )}
+
+                {/* Media Preview */}
+                {mediaUrl && (
+                  <div className="p-2.5 bg-white rounded-xl border border-indigo-200 flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {mediaType === 'video' ? (
+                        <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center text-purple-400 shrink-0">
+                          <FileVideo className="w-6 h-6" />
+                        </div>
+                      ) : (
+                        <img
+                          src={mediaUrl}
+                          alt="Media preview"
+                          className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-800 truncate">
+                          {mediaFileName || (mediaType === 'video' ? 'วิดีโอแนบ' : 'รูปภาพแนบ')}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {mediaType === 'video' ? 'วิดีโอ (เล่นได้ในบรอดแคสต์)' : 'รูปภาพ'}
+                          {mediaFileSize > 0 ? ` • ${formatBytes(mediaFileSize)}` : ''}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaUrl('');
+                        setMediaFileName('');
+                        setMediaFileSize(0);
+                      }}
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
+                      title="ลบสื่อนี้"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Optional URL input fallback */}
+                <div className="pt-1">
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">หรือใส่ลิงก์รูปภาพ / วิดีโอ URL</label>
                   <input
                     type="url"
                     value={mediaUrl}
-                    onChange={(e) => setMediaUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 outline-hidden"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">ลิงก์ปุ่มกดเพิ่มเติม (Action URL)</label>
-                  <input
-                    type="url"
-                    value={actionUrl}
-                    onChange={(e) => setActionUrl(e.target.value)}
+                    onChange={(e) => {
+                      setMediaUrl(e.target.value);
+                      if (e.target.value.match(/\.(mp4|webm|mov)$/i)) {
+                        setMediaType('video');
+                      } else {
+                        setMediaType('image');
+                      }
+                    }}
                     placeholder="https://..."
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    className="w-full text-xs border border-slate-300 rounded-xl px-3 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 outline-hidden"
                   />
                 </div>
+              </div>
+
+              {/* Action Button Link (Optional) */}
+              <div className="text-xs">
+                <label className="block font-semibold text-slate-700 mb-1">ลิงก์ปุ่มกดเพิ่มเติมในบรอดแคสต์ (Action URL - ถ้ามี)</label>
+                <input
+                  type="url"
+                  value={actionUrl}
+                  onChange={(e) => setActionUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 outline-hidden"
+                />
               </div>
 
               {/* Action Buttons */}

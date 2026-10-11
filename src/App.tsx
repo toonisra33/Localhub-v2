@@ -14,6 +14,7 @@ import { MarketView } from './components/views/MarketView';
 import { AlertsView } from './components/views/AlertsView';
 import { MapView } from './components/views/MapView';
 import { ProfileView } from './components/views/ProfileView';
+import { WeatherForecastView } from './components/views/WeatherForecastView';
 
 // Modals
 import { AdminBroadcastModal } from './components/modals/AdminBroadcastModal';
@@ -27,11 +28,13 @@ import { ReportAlertModal } from './components/modals/ReportAlertModal';
 import { ContactAdminModal } from './components/modals/ContactAdminModal';
 import { ToastContainer } from './components/modals/ToastContainer';
 import { AllDevicesTestAlertModal } from './components/modals/AllDevicesTestAlertModal';
-import { PWAInstallBanner } from './components/pwa/PWAInstallBanner';
+import { AdminSignalTestBar } from './components/AdminSignalTestBar';
+import { AdminSignalTestModal } from './components/modals/AdminSignalTestModal';
 
 function AppContent() {
   const {
     activeTab,
+    setActiveTab,
     openedPost,
     closePostDetail,
     isContactAdminModalOpen,
@@ -66,9 +69,6 @@ function AppContent() {
         </aside>
       )}
 
-      {/* PWA Home Screen Installation Banner */}
-      <PWAInstallBanner />
-
       {/* Toast Notification Container */}
       <ToastContainer />
 
@@ -81,6 +81,9 @@ function AppContent() {
         onOpenCreatePost={() => setIsCreatePostModalOpen(true)}
       />
 
+      {/* Permanent Admin Signal Test Bar (Directly visible upon opening the app) */}
+      <AdminSignalTestBar />
+
       {/* Main Content Layout */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5 sm:pt-6 flex-1 flex gap-6 items-start">
         {/* Left Desktop Sidebar Navigation */}
@@ -89,19 +92,29 @@ function AppContent() {
         {/* Center Dynamic Tab View */}
         <section className="flex-1 min-w-0">
           {activeTab === 'feed' && (
-            <FeedView onOpenCreatePost={() => setIsCreatePostModalOpen(true)} />
+            <FeedView
+              onOpenCreatePost={() => setIsCreatePostModalOpen(true)}
+              onOpenWeather={() => setActiveTab('weather')}
+            />
           )}
 
           {activeTab === 'broadcasts' && (
             <BroadcastListView />
           )}
 
-          {activeTab === 'market' && (
-            <MarketView onOpenCreateItem={() => setIsCreateMarketModalOpen(true)} />
+          {activeTab === 'weather' && (
+            <WeatherForecastView />
           )}
 
           {activeTab === 'alerts' && (
-            <AlertsView onOpenReportAlert={() => setIsReportAlertModalOpen(true)} />
+            <AlertsView
+              onOpenReportAlert={() => setIsReportAlertModalOpen(true)}
+              onOpenWeather={() => setActiveTab('weather')}
+            />
+          )}
+
+          {activeTab === 'market' && (
+            <MarketView onOpenCreateItem={() => setIsCreateMarketModalOpen(true)} />
           )}
 
           {activeTab === 'map' && (
@@ -119,6 +132,7 @@ function AppContent() {
 
       {/* Modals */}
       <AllDevicesTestAlertModal />
+      <AdminSignalTestModal />
       <AdminBroadcastModal />
 
       <NotificationCenterModal

@@ -5,7 +5,8 @@ import {
   ShoppingBag,
   AlertTriangle,
   Compass,
-  User
+  User,
+  CloudSun
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { Tab } from '../types';
@@ -16,9 +17,9 @@ export const MobileNav: React.FC = () => {
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'feed', label: 'ฟีด', icon: <MessageSquare className="w-5 h-5" /> },
     { id: 'broadcasts', label: 'บรอดแคสต์', icon: <Radio className="w-5 h-5" /> },
-    { id: 'market', label: 'ตลาดนัด', icon: <ShoppingBag className="w-5 h-5" /> },
+    { id: 'weather', label: 'พยากรณ์', icon: <CloudSun className="w-5 h-5" /> },
     { id: 'alerts', label: 'เตือนภัย', icon: <AlertTriangle className="w-5 h-5" /> },
-    { id: 'map', label: 'แผนที่', icon: <Compass className="w-5 h-5" /> },
+    { id: 'market', label: 'ตลาดนัด', icon: <ShoppingBag className="w-5 h-5" /> },
     { id: 'profile', label: 'ฉัน', icon: <User className="w-5 h-5" /> },
   ];
 

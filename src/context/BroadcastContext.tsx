@@ -53,6 +53,8 @@ interface BroadcastContextType {
   deleteBroadcast: (id: string) => void;
 
   // Signal Testing System
+  isSignalTestModalOpen: boolean;
+  setOpenSignalTestModal: (open: boolean) => void;
   activeTestSignal: SignalTestPayload | null;
   isTestingLocalAdmin: boolean;
   isTestingAllDevices: boolean;
@@ -146,6 +148,7 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [isAdminModalOpen, setOpenAdminModal] = useState<boolean>(false);
+  const [isSignalTestModalOpen, setOpenSignalTestModal] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   // Signal Testing System States
@@ -428,6 +431,8 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         reBroadcastItem,
         dismissBroadcast,
         setOpenAdminModal,
+        isSignalTestModalOpen,
+        setOpenSignalTestModal,
         setSoundEnabled,
         playSoundAlert,
         deleteBroadcast,

@@ -42,6 +42,12 @@ interface CommunityContextType {
     content: string;
     category: Post['category'];
     images?: string[];
+    videoUrl?: string;
+    videoThumbnail?: string;
+    videoDuration?: number;
+    mediaFileName?: string;
+    mediaFileSize?: number;
+    mediaType?: Post['mediaType'];
     tags?: string[];
   }) => void;
   likePost: (id: string) => void;
@@ -238,17 +244,17 @@ const INITIAL_MARKET: MarketItem[] = [
 const INITIAL_ALERTS: AlertReport[] = [
   {
     id: 'alt_1',
-    title: 'น้ำรอระบาย ซอยสุขุมวิท 39 สูงประมาณ 15 ซม.',
-    description: 'หลังฝนตกหนัก มีน้ำท่วมขังบริเวณช่วงกลางซอย รถเล็กและมอเตอร์ไซค์ควรชะลอความเร็ว',
-    type: 'flood',
-    severity: 'medium',
+    title: 'ซอยสุขุมวิท 39 ระบายน้ำเรียบร้อย ผิวการจราจรแห้งปกติ',
+    description: 'ตรวจสอบล่าสุด: สภาพอากาศโปร่ง ท้องฟ้าแจ่มใส ไม่มีฝนตก ไม่มีน้ำท่วมขัง รถทุกชนิดสัญจรได้ตามปกติ',
+    type: 'weather',
+    severity: 'low',
     province: 'กรุงเทพมหานคร',
     district: 'วัฒนา',
     subdistrict: 'คลองตันเหนือ',
-    reporter: 'หน่วยกู้ภัยชุมชน',
+    reporter: 'ศูนย์ตรวจสอบสถานการณ์ชุมชน',
     createdAt: Date.now() - 3600000 * 1,
-    verifiedCount: 14,
-    status: 'active'
+    verifiedCount: 22,
+    status: 'resolved'
   },
   {
     id: 'alt_2',
@@ -362,25 +368,35 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isContactAdminModalOpen, setIsContactAdminModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(true); // default true so user can easily test broadcast features
 
-  // Persist
+  // Persist safely without quota exceptions
   useEffect(() => {
-    localStorage.setItem('localhub_location', JSON.stringify(location));
+    try {
+      localStorage.setItem('localhub_location', JSON.stringify(location));
+    } catch {}
   }, [location]);
 
   useEffect(() => {
-    localStorage.setItem('localhub_posts', JSON.stringify(posts));
+    try {
+      localStorage.setItem('localhub_posts', JSON.stringify(posts));
+    } catch {}
   }, [posts]);
 
   useEffect(() => {
-    localStorage.setItem('localhub_market', JSON.stringify(marketItems));
+    try {
+      localStorage.setItem('localhub_market', JSON.stringify(marketItems));
+    } catch {}
   }, [marketItems]);
 
   useEffect(() => {
-    localStorage.setItem('localhub_alerts', JSON.stringify(alerts));
+    try {
+      localStorage.setItem('localhub_alerts', JSON.stringify(alerts));
+    } catch {}
   }, [alerts]);
 
   useEffect(() => {
-    localStorage.setItem('localhub_notifs', JSON.stringify(notifications));
+    try {
+      localStorage.setItem('localhub_notifs', JSON.stringify(notifications));
+    } catch {}
   }, [notifications]);
 
   // Toast helper
@@ -448,6 +464,12 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     content: string;
     category: Post['category'];
     images?: string[];
+    videoUrl?: string;
+    videoThumbnail?: string;
+    videoDuration?: number;
+    mediaFileName?: string;
+    mediaFileSize?: number;
+    mediaType?: Post['mediaType'];
     tags?: string[];
   }) => {
     const newPost: Post = {
@@ -468,6 +490,12 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       shares: 0,
       comments: [],
       images: data.images,
+      videoUrl: data.videoUrl,
+      videoThumbnail: data.videoThumbnail,
+      videoDuration: data.videoDuration,
+      mediaFileName: data.mediaFileName,
+      mediaFileSize: data.mediaFileSize,
+      mediaType: data.mediaType,
       tags: data.tags || ['ทั่วไป'],
     };
 
