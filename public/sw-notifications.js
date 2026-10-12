@@ -1,14 +1,43 @@
 // LocalHub Background Notification & Service Worker Handler
+// Version tag to force cache invalidation upon updates
+const SW_VERSION = 'localhub-v1.3.0-20261012';
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      // Invalidate all stale caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((name) => {
+            if (name !== SW_VERSION && !name.includes('google-fonts')) {
+              console.log('[SW] Purging outdated cache:', name);
+              return caches.delete(name);
+            }
+          })
+        );
+      })
+    ])
+  );
 });
 
-// Listen for messages from web pages (e.g. Broadcasts, Alerts, Test Signals)
+// Listen for messages from web pages (e.g. Broadcasts, Alerts, Test Signals, Force Update)
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'FORCE_UPDATE_CACHE') {
+    caches.keys().then((names) => {
+      return Promise.all(names.map((n) => caches.delete(n)));
+    }).then(() => {
+      self.skipWaiting();
+      self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((c) => c.postMessage({ type: 'CACHE_PURGED_RELOAD' }));
+      });
+    });
+    return;
+  }
   if (event.data && event.data.type === 'BROADCAST_TEST_SIGNAL') {
     const payload = event.data.payload || {};
     const title = payload.title || '🚨 [ทดสอบระบบ] สัญญาณแจ้งเตือนฉุกเฉินทุกอุปกรณ์';

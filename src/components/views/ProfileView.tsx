@@ -15,10 +15,16 @@ import {
   CheckCircle2,
   AlertCircle,
   Activity,
-  Sliders
+  Sliders,
+  RefreshCw,
+  Sparkles,
+  RotateCcw,
+  ExternalLink,
+  ChevronDown
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { useBroadcast } from '../../context/BroadcastContext';
+import { APP_VERSION, BUILD_DATE, forcePurgeCacheAndReload, checkForAppUpdates } from '../../utils/updateManager';
 
 export const ProfileView: React.FC = () => {
   const {
@@ -29,6 +35,10 @@ export const ProfileView: React.FC = () => {
     openContactAdminModal,
     showToast
   } = useCommunity();
+
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isPurgingCache, setIsPurgingCache] = useState(false);
+  const [showTroubleshootGuide, setShowTroubleshootGuide] = useState(false);
 
   const {
     soundEnabled,
@@ -70,6 +80,103 @@ export const ProfileView: React.FC = () => {
               แก้ไข
             </button>
           </p>
+        </div>
+      </div>
+
+      {/* App Version & Force Update Card */}
+      <div className="p-5 bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white rounded-3xl shadow-md space-y-4 border-2 border-blue-500/60 animate-fadeIn">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-md">
+              <Sparkles className="w-5 h-5" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-extrabold text-sm sm:text-base text-white">
+                  เวอร์ชันแอป & ระบบอัปเดต (Version & Cache)
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 text-[11px] font-black border border-emerald-400/40">
+                  v{APP_VERSION}
+                </span>
+              </div>
+              <p className="text-xs text-blue-200 mt-0.5">
+                Build: {BUILD_DATE} • รองรับกล้องสด, วิดีโอคลิป และพยากรณ์อากาศสด
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons for Update */}
+        <div className="p-3.5 bg-white/10 rounded-2xl border border-white/10 space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-300">หากเพิ่ง Push ขึ้น GitHub หรือพบบราวเซอร์จำแคชเดิม:</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* Button 1: Force Purge Cache & Reload */}
+            <button
+              onClick={async () => {
+                setIsPurgingCache(true);
+                showToast('🔄 กำลังล้างแคชและบังคับดึงโค้ดล่าสุดจากเซิร์ฟเวอร์...', 'info');
+                await forcePurgeCacheAndReload();
+              }}
+              disabled={isPurgingCache}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isPurgingCache ? 'animate-spin' : ''}`} />
+              <span>{isPurgingCache ? 'กำลังโหลดเวอร์ชันใหม่...' : '🔄 บังคับอัปเดต & ล้างแคชทันที'}</span>
+            </button>
+
+            {/* Button 2: Check for Updates */}
+            <button
+              onClick={async () => {
+                setIsCheckingUpdate(true);
+                const hasNew = await checkForAppUpdates();
+                setIsCheckingUpdate(false);
+                if (hasNew) {
+                  showToast('🎉 ตรวจพบเวอร์ชันใหม่! กำลังเตรียมรีโหลด...', 'success');
+                } else {
+                  showToast('✓ คุณกำลังใช้งานเวอร์ชันล่าสุดแล้ว (v' + APP_VERSION + ')', 'success');
+                }
+              }}
+              disabled={isCheckingUpdate}
+              className="px-4 py-2.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white border border-white/20 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+            >
+              <RotateCcw className={`w-4 h-4 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+              <span>{isCheckingUpdate ? 'กำลังตรวจสอบ...' : '🔍 ตรวจสอบเวอร์ชันใหม่'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible GitHub & Play Store Deployment Troubleshooting Guide */}
+        <div className="border-t border-white/10 pt-2">
+          <button
+            onClick={() => setShowTroubleshootGuide(!showTroubleshootGuide)}
+            className="w-full text-left text-xs font-bold text-sky-300 hover:text-white flex items-center justify-between py-1 transition"
+          >
+            <span>📖 คำแนะนำ: หาก Push ขึ้น GitHub แล้วแต่ในแอพยังไม่อัปเดต</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showTroubleshootGuide ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showTroubleshootGuide && (
+            <div className="mt-2.5 p-3.5 bg-black/40 rounded-2xl border border-white/10 text-xs text-slate-300 space-y-2.5 animate-fadeIn leading-relaxed">
+              <div className="font-bold text-white flex items-center gap-1.5">
+                <span>สาเหตุที่พบบ่อยและวิธีแก้ไข:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-1.5 text-slate-300">
+                <li>
+                  <strong className="text-white">1. แคชของ Service Worker และบราวเซอร์มือถือ:</strong> แอปในมือถือจะจำไฟล์โค้ดชุดเดิมไว้ในเครื่องเพื่อประหยัดเน็ต กดปุ่ม <span className="text-emerald-400 font-bold">"บังคับอัปเดต & ล้างแคชทันที"</span> ด้านบน แอปจะลบไฟล์แคชเดิมและดึงโค้ดล่าสุดจาก GitHub/เซิร์ฟเวอร์ทันที
+                </li>
+                <li>
+                  <strong className="text-white">2. หากโฮสต์ด้วย GitHub Pages:</strong> ต้องรันการบิลด์โค้ด (Vite Build) ด้วย โดยเราได้สร้างไฟล์ <code className="px-1 py-0.5 bg-white/10 rounded text-sky-300">.github/workflows/deploy.yml</code> ไว้ให้แล้วในโปรเจกต์ ซึ่งจะรัน build และ deploy ให้โดยอัตโนมัติทุกครั้งที่คุณ Push
+                </li>
+                <li>
+                  <strong className="text-white">3. หากเป็นแอป APK/AAB ที่ติดตั้งจาก Play Store:</strong>
+                  หากแอปของคุณเชื่อมต่อ URL เว็บ เมื่อเว็บอัปเดตและล้างแคช หน้าจอจะเปลี่ยนทันที แต่ถ้าเป็นแบบออฟไลน์แพ็กไฟล์ไว้ในตัว APK ต้องอัปเดต <code className="px-1 py-0.5 bg-white/10 rounded text-sky-300">versionCode</code> ใน Android แล้วอัปโหลดไฟล์ AAB ใหม่เข้า Play Console
+                </li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
@@ -237,7 +344,7 @@ export const ProfileView: React.FC = () => {
 
       {/* Info footer */}
       <div className="text-center text-xs text-slate-400 py-3">
-        LocalHub v1.0.0 • แพลตฟอร์มข้อมูลและเตือนภัยชุมชนท้องถิ่น (Play Store Edition)
+        LocalHub v{APP_VERSION} (Build {BUILD_DATE}) • แพลตฟอร์มข้อมูลและเตือนภัยชุมชนท้องถิ่น (Play Store Edition)
       </div>
     </div>
   );

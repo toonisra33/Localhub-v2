@@ -30,6 +30,7 @@ import { ToastContainer } from './components/modals/ToastContainer';
 import { AllDevicesTestAlertModal } from './components/modals/AllDevicesTestAlertModal';
 import { AdminSignalTestBar } from './components/AdminSignalTestBar';
 import { AdminSignalTestModal } from './components/modals/AdminSignalTestModal';
+import { AppUpdateBanner } from './components/AppUpdateBanner';
 
 function AppContent() {
   const {
@@ -68,6 +69,9 @@ function AppContent() {
           </button>
         </aside>
       )}
+
+      {/* Floating In-App Update Banner */}
+      <AppUpdateBanner />
 
       {/* Toast Notification Container */}
       <ToastContainer />

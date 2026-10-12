@@ -34,12 +34,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNotifications, onOpenCreat
               <span className="font-extrabold text-slate-900 tracking-tight text-lg sm:text-xl">
                 Local<span className="text-blue-600">Hub</span>
               </span>
-              <span className="hidden sm:inline-block px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">
-                ชุมชนท้องถิ่น
+              <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">
+                v1.3.0
               </span>
             </div>
             <p className="text-[10px] text-slate-400 hidden sm:block">
-              ข่าวสาร บรอดแคสเตือนภัย และตลาดนัดใกล้ตัวคุณ
+              ข่าวสาร บรอดแคสเตือนภัย และตลาดนัดใกล้ตัวคุณ (Play Store Edition)
             </p>
           </div>
         </div>
