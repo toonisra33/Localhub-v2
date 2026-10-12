@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="50%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bg)"/>
+  
+  <!-- Outer Radio Waves -->
+  <path d="M140 200 A 150 150 0 0 1 372 200" stroke="white" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M185 235 A 95 95 0 0 1 327 235" stroke="white" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.95"/>
+  
+  <!-- Central Pulse Transmitter Point -->
+  <circle cx="256" cy="270" r="32" fill="white"/>
+  
+  <!-- Antenna Tower Base -->
+  <path d="M256 302 L256 410" stroke="white" stroke-width="28" stroke-linecap="round"/>
+  <path d="M210 420 L256 340 L302 420" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M225 385 L287 385" stroke="white" stroke-width="20" stroke-linecap="round"/>
+  
+  <!-- Red Emergency Alert Beacon -->
+  <circle cx="256" cy="120" r="22" fill="#ef4444"/>
+</svg>
