@@ -1,11 +1,12 @@
 {
   "name": "localhub",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000 --host 0.0.0.0",
     "build": "tsc && vite build",
+    "deploy:firebase": "firebase deploy --only hosting",
     "lint": "tsc --noEmit",
     "preview": "vite preview --port 3000 --host 0.0.0.0"
   },

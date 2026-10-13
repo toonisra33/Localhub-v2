@@ -38,9 +38,21 @@ jobs:
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
 
+      # 1. Deploy ไปยัง GitHub Pages
       - name: Deploy to gh-pages branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
           branch: gh-pages
           clean: true
+
+      # 2. Deploy ไปยัง Firebase Hosting (อัปเดตแอปตัวจริงที่ลิงก์กับ Firebase)
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LOCALHUB_69FBE != '' }}
+        continue-on-error: true
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_LOCALHUB_69FBE }}'
+          channelId: live
+          projectId: localhub-69fbe

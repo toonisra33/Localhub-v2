@@ -240,16 +240,31 @@ export const ProfileView: React.FC = () => {
               <div className="font-bold text-white flex items-center gap-1.5">
                 <span>สาเหตุที่พบบ่อยและวิธีแก้ไข:</span>
               </div>
-              <ul className="list-disc list-inside space-y-1.5 text-slate-300">
-                <li>
-                  <strong className="text-white">1. แคชของ Service Worker และบราวเซอร์มือถือ:</strong> แอปในมือถือจะจำไฟล์โค้ดชุดเดิมไว้ในเครื่องเพื่อประหยัดเน็ต กดปุ่ม <span className="text-emerald-400 font-bold">"บังคับอัปเดต & ล้างแคชทันที"</span> ด้านบน แอปจะลบไฟล์แคชเดิมและดึงโค้ดล่าสุดจาก GitHub/เซิร์ฟเวอร์ทันที
+              <ul className="list-disc list-inside space-y-2 text-slate-300">
+                <li className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/30 text-amber-200">
+                  <strong className="text-white block mb-1">⚠️ ทำไมลิงก์ GitHub กับ Firebase ถึงคนละตัว และส่งผลอะไรไหม?</strong>
+                  <span className="block text-slate-300 mb-1.5">
+                    <strong>ส่งผล 100% เต็มครับ!</strong> นี่คือสาเหตุสำคัญที่แอปในมือถือไม่เปลี่ยน:
+                  </span>
+                  <div className="space-y-1 text-[11px] font-mono bg-black/50 p-2 rounded-lg border border-white/10 mb-1.5">
+                    <div className="text-emerald-400">🔥 Firebase: https://localhub-69fbe.web.app (แอปจริงบนมือถือวิ่งมาเปิดที่นี่)</div>
+                    <div className="text-sky-300">🐙 GitHub: https://[username].github.io/ (GitHub Actions ส่งโค้ดไปที่นี่)</div>
+                  </div>
+                  <span className="block text-slate-300 text-[11px]">
+                    เมื่อ GitHub Actions รันผ่านสีเขียว มันนำโค้ดไปวางไว้ที่ <strong>GitHub Pages</strong> แต่แอปในมือถือของคุณเปิดดูที่ <strong>Firebase Hosting</strong> โค้ดบนมือถือจึงยังเป็นเวอร์ชันเก่าตลอดเวลา!
+                  </span>
                 </li>
                 <li>
-                  <strong className="text-white">2. หากโฮสต์ด้วย GitHub Pages:</strong> ต้องรันการบิลด์โค้ด (Vite Build) ด้วย โดยเราได้สร้างไฟล์ <code className="px-1 py-0.5 bg-white/10 rounded text-sky-300">.github/workflows/deploy.yml</code> ไว้ให้แล้วในโปรเจกต์ ซึ่งจะรัน build และ deploy ให้โดยอัตโนมัติทุกครั้งที่คุณ Push
+                  <strong className="text-white">วิธีแก้ที่ 1 (แนะนำ): Deploy ตรงเข้า Firebase Hosting</strong>
+                  <div className="text-slate-300 text-[11px] mt-0.5">
+                    รันคำสั่ง <code className="px-1.5 py-0.5 bg-white/10 rounded text-emerald-400 font-mono">npm run build && npm run deploy:firebase</code> เพื่อส่งโค้ดตรงเข้า Firebase ทันที
+                  </div>
                 </li>
                 <li>
-                  <strong className="text-white">3. หากเป็นแอป APK/AAB ที่ติดตั้งจาก Play Store:</strong>
-                  หากแอปของคุณเชื่อมต่อ URL เว็บ เมื่อเว็บอัปเดตและล้างแคช หน้าจอจะเปลี่ยนทันที แต่ถ้าเป็นแบบออฟไลน์แพ็กไฟล์ไว้ในตัว APK ต้องอัปเดต <code className="px-1 py-0.5 bg-white/10 rounded text-sky-300">versionCode</code> ใน Android แล้วอัปโหลดไฟล์ AAB ใหม่เข้า Play Console
+                  <strong className="text-white">วิธีแก้ที่ 2: บังคับล้างแคชในตัวแอป</strong>
+                  <div className="text-slate-300 text-[11px] mt-0.5">
+                    กดปุ่ม <span className="text-emerald-400 font-bold">"บังคับอัปเดต & ล้างแคชทันที"</span> ด้านบน เพื่อล้าง Service Worker ในเครื่องให้ดึงหน้าเว็บล่าสุด
+                  </div>
                 </li>
               </ul>
             </div>
