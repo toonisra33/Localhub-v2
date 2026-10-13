@@ -7,15 +7,25 @@ import {
   Layers,
   Navigation,
   Compass,
-  Info
+  Search,
+  Plus,
+  Filter,
+  Maximize2,
+  Car,
+  Globe
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { useBroadcast } from '../../context/BroadcastContext';
 
 export const MapView: React.FC = () => {
-  const { location, alerts, marketItems, openLocationModal, openPostDetail } = useCommunity();
+  const { location, alerts, marketItems, openLocationModal, showToast } = useCommunity();
   const { broadcasts } = useBroadcast();
-  const [activeLayer, setActiveLayer] = useState<'all' | 'alerts' | 'broadcasts' | 'market'>('all');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'myPins' | 'alerts'>('all');
+  const [selectedRadius, setSelectedRadius] = useState<'1' | '5' | '10' | 'district' | 'province'>('5');
+  const [activePreset, setActivePreset] = useState<'local' | 'world' | 'bkk' | 'tokyo'>('local');
+
   const [selectedPin, setSelectedPin] = useState<{
     id: string;
     title: string;
@@ -24,164 +34,244 @@ export const MapView: React.FC = () => {
   } | null>(null);
 
   return (
-    <div className="space-y-4">
-      {/* Map Control Bar */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+    <div className="space-y-3 max-w-4xl mx-auto animate-fadeIn">
+      {/* Top Header matching 05-around-me-map.png */}
+      <div className="bg-slate-950 text-white rounded-3xl p-4 border border-slate-800 shadow-md flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
-            <Compass className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold">
+            <MapPin className="w-4 h-4 text-slate-950" />
           </div>
-          <div>
-            <h3 className="font-bold text-slate-800 text-sm">แผนที่เรดาร์ชุมชน: {location.province}</h3>
-            <p className="text-xs text-slate-500">แสดงจุดเกิดเหตุ ประกาศเร่งด่วน และตลาดนัดใกล้คุณ</p>
-          </div>
+          <span className="font-extrabold text-base text-white tracking-tight">
+            Local<span className="text-emerald-400">Hub</span>
+          </span>
+          <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30">
+            ● LIVE
+          </span>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {[
-            { id: 'all', label: 'ทั้งหมด' },
-            { id: 'alerts', label: '⚠️ เหตุเตือนภัย' },
-            { id: 'broadcasts', label: '📢 บรอดแคสต์' },
-            { id: 'market', label: '🛍️ ตลาดนัด' },
-          ].map(l => (
-            <button
-              key={l.id}
-              onClick={() => setActiveLayer(l.id as typeof activeLayer)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                activeLayer === l.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30 flex items-center gap-1">
+            Google Maps สด
+          </span>
           <button
             onClick={openLocationModal}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+            className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition"
           >
-            เปลี่ยนพื้นที่
+            <span>🗺️ แผนที่</span>
           </button>
         </div>
       </div>
 
-      {/* Visual Simulated Interactive Canvas */}
-      <div className="relative w-full h-[450px] bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-lg flex items-center justify-center">
-        {/* Subtle Map Grid / Radar Graphics */}
-        <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
+      {/* Search & Action Bar matching 05-around-me-map.png */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="ค้นหาพื้นที่, ตำบล, ร้าน..."
+            className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-500 shadow-xs"
+          />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        </div>
 
-        {/* Concentric radar circles */}
-        <div className="absolute w-[400px] h-[400px] rounded-full border border-blue-500/20 pointer-events-none animate-ping [animation-duration:6s]" />
-        <div className="absolute w-[260px] h-[260px] rounded-full border border-blue-400/25 pointer-events-none" />
-        <div className="absolute w-[120px] h-[120px] rounded-full border border-blue-300/30 pointer-events-none" />
+        <button
+          onClick={() => showToast('เปิดโหมดปักหมุดตำแหน่งในพื้นที่', 'info')}
+          className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-1 transition shrink-0 shadow-xs"
+        >
+          <Plus className="w-3.5 h-3.5 text-emerald-400" />
+          <span>+ ปักหมุด</span>
+        </button>
 
-        {/* Center User Position */}
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="w-5 h-5 rounded-full bg-blue-500 ring-4 ring-blue-400/30 animate-pulse shadow-lg flex items-center justify-center text-white text-[10px] font-bold">
+        <button
+          onClick={() => showToast('เปิดตัวกรองหมวดหมู่แผนที่', 'info')}
+          className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-2xl transition shrink-0 shadow-xs"
+        >
+          <Filter className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Filter Category Pills matching 05-around-me-map.png */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
+        <button
+          onClick={() => setActiveFilter('all')}
+          className={`px-3 py-1.5 rounded-full transition shrink-0 ${
+            activeFilter === 'all'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          ทั้งหมด
+        </button>
+
+        <button
+          onClick={() => setActiveFilter('myPins')}
+          className={`px-3 py-1.5 rounded-full transition shrink-0 flex items-center gap-1 ${
+            activeFilter === 'myPins'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <span>📍 หมุดของฉัน</span>
+          <span className="px-1.5 py-0.2 bg-slate-100 rounded-full text-[10px]">0</span>
+        </button>
+
+        <button
+          onClick={() => setActiveFilter('alerts')}
+          className={`px-3 py-1.5 rounded-full transition shrink-0 flex items-center gap-1 ${
+            activeFilter === 'alerts'
+              ? 'bg-red-600 text-white shadow-xs'
+              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <span>🚨 เตือนภัย/ซ่อมบำรุง</span>
+          <span className="px-1.5 py-0.2 bg-rose-50 text-rose-700 rounded-full text-[10px] font-bold">
+            {alerts.length}
+          </span>
+        </button>
+      </div>
+
+      {/* Preset View Pills matching 05-around-me-map.png */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-semibold text-slate-600 scrollbar-none">
+        <button
+          onClick={() => setActivePreset('world')}
+          className={`px-3 py-1 rounded-xl transition shrink-0 flex items-center gap-1 ${
+            activePreset === 'world' ? 'bg-slate-800 text-white' : 'bg-slate-100 hover:bg-slate-200'
+          }`}
+        >
+          <span>🌍 ภาพรวมโลก (World View)</span>
+        </button>
+
+        <button
+          onClick={() => setActivePreset('bkk')}
+          className={`px-3 py-1 rounded-xl transition shrink-0 flex items-center gap-1 ${
+            activePreset === 'bkk' ? 'bg-slate-800 text-white' : 'bg-slate-100 hover:bg-slate-200'
+          }`}
+        >
+          <span>🇹🇭 กรุงเทพฯ (พหลโยธิน)</span>
+        </button>
+
+        <button
+          onClick={() => setActivePreset('tokyo')}
+          className={`px-3 py-1 rounded-xl transition shrink-0 flex items-center gap-1 ${
+            activePreset === 'tokyo' ? 'bg-slate-800 text-white' : 'bg-slate-100 hover:bg-slate-200'
+          }`}
+        >
+          <span>🇯🇵 โตเกียว</span>
+        </button>
+      </div>
+
+      {/* Interactive Map Visual matching 05-around-me-map.png */}
+      <div className="relative w-full h-[460px] bg-slate-100 rounded-3xl overflow-hidden border border-slate-300 shadow-lg">
+        {/* Map Grid / Streets Simulation */}
+        <div className="absolute inset-0 bg-[#e8ece9]" />
+        
+        {/* Simulated Road Lines */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="0" y1="120" x2="800" y2="120" stroke="#fef08a" strokeWidth="6" />
+          <line x1="0" y1="280" x2="800" y2="280" stroke="#fed7aa" strokeWidth="8" />
+          <line x1="240" y1="0" x2="240" y2="500" stroke="#cbd5e1" strokeWidth="5" />
+          <line x1="500" y1="0" x2="500" y2="500" stroke="#fde047" strokeWidth="7" />
+          <line x1="100" y1="500" x2="600" y2="50" stroke="#cbd5e1" strokeWidth="4" />
+          <circle cx="500" cy="280" r="160" stroke="#60a5fa" strokeWidth="1" fill="#3b82f6" fillOpacity="0.08" strokeDasharray="4 4" />
+        </svg>
+
+        {/* Center Target Pin matching 05-around-me-map.png */}
+        <div className="absolute top-[260px] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
+          <div className="w-8 h-8 rounded-full bg-red-600 ring-4 ring-red-400/30 shadow-xl flex items-center justify-center text-white text-xs font-bold animate-bounce">
             📍
           </div>
-          <div className="mt-1 px-2.5 py-0.5 rounded-full bg-slate-800/90 text-white text-[11px] font-medium border border-slate-600 shadow-md">
-            ตำแหน่งของคุณ ({location.province})
+          <div className="mt-1 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-bold shadow-md">
+            {location.displayName || location.province}
           </div>
         </div>
 
-        {/* Simulated Pins scattered around center */}
-        {(activeLayer === 'all' || activeLayer === 'alerts') && alerts.slice(0, 3).map((a, idx) => {
-          const offsets = [
-            { top: '25%', left: '28%' },
-            { top: '65%', left: '35%' },
-            { top: '35%', left: '72%' }
-          ];
-          const pos = offsets[idx % offsets.length];
+        {/* Map Floating Control Tools on Right */}
+        <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+          <button
+            onClick={() => showToast('ซูมเข้า', 'info')}
+            className="w-10 h-10 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl shadow-md flex items-center justify-center font-bold text-lg"
+          >
+            +
+          </button>
+          <button
+            onClick={() => showToast('นำทางด้วยยานพาหนะ', 'info')}
+            className="w-10 h-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-2xl shadow-md flex items-center justify-center"
+          >
+            <Car className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => showToast('ระบุพิกัด GPS ปัจจุบัน', 'info')}
+            className="w-10 h-10 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl shadow-md flex items-center justify-center"
+          >
+            <Navigation className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => showToast('เปลี่ยนเลเยอร์ดาวเทียม', 'info')}
+            className="w-10 h-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-2xl shadow-md flex items-center justify-center"
+          >
+            <Layers className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => showToast('ขยายเต็มจอ', 'info')}
+            className="w-10 h-10 bg-white hover:bg-slate-100 text-slate-800 rounded-2xl shadow-md flex items-center justify-center border border-slate-200"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        </div>
 
-          return (
-            <button
-              key={a.id}
-              style={{ top: pos.top, left: pos.left }}
-              onClick={() => setSelectedPin({ id: a.id, title: a.title, type: 'alert', desc: a.description })}
-              className="absolute z-20 group transform -translate-x-1/2 -translate-y-1/2 p-2 rounded-full bg-rose-600 text-white shadow-lg hover:scale-125 transition-transform"
-            >
-              <AlertTriangle className="w-4 h-4 animate-bounce" />
-              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                {a.title}
-              </span>
-            </button>
-          );
-        })}
+        {/* Bottom Radius Selector Bar matching 05-around-me-map.png */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-slate-950/95 text-white rounded-2xl p-1.5 shadow-2xl border border-slate-700 flex items-center gap-1 backdrop-blur-md">
+          <button
+            onClick={() => setSelectedRadius('1')}
+            className={`px-3 py-1.5 rounded-xl text-center text-xs font-bold transition flex flex-col items-center justify-center min-w-[50px] ${
+              selectedRadius === '1' ? 'bg-emerald-600 text-white' : 'hover:bg-white/10 text-slate-300'
+            }`}
+          >
+            <span className="text-sm font-black">1</span>
+            <span className="text-[10px] text-slate-300">กม.</span>
+          </button>
 
-        {(activeLayer === 'all' || activeLayer === 'broadcasts') && broadcasts.slice(0, 2).map((b, idx) => {
-          const offsets = [
-            { top: '20%', left: '55%' },
-            { top: '70%', left: '68%' }
-          ];
-          const pos = offsets[idx % offsets.length];
+          <button
+            onClick={() => setSelectedRadius('5')}
+            className={`px-3 py-1.5 rounded-xl text-center text-xs font-bold transition flex flex-col items-center justify-center min-w-[50px] ${
+              selectedRadius === '5' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-white/10 text-slate-300'
+            }`}
+          >
+            <span className="text-sm font-black">5</span>
+            <span className="text-[10px] text-emerald-100">กม.</span>
+          </button>
 
-          return (
-            <button
-              key={b.id}
-              style={{ top: pos.top, left: pos.left }}
-              onClick={() => setSelectedPin({ id: b.id, title: b.title, type: 'broadcast', desc: b.message })}
-              className="absolute z-20 group transform -translate-x-1/2 -translate-y-1/2 p-2 rounded-full bg-amber-500 text-white shadow-lg hover:scale-125 transition-transform"
-            >
-              <Radio className="w-4 h-4" />
-              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                {b.title}
-              </span>
-            </button>
-          );
-        })}
+          <button
+            onClick={() => setSelectedRadius('10')}
+            className={`px-3 py-1.5 rounded-xl text-center text-xs font-bold transition flex flex-col items-center justify-center min-w-[50px] ${
+              selectedRadius === '10' ? 'bg-emerald-600 text-white' : 'hover:bg-white/10 text-slate-300'
+            }`}
+          >
+            <span className="text-sm font-black">10</span>
+            <span className="text-[10px] text-slate-300">กม.</span>
+          </button>
 
-        {(activeLayer === 'all' || activeLayer === 'market') && marketItems.slice(0, 3).map((m, idx) => {
-          const offsets = [
-            { top: '48%', left: '20%' },
-            { top: '80%', left: '48%' },
-            { top: '58%', left: '80%' }
-          ];
-          const pos = offsets[idx % offsets.length];
+          <button
+            onClick={() => setSelectedRadius('district')}
+            className={`px-2.5 py-1.5 rounded-xl text-center text-[10px] font-bold transition flex flex-col items-center justify-center min-w-[55px] ${
+              selectedRadius === 'district' ? 'bg-emerald-600 text-white' : 'hover:bg-white/10 text-slate-300'
+            }`}
+          >
+            <span>ทั้ง</span>
+            <span>อำเภอ/เขต</span>
+          </button>
 
-          return (
-            <button
-              key={m.id}
-              style={{ top: pos.top, left: pos.left }}
-              onClick={() => setSelectedPin({ id: m.id, title: m.title, type: 'market', desc: `ราคา ฿${m.price} โดย ${m.seller}` })}
-              className="absolute z-20 group transform -translate-x-1/2 -translate-y-1/2 p-2 rounded-full bg-emerald-600 text-white shadow-lg hover:scale-125 transition-transform"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                {m.title}
-              </span>
-            </button>
-          );
-        })}
-
-        {/* Selected Pin Details Overlay Card */}
-        {selectedPin && (
-          <div className="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-30 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-slate-200 space-y-2 animate-fadeIn text-slate-900">
-            <div className="flex items-start justify-between gap-2">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                selectedPin.type === 'alert'
-                  ? 'bg-rose-100 text-rose-700'
-                  : selectedPin.type === 'broadcast'
-                  ? 'bg-amber-100 text-amber-700'
-                  : 'bg-emerald-100 text-emerald-700'
-              }`}>
-                {selectedPin.type === 'alert' && 'เหตุเตือนภัย'}
-                {selectedPin.type === 'broadcast' && 'บรอดแคสต์'}
-                {selectedPin.type === 'market' && 'ตลาดนัด'}
-              </span>
-
-              <button
-                onClick={() => setSelectedPin(null)}
-                className="text-xs text-slate-400 hover:text-slate-700 p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <h4 className="font-bold text-sm leading-tight">{selectedPin.title}</h4>
-            <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{selectedPin.desc}</p>
-          </div>
-        )}
+          <button
+            onClick={() => setSelectedRadius('province')}
+            className={`px-2.5 py-1.5 rounded-xl text-center text-[10px] font-bold transition flex flex-col items-center justify-center min-w-[55px] ${
+              selectedRadius === 'province' ? 'bg-emerald-600 text-white' : 'hover:bg-white/10 text-slate-300'
+            }`}
+          >
+            <span>ทั้ง</span>
+            <span>จังหวัด</span>
+          </button>
+        </div>
       </div>
     </div>
   );

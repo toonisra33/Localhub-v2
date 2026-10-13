@@ -336,7 +336,7 @@ const INITIAL_NOTIFICATIONS: InAppNotification[] = [
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('feed');
+  const [activeTab, setActiveTab] = useState<Tab>('home');
 
   const [location, setLocation] = useState<Location>(() => {
     try {
