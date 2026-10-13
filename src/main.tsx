@@ -2,32 +2,51 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { registerSW } from 'virtual:pwa-register';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
-// Register Service Worker with automatic update listener
-export const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    console.log('[PWA] New version detected on server!');
-    // Dispatch event to show in-app update banner
-    window.dispatchEvent(new CustomEvent('localhub_update_available'));
-  },
-  onOfflineReady() {
-    console.log('[PWA] LocalHub is ready to work offline and receive background alerts.');
-  },
-});
+// Safely register Service Worker asynchronously without blocking React render (only when not in iframe)
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.self === window.top) {
+  try {
+    // Listen for service worker reload signal
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'CACHE_PURGED_RELOAD') {
+        window.location.reload();
+      }
+    });
 
-// Listen for service worker reload signal
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'CACHE_PURGED_RELOAD') {
-      window.location.reload();
-    }
-  });
+    // Only register PWA service worker if supported
+    import('virtual:pwa-register')
+      .then(({ registerSW }) => {
+        try {
+          registerSW({
+            immediate: false,
+            onNeedRefresh() {
+              console.log('[PWA] New version detected on server!');
+              window.dispatchEvent(new CustomEvent('localhub_update_available'));
+            },
+            onOfflineReady() {
+              console.log('[PWA] LocalHub is ready to work offline.');
+            },
+          });
+        } catch (swErr) {
+          console.warn('[PWA] registerSW skipped:', swErr);
+        }
+      })
+      .catch((importErr) => {
+        console.warn('[PWA] virtual:pwa-register import skipped:', importErr);
+      });
+  } catch (err) {
+    console.warn('[PWA] Service worker setup skipped:', err);
+  }
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+}

@@ -21,19 +21,26 @@
     <script>
       // Automated Cache Invalidation & Instant Live Update
       (function() {
-        var APP_VERSION = '1.5.0-20261013-live';
-        var stored = localStorage.getItem('localhub_cache_key');
-        if (stored !== APP_VERSION) {
-          localStorage.setItem('localhub_cache_key', APP_VERSION);
-          if ('caches' in window) {
-            caches.keys().then(function(keys) {
-              return Promise.all(keys.map(function(k) {
-                if (!k.includes('google-fonts') && !k.includes('gstatic')) {
-                  return caches.delete(k);
-                }
-              }));
-            }).catch(function() {});
+        try {
+          if (typeof window !== 'undefined' && window.self !== window.top) return;
+          var APP_VERSION = '1.5.0-20261013-live';
+          if (typeof window !== 'undefined' && 'localStorage' in window) {
+            var stored = localStorage.getItem('localhub_cache_key');
+            if (stored !== APP_VERSION) {
+              localStorage.setItem('localhub_cache_key', APP_VERSION);
+              if ('caches' in window) {
+                caches.keys().then(function(keys) {
+                  return Promise.all(keys.map(function(k) {
+                    if (!k.includes('google-fonts') && !k.includes('gstatic')) {
+                      return caches.delete(k);
+                    }
+                  }));
+                }).catch(function() {});
+              }
+            }
           }
+        } catch (e) {
+          console.warn('[Cache Invalidation] Storage access restricted:', e);
         }
       })();
     </script>
