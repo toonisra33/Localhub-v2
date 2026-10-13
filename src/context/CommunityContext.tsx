@@ -420,32 +420,106 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (!snapshot.empty) {
           const cloudPosts: Post[] = [];
           snapshot.forEach((d) => {
-            const raw = (d.data() || {}) as Partial<Post>;
+            const raw = (d.data() || {}) as any;
+
+            // Safe author name (MUST ALWAYS BE A STRING)
+            let authorName = 'สมาชิกชุมชน';
+            if (typeof raw.author === 'string' && raw.author.trim()) {
+              authorName = raw.author;
+            } else if (raw.author && typeof raw.author === 'object' && typeof raw.author.name === 'string' && raw.author.name.trim()) {
+              authorName = raw.author.name;
+            } else if (typeof raw.authorName === 'string' && raw.authorName.trim()) {
+              authorName = raw.authorName;
+            }
+
+            // Safe author avatar (MUST BE STRING URL)
+            let authorAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+            if (typeof raw.authorAvatar === 'string' && raw.authorAvatar.trim()) {
+              authorAvatar = raw.authorAvatar;
+            } else if (raw.author && typeof raw.author === 'object' && typeof raw.author.avatar === 'string' && raw.author.avatar.trim()) {
+              authorAvatar = raw.author.avatar;
+            }
+
+            // Safe isVerified
+            const isVerified = Boolean(
+              raw.isVerified ||
+              (raw.author && typeof raw.author === 'object' && raw.author.isVerified)
+            );
+
+            // Safe timestamp (Convert Firestore Timestamp object or number to ms)
+            let createdAtMs = Date.now();
+            if (typeof raw.createdAt === 'number') {
+              createdAtMs = raw.createdAt;
+            } else if (raw.createdAt && typeof raw.createdAt === 'object') {
+              if (typeof raw.createdAt.toMillis === 'function') {
+                createdAtMs = raw.createdAt.toMillis();
+              } else if (typeof raw.createdAt.seconds === 'number') {
+                createdAtMs = raw.createdAt.seconds * 1000;
+              }
+            }
+
+            // Safe content & title
+            const content = typeof raw.content === 'string' ? raw.content : '';
+            let title = typeof raw.title === 'string' && raw.title.trim() ? raw.title : '';
+            if (!title) {
+              if (content) {
+                title = content.length > 50 ? content.slice(0, 50) + '...' : content;
+              } else {
+                title = 'เรื่องราวจากชุมชน';
+              }
+            }
+
+            // Safe category
+            let category: Post['category'] = 'general';
+            const rawCat = String(raw.category || '').toLowerCase();
+            if (rawCat.includes('ข่าว') || rawCat === 'news') category = 'news';
+            else if (rawCat.includes('ช่วย') || rawCat.includes('หาย') || rawCat === 'help') category = 'help';
+            else if (rawCat.includes('ตลาด') || rawCat.includes('ขาย') || rawCat === 'market') category = 'market';
+            else if (rawCat.includes('เตือน') || rawCat === 'alert') category = 'alert';
+            else if (rawCat.includes('กิจกรรม') || rawCat === 'activity') category = 'activity';
+            else category = 'general';
+
+            // Safe comments
+            const commentsCount = typeof raw.comments === 'number'
+              ? raw.comments
+              : Array.isArray(raw.comments)
+              ? raw.comments.length
+              : 0;
+            const commentsList = Array.isArray(raw.comments) ? raw.comments : [];
+
+            // Safe likes
+            const likesCount = typeof raw.likes === 'number'
+              ? raw.likes
+              : Array.isArray(raw.likedBy)
+              ? raw.likedBy.length
+              : 0;
+
             cloudPosts.push({
               id: d.id || raw.id || `post_${Date.now()}`,
-              title: raw.title || 'ไม่มีหัวข้อ',
-              content: raw.content || '',
-              author: raw.author || 'สมาชิกชุมชน',
-              authorRole: raw.authorRole || 'ผู้ใช้ทั่วไป',
-              authorAvatar: raw.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-              isVerified: Boolean(raw.isVerified),
-              category: raw.category || 'general',
+              title,
+              content,
+              author: authorName,
+              authorRole: typeof raw.authorRole === 'string' ? raw.authorRole : 'ผู้ใช้ทั่วไป',
+              authorAvatar,
+              isVerified,
+              category,
               location: {
-                province: raw.location?.province || DEFAULT_LOCATION.province,
-                district: raw.location?.district || DEFAULT_LOCATION.district,
-                subdistrict: raw.location?.subdistrict || DEFAULT_LOCATION.subdistrict,
-                address: raw.location?.address || ''
+                province: raw.location?.province || raw.province || DEFAULT_LOCATION.province,
+                district: raw.location?.district || raw.district || DEFAULT_LOCATION.district,
+                subdistrict: raw.location?.subdistrict || raw.subdistrict || DEFAULT_LOCATION.subdistrict,
+                address: raw.location?.village || raw.location?.address || ''
               },
-              createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
-              likes: typeof raw.likes === 'number' ? raw.likes : 0,
-              isLiked: Boolean(raw.isLiked),
-              comments: Array.isArray(raw.comments) ? raw.comments : [],
+              createdAt: createdAtMs,
+              likes: likesCount,
+              isLiked: Boolean(raw.isLiked || (Array.isArray(raw.likedBy) && currentUser && raw.likedBy.includes(currentUser.uid))),
+              comments: commentsList,
+              commentsCount,
               shares: typeof raw.shares === 'number' ? raw.shares : 0,
               images: Array.isArray(raw.images) ? raw.images : [],
-              videoUrl: raw.videoUrl || undefined,
-              videoThumbnail: raw.videoThumbnail || undefined,
-              videoDuration: raw.videoDuration,
-              mediaFileName: raw.mediaFileName,
+              videoUrl: typeof raw.videoUrl === 'string' ? raw.videoUrl : undefined,
+              videoThumbnail: typeof raw.videoThumbnail === 'string' ? raw.videoThumbnail : undefined,
+              videoDuration: typeof raw.videoDuration === 'number' ? raw.videoDuration : undefined,
+              mediaFileName: typeof raw.mediaFileName === 'string' ? raw.mediaFileName : undefined,
               tags: Array.isArray(raw.tags) ? raw.tags.filter(Boolean).map(String) : [],
               pinned: Boolean(raw.pinned)
             });
@@ -476,20 +550,31 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (!snapshot.empty) {
           const cloudItems: MarketItem[] = [];
           snapshot.forEach((d) => {
-            const raw = (d.data() || {}) as Partial<MarketItem>;
+            const raw = (d.data() || {}) as any;
+            let createdAtMs = Date.now();
+            if (typeof raw.createdAt === 'number') {
+              createdAtMs = raw.createdAt;
+            } else if (raw.createdAt && typeof raw.createdAt === 'object') {
+              if (typeof raw.createdAt.toMillis === 'function') {
+                createdAtMs = raw.createdAt.toMillis();
+              } else if (typeof raw.createdAt.seconds === 'number') {
+                createdAtMs = raw.createdAt.seconds * 1000;
+              }
+            }
+
             cloudItems.push({
               id: d.id || raw.id || `market_${Date.now()}`,
-              title: raw.title || 'ไม่มีชื่อสินค้า',
-              description: raw.description || '',
+              title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'ไม่มีชื่อสินค้า',
+              description: typeof raw.description === 'string' ? raw.description : '',
               price: typeof raw.price === 'number' ? raw.price : 0,
               category: (raw.category && ['food', 'produce', 'craft', 'secondhand', 'service'].includes(raw.category) ? raw.category : 'produce') as MarketItem['category'],
-              seller: raw.seller || 'ร้านค้าชุมชน',
-              sellerContact: raw.sellerContact || '',
-              sellerAvatar: raw.sellerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-              province: raw.province || DEFAULT_LOCATION.province,
-              district: raw.district || DEFAULT_LOCATION.district,
+              seller: typeof raw.seller === 'string' ? raw.seller : 'ร้านค้าชุมชน',
+              sellerContact: typeof raw.sellerContact === 'string' ? raw.sellerContact : '',
+              sellerAvatar: typeof raw.sellerAvatar === 'string' ? raw.sellerAvatar : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+              province: raw.location?.province || raw.province || DEFAULT_LOCATION.province,
+              district: raw.location?.district || raw.district || DEFAULT_LOCATION.district,
               images: Array.isArray(raw.images) && raw.images.length > 0 ? raw.images : ['https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'],
-              createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+              createdAt: createdAtMs,
               isAvailable: raw.isAvailable !== false,
               likes: typeof raw.likes === 'number' ? raw.likes : 0,
               isLiked: Boolean(raw.isLiked)
@@ -519,19 +604,30 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (!snapshot.empty) {
           const cloudAlerts: AlertReport[] = [];
           snapshot.forEach((d) => {
-            const raw = (d.data() || {}) as Partial<AlertReport>;
+            const raw = (d.data() || {}) as any;
+            let createdAtMs = Date.now();
+            if (typeof raw.createdAt === 'number') {
+              createdAtMs = raw.createdAt;
+            } else if (raw.createdAt && typeof raw.createdAt === 'object') {
+              if (typeof raw.createdAt.toMillis === 'function') {
+                createdAtMs = raw.createdAt.toMillis();
+              } else if (typeof raw.createdAt.seconds === 'number') {
+                createdAtMs = raw.createdAt.seconds * 1000;
+              }
+            }
+
             cloudAlerts.push({
               id: d.id || raw.id || `alert_${Date.now()}`,
-              title: raw.title || 'รายงานเหตุ',
-              description: raw.description || '',
+              title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : (typeof raw.description === 'string' && raw.description.trim() ? raw.description.slice(0, 30) : 'รายงานเหตุเตือนภัย'),
+              description: typeof raw.description === 'string' ? raw.description : '',
               type: (raw.type && ['accident', 'flood', 'fire', 'power_cut', 'road_closed', 'weather'].includes(raw.type) ? raw.type : 'weather') as AlertReport['type'],
               severity: raw.severity || 'medium',
-              province: raw.province || DEFAULT_LOCATION.province,
-              district: raw.district || DEFAULT_LOCATION.district,
-              subdistrict: raw.subdistrict || DEFAULT_LOCATION.subdistrict,
-              reporter: raw.reporter || 'ประชาชนในพื้นที่',
-              createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
-              verifiedCount: typeof raw.verifiedCount === 'number' ? raw.verifiedCount : 1,
+              province: raw.location?.province || raw.province || DEFAULT_LOCATION.province,
+              district: raw.location?.district || raw.district || DEFAULT_LOCATION.district,
+              subdistrict: raw.location?.subdistrict || raw.subdistrict || DEFAULT_LOCATION.subdistrict,
+              reporter: (typeof raw.reporter === 'string' ? raw.reporter : '') || (typeof raw.reportedBy === 'string' ? raw.reportedBy : '') || 'ประชาชนในพื้นที่',
+              createdAt: createdAtMs,
+              verifiedCount: typeof raw.verifiedCount === 'number' ? raw.verifiedCount : (typeof raw.confirmations === 'number' ? raw.confirmations : 1),
               status: raw.status || 'active'
             });
           });

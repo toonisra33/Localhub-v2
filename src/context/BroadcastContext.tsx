@@ -314,7 +314,40 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (!snapshot.empty) {
           const cloudList: AdminBroadcast[] = [];
           snapshot.forEach((d) => {
-            cloudList.push(d.data() as AdminBroadcast);
+            const raw = (d.data() || {}) as any;
+            if (!raw || (!raw.title && !raw.message)) return; // skip empty or non-broadcast docs
+            let broadcastAtMs = Date.now();
+            if (typeof raw.broadcastAt === 'number') {
+              broadcastAtMs = raw.broadcastAt;
+            } else if (raw.updatedAt && typeof raw.updatedAt === 'object' && typeof raw.updatedAt.seconds === 'number') {
+              broadcastAtMs = raw.updatedAt.seconds * 1000;
+            }
+
+            cloudList.push({
+              id: d.id || raw.id || `bc_${Date.now()}`,
+              title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'ประกาศจากชุมชน',
+              message: typeof raw.message === 'string' ? raw.message : '',
+              category: raw.category || 'news',
+              severity: raw.severity || 'normal',
+              targetScope: raw.targetScope || 'all',
+              targetArea: typeof raw.targetArea === 'string' ? raw.targetArea : undefined,
+              targetProvince: typeof raw.targetProvince === 'string' ? raw.targetProvince : undefined,
+              targetDistrict: typeof raw.targetDistrict === 'string' ? raw.targetDistrict : undefined,
+              mediaType: raw.mediaType,
+              mediaUrl: typeof raw.mediaUrl === 'string' ? raw.mediaUrl : undefined,
+              mediaFileName: typeof raw.mediaFileName === 'string' ? raw.mediaFileName : undefined,
+              videoDurationSec: typeof raw.videoDurationSec === 'number' ? raw.videoDurationSec : undefined,
+              broadcastAt: broadcastAtMs,
+              broadcastDateStr: typeof raw.broadcastDateStr === 'string' ? raw.broadcastDateStr : 'เมื่อสักครู่',
+              adminName: typeof raw.adminName === 'string' ? raw.adminName : 'ผู้ดูแลระบบ',
+              adminRole: typeof raw.adminRole === 'string' ? raw.adminRole : 'ผู้ดูแลระบบ',
+              isPinned: Boolean(raw.pinned ?? raw.isPinned),
+              isArchived: Boolean(raw.isArchived),
+              actionUrl: typeof raw.actionUrl === 'string' ? raw.actionUrl : undefined,
+              actionText: typeof raw.actionText === 'string' ? raw.actionText : undefined,
+              viewsCount: typeof raw.viewsCount === 'number' ? raw.viewsCount : 0,
+              likesCount: typeof raw.likesCount === 'number' ? raw.likesCount : 0
+            });
           });
           cloudList.sort((a, b) => b.broadcastAt - a.broadcastAt);
           setBroadcasts(cloudList);

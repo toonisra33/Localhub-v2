@@ -54,8 +54,15 @@ export class ErrorBoundary extends Component<Props, State> {
             ระบบตรวจพบข้อผิดพลาดที่ไม่คาดคิด สามารถกดปุ่มด้านล่างเพื่อล้างข้อมูลชั่วคราวและเปิดหน้าจอใหม่อีกครั้ง
           </p>
           {this.state.error && (
-            <div className="max-w-md w-full bg-slate-800 p-3 rounded-xl border border-slate-700 text-left text-xs font-mono text-red-300 mb-6 overflow-auto max-h-32 select-all">
-              {this.state.error.message || String(this.state.error)}
+            <div className="max-w-md w-full bg-slate-800 p-3 rounded-xl border border-slate-700 text-left text-xs font-mono text-red-300 mb-6 overflow-auto max-h-32 select-all break-words">
+              {this.state.error.message && this.state.error.message.includes('Minified React error #31') ? (
+                <div>
+                  <div className="font-bold text-amber-300 mb-1">React Error #31: ตรวจพบ Object ในช่องแสดงผลข้อความ</div>
+                  <div>{decodeURIComponent(this.state.error.message)}</div>
+                </div>
+              ) : (
+                this.state.error.message || String(this.state.error)
+              )}
             </div>
           )}
           <div className="flex items-center gap-3">

@@ -394,21 +394,21 @@ export const FeedView: React.FC<FeedViewProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <img
-                    src={post.authorAvatar}
-                    alt={post.author}
+                    src={post.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                    alt={typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'ผู้ใช้'}
                     className="w-9 h-9 rounded-full object-cover border border-slate-200"
                   />
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-blue-600 transition">
-                        {post.author}
+                        {typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'สมาชิกชุมชน'}
                       </span>
                       {post.isVerified && (
                         <CheckCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white" />
                       )}
                       {post.authorRole && (
                         <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-medium">
-                          {post.authorRole}
+                          {typeof post.authorRole === 'string' ? post.authorRole : 'ผู้ใช้'}
                         </span>
                       )}
                     </div>
@@ -509,7 +509,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
                   <span className="flex items-center gap-1.5 font-semibold hover:text-blue-600">
                     <MessageSquare className="w-4 h-4 text-blue-500" />
-                    <span>{post.comments?.length || 0}</span>
+                    <span>{post.commentsCount ?? (Array.isArray(post.comments) ? post.comments.length : 0)}</span>
                   </span>
                 </div>
 

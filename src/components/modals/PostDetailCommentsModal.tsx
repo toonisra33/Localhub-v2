@@ -55,13 +55,15 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
         <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-3">
             <img
-              src={post.authorAvatar}
-              alt={post.author}
+              src={post.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+              alt={typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'ผู้ใช้'}
               className="w-10 h-10 rounded-full object-cover border border-slate-200"
             />
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm text-slate-900">{post.author}</span>
+                <span className="font-bold text-sm text-slate-900">
+                  {typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'สมาชิกชุมชน'}
+                </span>
                 {post.isVerified && <CheckCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white" />}
               </div>
               <p className="text-xs text-slate-500 flex items-center gap-1">
@@ -156,7 +158,7 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
 
               <span className="flex items-center gap-1.5 font-semibold">
                 <MessageSquare className="w-4 h-4 text-blue-500" />
-                {post.comments?.length || 0} ความคิดเห็น
+                {post.commentsCount ?? (post.comments?.length || 0)} ความคิดเห็น
               </span>
             </div>
 
@@ -172,7 +174,7 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
           {/* Comments Section */}
           <div className="space-y-3 pt-1">
             <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
-              ความคิดเห็น ({post.comments?.length || 0})
+              ความคิดเห็น ({post.commentsCount ?? (post.comments?.length || 0)})
             </h3>
 
             {(!post.comments || post.comments.length === 0) ? (

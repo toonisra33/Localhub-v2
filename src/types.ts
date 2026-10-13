@@ -62,6 +62,7 @@ export interface Post {
   likes: number;
   isLiked?: boolean;
   comments: PostComment[];
+  commentsCount?: number;
   shares: number;
   images?: string[];
   videoUrl?: string;

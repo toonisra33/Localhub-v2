@@ -150,7 +150,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert, onOpe
               </p>
 
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 pl-11">
-                <span>รายงานโดย: <strong className="text-slate-600">{alert.reporter}</strong></span>
+                <span>รายงานโดย: <strong className="text-slate-600">{typeof alert.reporter === 'string' ? alert.reporter : 'ประชาชนในพื้นที่'}</strong></span>
                 <span className="flex items-center gap-1 text-emerald-600 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   ยืนยันแล้ว {alert.verifiedCount} คน
