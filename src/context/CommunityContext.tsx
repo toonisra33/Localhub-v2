@@ -117,6 +117,8 @@ interface CommunityContextType {
   setIsAdmin: (val: boolean) => void;
 }
 
+export const ORIGINAL_ADMIN_EMAIL = 'toonisra33@gmail.com';
+
 const DEFAULT_LOCATION: Location = {
   province: 'กรุงเทพมหานคร',
   district: 'วัฒนา',
@@ -396,10 +398,9 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isContactAdminModalOpen, setIsContactAdminModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     try {
-      const stored = localStorage.getItem('localhub_is_admin');
-      if (stored !== null) return JSON.parse(stored);
+      localStorage.removeItem('localhub_is_admin');
     } catch {}
-    return true; // Default true so user can easily find and test admin signal features
+    return false; // Default false: Only original admin email (toonisra33@gmail.com) gets admin privileges
   });
 
   // Firebase state
@@ -646,58 +647,23 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => unsub();
   }, []);
 
-  // Persist safely without quota exceptions
-  useEffect(() => {
-    try {
-      localStorage.setItem('localhub_is_admin', JSON.stringify(isAdmin));
-    } catch {}
-  }, [isAdmin]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('localhub_location', JSON.stringify(location));
-    } catch {}
-  }, [location]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('localhub_posts', JSON.stringify(posts));
-    } catch {}
-  }, [posts]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('localhub_market', JSON.stringify(marketItems));
-    } catch {}
-  }, [marketItems]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('localhub_alerts', JSON.stringify(alerts));
-    } catch {}
-  }, [alerts]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('localhub_notifs', JSON.stringify(notifications));
-    } catch {}
-  }, [notifications]);
-
   // Auth Listener
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
-      if (user) {
+      if (user && !user.isAnonymous) {
         setCurrentUser({
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
           photoURL: user.photoURL,
         });
-        if (user.email === 'toonisra33@gmail.com') {
-          setIsAdmin(true);
-        }
+        const isOriginalAdmin = Boolean(
+          user.email && user.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
+        );
+        setIsAdmin(isOriginalAdmin);
       } else {
         setCurrentUser(null);
+        setIsAdmin(false);
         // Automatically sign in anonymously so user has a valid UID for Firestore
         signInAnonymously(auth).catch((e) => {
           console.warn('Anonymous auth note:', e);
@@ -710,9 +676,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const loginWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      showToast(`เข้าสู่ระบบด้วย Google สำเร็จ: ${result.user.displayName || result.user.email}`, 'success');
-      if (result.user.email === 'toonisra33@gmail.com') {
-        setIsAdmin(true);
+      const userEmail = result.user.email?.toLowerCase().trim();
+      const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
+      setIsAdmin(isOriginalAdmin);
+      if (isOriginalAdmin) {
+        showToast(`ยินดีต้อนรับผู้ดูแลระบบส่วนกลาง: ${result.user.email}`, 'success');
+      } else {
+        showToast(`เข้าสู่ระบบสำเร็จ: ${result.user.displayName || result.user.email}`, 'success');
       }
     } catch (err) {
       console.warn('Google sign-in error:', err);
@@ -723,11 +693,25 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const logoutFirebase = async () => {
     try {
       await signOut(auth);
+      setIsAdmin(false);
       showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
     } catch (err) {
       console.warn('Logout error:', err);
     }
   };
+
+  const safeSetIsAdmin = useCallback((val: boolean) => {
+    if (val) {
+      if (currentUser?.email && currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()) {
+        setIsAdmin(true);
+      } else {
+        console.warn('Access denied: Only original admin (toonisra33@gmail.com) can hold admin privileges.');
+        setIsAdmin(false);
+      }
+    } else {
+      setIsAdmin(false);
+    }
+  }, [currentUser]);
 
   // Toast helper
   const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'info', link?: string) => {
@@ -1072,7 +1056,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         openContactAdminModal: () => setIsContactAdminModalOpen(true),
         closeContactAdminModal: () => setIsContactAdminModalOpen(false),
         isAdmin,
-        setIsAdmin,
+        setIsAdmin: safeSetIsAdmin,
         currentUser,
         isFirebaseConnected,
         loginWithGoogle,

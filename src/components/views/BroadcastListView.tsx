@@ -38,7 +38,7 @@ export const BroadcastListView: React.FC = () => {
     testAllDevicesSignal,
     dismissTestSignal
   } = useBroadcast();
-  const { isAdmin, setIsAdmin, location, showToast } = useCommunity();
+  const { isAdmin, location, showToast } = useCommunity();
   const [severityFilter, setSeverityFilter] = useState<string>('all');
 
   const filtered = broadcasts.filter(b => {
@@ -167,26 +167,7 @@ export const BroadcastListView: React.FC = () => {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-white shadow-xs flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-slate-300">
-            <span className="p-1 bg-slate-800 rounded-lg text-slate-400">
-              <Shield className="w-4 h-4" />
-            </span>
-            <span>ต้องการทดสอบสัญญาณเตือนภัยเฉพาะเครื่องหรือทุกอุปกรณ์?</span>
-          </div>
-          <button
-            onClick={() => {
-              setIsAdmin(true);
-              showToast('เปิดโหมด Admin แล้ว! แสดงปุ่มทดสอบสัญญาณเตือนภัย', 'success');
-            }}
-            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>เปิดโหมด Admin</span>
-          </button>
-        </div>
-      )}
+      ) : null}
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">

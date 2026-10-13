@@ -4,15 +4,10 @@ import {
   Bell,
   Radio,
   Plus,
-  Shield,
   ChevronDown,
-  Activity,
-  Camera,
-  Play,
-  Volume2
+  Camera
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
-import { useBroadcast } from '../context/BroadcastContext';
 import { saveMediaFile } from '../utils/mediaStorage';
 
 interface NavbarProps {
@@ -28,13 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCreatePostWithMode,
   onOpenInstantCamera
 }) => {
-  const { location, openLocationModal, unreadNotifCount, isAdmin, showToast } = useCommunity();
-  const {
-    testLocalDeviceSignal,
-    testAllDevicesSignal,
-    setOpenSignalTestModal,
-    setOpenAdminModal
-  } = useBroadcast();
+  const { location, openLocationModal, unreadNotifCount, showToast } = useCommunity();
 
   const navCameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -103,35 +92,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           <ChevronDown className="w-3 h-3 text-slate-400" />
         </button>
 
-        {/* Right action icons & test buttons */}
+        {/* Right action icons */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Quick Admin Test Buttons right in Header */}
-          {isAdmin && (
-            <div className="hidden xl:flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200">
-              <button
-                onClick={() => {
-                  testLocalDeviceSignal('siren', 5);
-                  showToast('▶️ ทดสอบเสียงและระบบสั่นเฉพาะเครื่องนี้ (Admin Only)', 'info');
-                }}
-                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 transition"
-                title="ทดสอบเสียงและสั่นเฉพาะเครื่องแอดมินนี้"
-              >
-                <Play className="w-3 h-3" />
-                <span>ทดสอบเครื่องนี้</span>
-              </button>
-              <button
-                onClick={() => {
-                  testAllDevicesSignal();
-                  showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
-                }}
-                className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 transition"
-                title="ส่งสัญญาณเสียงและสั่นไปยังทุกอุปกรณ์"
-              >
-                <Radio className="w-3 h-3 animate-pulse" />
-                <span>ทดสอบทุกอุปกรณ์</span>
-              </button>
-            </div>
-          )}
 
           {/* Quick Camera Snap Button */}
           <button

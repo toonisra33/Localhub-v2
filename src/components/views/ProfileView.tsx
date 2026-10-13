@@ -31,7 +31,6 @@ export const ProfileView: React.FC = () => {
     location,
     openLocationModal,
     isAdmin,
-    setIsAdmin,
     openContactAdminModal,
     showToast,
     currentUser,
@@ -72,7 +71,7 @@ export const ProfileView: React.FC = () => {
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
               isAdmin ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'
             }`}>
-              {isAdmin ? '🛡️ ผู้ดูแลระบบ (Admin)' : '👤 สมาชิกชุมชน'}
+              {isAdmin ? '🛡️ ผู้ดูแลระบบหลัก (Admin)' : '👤 สมาชิกชุมชนทั่วไป'}
             </span>
           </div>
 
@@ -298,67 +297,76 @@ export const ProfileView: React.FC = () => {
           แอปพลิเคชันกำลังทำงานในโหมด Native เมื่อมีบรอดแคสต์หรือสัญญาณฉุกเฉิน ระบบจะส่งการแจ้งเตือน สั่นสะเทือน และเล่นเสียงไซเรนเตือนภัยขึ้นบนหน้าจอมือถือของคุณทันทีแม้ไม่ได้เปิดแอป
         </p>
 
-        {/* Direct Test Buttons inside Profile */}
-        <div className="pt-1 flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => {
-              testLocalDeviceSignal('siren', 5);
-              showToast('▶️ ทดสอบเสียงและระบบสั่นเฉพาะเครื่องนี้ (ไม่ส่งออกไปยังอุปกรณ์อื่น)', 'info');
-            }}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            ทดสอบเฉพาะเครื่องนี้ (Admin Only)
-          </button>
+        {/* Direct Test Buttons inside Profile (Admin Only) */}
+        {isAdmin && (
+          <div className="pt-1 flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                testLocalDeviceSignal('siren', 5);
+                showToast('▶️ ทดสอบเสียงและระบบสั่นเฉพาะเครื่องนี้ (ไม่ส่งออกไปยังอุปกรณ์อื่น)', 'info');
+              }}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              ทดสอบเฉพาะเครื่องนี้ (Admin Only)
+            </button>
 
-          <button
-            onClick={() => {
-              testAllDevicesSignal();
-              showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
-            }}
-            className="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
-          >
-            <Radio className="w-3.5 h-3.5 animate-pulse" />
-            ทดสอบทุกอุปกรณ์ (All Devices)
-          </button>
+            <button
+              onClick={() => {
+                testAllDevicesSignal();
+                showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
+              }}
+              className="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+            >
+              <Radio className="w-3.5 h-3.5 animate-pulse" />
+              ทดสอบทุกอุปกรณ์ (All Devices)
+            </button>
 
-          <button
-            onClick={() => setOpenSignalTestModal(true)}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            เปิดคอนโซลตั้งค่า
-          </button>
-        </div>
+            <button
+              onClick={() => setOpenSignalTestModal(true)}
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              เปิดคอนโซลตั้งค่า
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Settings list */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs divide-y divide-slate-100 overflow-hidden">
-        {/* Admin Switch */}
-        <div className="p-4 sm:p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl">
-              <Shield className="w-5 h-5" />
+        {/* Admin Status Card for toonisra33@gmail.com */}
+        {isAdmin ? (
+          <div className="p-4 sm:p-5 flex items-center justify-between bg-emerald-50/60">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-2xl">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-emerald-950">สิทธิ์ผู้ดูแลระบบหลัก (Super Admin)</h4>
+                <p className="text-xs text-emerald-700 font-mono">ยืนยันสิทธิ์สำหรับ: toonisra33@gmail.com</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-sm text-slate-800">สิทธิ์ผู้ดูแลระบบ (Admin Mode)</h4>
-              <p className="text-xs text-slate-500">เปิดเพื่อทดสอบระบบบรอดแคสต์ ส่งสัญญาณเตือนภัย และส่งซ้ำ</p>
-            </div>
+            <span className="px-3 py-1 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-xs">
+              ยืนยันสิทธิ์แล้ว
+            </span>
           </div>
-
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isAdmin}
-              onChange={(e) => {
-                setIsAdmin(e.target.checked);
-                showToast(e.target.checked ? 'เปิดใช้งานโหมดผู้ดูแลระบบ' : 'ปิดโหมดผู้ดูแลระบบ', 'info');
-              }}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
+        ) : (
+          <div className="p-4 sm:p-5 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-slate-100 text-slate-600 rounded-2xl">
+                <User className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-800">สถานะสมาชิก (Member Role)</h4>
+                <p className="text-xs text-slate-500">สมาชิกชุมชนทั่วไป (เฉพาะ toonisra33@gmail.com เท่านั้นที่มีสิทธิ์ Admin)</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">
+              สมาชิกทั่วไป
+            </span>
+          </div>
+        )}
 
         {/* Sound alerts toggle */}
         <div className="p-4 sm:p-5 flex items-center justify-between">

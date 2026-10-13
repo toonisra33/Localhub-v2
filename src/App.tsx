@@ -28,10 +28,8 @@ import { ReportAlertModal } from './components/modals/ReportAlertModal';
 import { ContactAdminModal } from './components/modals/ContactAdminModal';
 import { ToastContainer } from './components/modals/ToastContainer';
 import { AllDevicesTestAlertModal } from './components/modals/AllDevicesTestAlertModal';
-import { AdminSignalTestBar } from './components/AdminSignalTestBar';
 import { AdminSignalTestModal } from './components/modals/AdminSignalTestModal';
 import { AppUpdateBanner } from './components/AppUpdateBanner';
-import { NotificationActivationBanner } from './components/NotificationActivationBanner';
 import { InstantCameraModal } from './components/modals/InstantCameraModal';
 
 function AppContent() {
@@ -84,9 +82,6 @@ function AppContent() {
       {/* Floating In-App Update Banner */}
       <AppUpdateBanner />
 
-      {/* Explicit Real-Time Web Notification Permission & Test Banner */}
-      <NotificationActivationBanner />
-
       {/* Toast Notification Container */}
       <ToastContainer />
 
@@ -100,9 +95,6 @@ function AppContent() {
         onOpenCreatePostWithMode={(mode, images) => openCreatePostWith(mode, images || [])}
         onOpenInstantCamera={() => setIsInstantCameraOpen(true)}
       />
-
-      {/* Permanent Admin Signal Test Bar (Directly visible upon opening the app) */}
-      <AdminSignalTestBar />
 
       {/* Main Content Layout */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5 sm:pt-6 flex-1 flex gap-6 items-start">

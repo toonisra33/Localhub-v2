@@ -42,16 +42,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onOpenWeather,
   onOpenInstantCamera
 }) => {
-  const { posts, location, likePost, openPostDetail, showToast, isAdmin, setIsAdmin } = useCommunity();
-  const {
-    testLocalDeviceSignal,
-    testAllDevicesSignal,
-    stopLocalDeviceTest,
-    dismissTestSignal,
-    isTestingLocalAdmin,
-    isTestingAllDevices,
-    setOpenSignalTestModal
-  } = useBroadcast();
+  const { posts, location, likePost, openPostDetail, showToast } = useCommunity();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -172,92 +163,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {/* Live Accurate Weather Widget */}
       <WeatherWidget onOpenFullForecast={onOpenWeather} />
 
-      {/* Admin Signal Test Quick Access Card in Feed */}
-      {isAdmin ? (
-        <div className="p-4 bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 border-2 border-red-500 rounded-2xl text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3 animate-fadeIn">
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 bg-red-600 text-white rounded-xl shadow-md shadow-red-600/50 animate-pulse shrink-0">
-              <Activity className="w-5 h-5" />
-            </span>
-            <div>
-              <div className="text-xs sm:text-sm font-black tracking-tight text-white flex items-center gap-1.5 flex-wrap">
-                <span>⚡ ระบบทดสอบสัญญาณเตือนภัย & ระบบสั่น (Admin Signal Test)</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
-                  สิทธิ์ผู้ดูแลระบบ
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-300">
-                เลือกทดสอบเฉพาะเครื่องนี้ (Admin Only) หรือส่งสัญญาณเตือนภัยพร้อมกันทุกอุปกรณ์
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            {/* Button 1: Test Local Admin Device */}
-            {isTestingLocalAdmin ? (
-              <button
-                onClick={() => {
-                  stopLocalDeviceTest();
-                  showToast('⏹️ หยุดทดสอบเฉพาะเครื่องนี้แล้ว', 'info');
-                }}
-                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm animate-pulse"
-              >
-                <Square className="w-3.5 h-3.5" />
-                <span>หยุดเสียง</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  testLocalDeviceSignal('siren', 5);
-                  showToast('▶️ ทดสอบเสียงและระบบสั่นเฉพาะเครื่องนี้ (ไม่ส่งออกไปยังอุปกรณ์อื่น)', 'info');
-                }}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
-              >
-                <Play className="w-3.5 h-3.5" />
-                <span>ทดสอบเครื่องนี้ (Admin)</span>
-              </button>
-            )}
-
-            {/* Button 2: Test All Devices */}
-            <button
-              onClick={() => {
-                testAllDevicesSignal();
-                showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
-              }}
-              className="px-3.5 py-2 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
-            >
-              <Radio className="w-3.5 h-3.5 animate-pulse" />
-              <span>ทดสอบทุกอุปกรณ์</span>
-            </button>
-
-            {/* Button 3: Console settings */}
-            <button
-              onClick={() => setOpenSignalTestModal(true)}
-              className="p-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl text-xs font-bold transition"
-              title="เปิดคอนโซลตั้งค่าทดสอบ"
-            >
-              <Sliders className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-white shadow-xs flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-slate-300">
-            <Shield className="w-4 h-4 text-slate-400" />
-            <span>ต้องการทดสอบสัญญาณเตือนภัยฉุกเฉินและระบบสั่น?</span>
-          </div>
-          <button
-            onClick={() => {
-              setIsAdmin(true);
-              showToast('เปิดโหมด Admin แล้ว! แสดงปุ่มทดสอบสัญญาณ', 'success');
-            }}
-            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>เปิดโหมด Admin</span>
-          </button>
-        </div>
-      )}
 
       {/* Top Banner / Create Post bar with Direct Camera Shutter */}
       <div className="p-4 bg-white rounded-2xl border-2 border-slate-200/90 shadow-xs space-y-3">

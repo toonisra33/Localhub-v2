@@ -29,34 +29,12 @@ export const AdminSignalTestBar: React.FC = () => {
     setOpenSignalTestModal
   } = useBroadcast();
 
-  const { isAdmin, setIsAdmin, showToast } = useCommunity();
+  const { isAdmin, showToast } = useCommunity();
   const [selectedSound, setSelectedSound] = useState<TestSoundType>('siren');
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
-  // If Admin is OFF, show an unmissable single-click activate banner so the user never misses it
   if (!isAdmin) {
-    return (
-      <div className="w-full bg-slate-900 border-b border-slate-700 text-white shadow-md z-30">
-        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span className="p-1 bg-slate-800 rounded-lg text-slate-400">
-              <Shield className="w-3.5 h-3.5" />
-            </span>
-            <span>สถานะปัจจุบัน: <strong>ผู้ใช้ทั่วไป (Citizen Mode)</strong> หากต้องการทดสอบสัญญาณเตือนภัย</span>
-          </div>
-          <button
-            onClick={() => {
-              setIsAdmin(true);
-              showToast('เปิดโหมดผู้ดูแลระบบ (Admin Mode) แล้ว! พร้อมปุ่มทดสอบสัญญาณเตือนภัย', 'success');
-            }}
-            className="px-3 py-1 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-          >
-            <Activity className="w-3.5 h-3.5 animate-pulse" />
-            <span>เปิดโหมด Admin (เพื่อแสดงปุ่มทดสอบสัญญาณ)</span>
-          </button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
