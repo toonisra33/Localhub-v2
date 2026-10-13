@@ -18,6 +18,26 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
+    <script>
+      // Automated Cache Invalidation & Instant Live Update
+      (function() {
+        var APP_VERSION = '1.5.0-20261013-live';
+        var stored = localStorage.getItem('localhub_cache_key');
+        if (stored !== APP_VERSION) {
+          localStorage.setItem('localhub_cache_key', APP_VERSION);
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) {
+                if (!k.includes('google-fonts') && !k.includes('gstatic')) {
+                  return caches.delete(k);
+                }
+              }));
+            }).catch(function() {});
+          }
+        }
+      })();
+    </script>
+
     <title>LocalHub</title>
     <meta name="description" content="LocalHub ศูนย์รวมข้อมูล ข่าวสาร บรอดแคสเตือนภัย และตลาดนัดชุมชนใกล้ตัวคุณ" />
     <meta property="og:title" content="LocalHub" />
@@ -27,8 +47,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="./assets/index-Cf2xAVYx.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-B8QE4Ydv.css">
+    <script type="module" crossorigin src="./assets/index-B-W71N3y.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-53ZkGOFb.css">
   <link rel="manifest" href="./manifest.webmanifest"></head>
   <body class="bg-slate-100 text-slate-900 antialiased font-['Prompt',sans-serif]">
     <div id="root"></div>
