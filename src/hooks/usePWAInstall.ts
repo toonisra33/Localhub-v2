@@ -19,7 +19,7 @@ export function usePWAInstall() {
     setIsInstalled(isStandalone);
 
     // Detect OS
-    const userAgent = window.navigator.userAgent.toLowerCase();
+    const userAgent = (window.navigator?.userAgent || '').toLowerCase();
     const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
     const isAndroidDevice = /android/.test(userAgent);
     setIsIOS(isIOSDevice);

@@ -29,20 +29,20 @@ export const AdminBroadcastBanner: React.FC = () => {
     if (!activeBroadcast.targetScope || activeBroadcast.targetScope === 'all') return true;
 
     // If specific, check province & district
-    if (activeBroadcast.targetProvince) {
-      const provMatch =
-        location.province.includes(activeBroadcast.targetProvince) ||
-        activeBroadcast.targetProvince.includes(location.province);
+    const userProv = (location?.province || '').trim();
+    const targetProv = (activeBroadcast.targetProvince || '').trim();
+    if (targetProv && userProv) {
+      const provMatch = userProv.includes(targetProv) || targetProv.includes(userProv);
       if (!provMatch) {
         // If user is admin, allow seeing anyway with badge indicator
         return isAdmin;
       }
     }
 
-    if (activeBroadcast.targetDistrict && location.district) {
-      const distMatch =
-        location.district.includes(activeBroadcast.targetDistrict) ||
-        activeBroadcast.targetDistrict.includes(location.district);
+    const userDist = (location?.district || '').trim();
+    const targetDist = (activeBroadcast.targetDistrict || '').trim();
+    if (targetDist && userDist) {
+      const distMatch = userDist.includes(targetDist) || targetDist.includes(userDist);
       if (!distMatch) {
         return isAdmin;
       }

@@ -24,10 +24,18 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('[LocalHub ErrorBoundary caught error]:', error, errorInfo);
   }
 
-  private handleReload = () => {
+  private handleReload = async () => {
     try {
       localStorage.clear();
       sessionStorage.clear();
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
     } catch {
       // ignore
     }
@@ -46,17 +54,19 @@ export class ErrorBoundary extends Component<Props, State> {
             ระบบตรวจพบข้อผิดพลาดที่ไม่คาดคิด สามารถกดปุ่มด้านล่างเพื่อล้างข้อมูลชั่วคราวและเปิดหน้าจอใหม่อีกครั้ง
           </p>
           {this.state.error && (
-            <div className="max-w-md w-full bg-slate-800 p-3 rounded-xl border border-slate-700 text-left text-xs font-mono text-red-300 mb-6 overflow-auto max-h-32">
+            <div className="max-w-md w-full bg-slate-800 p-3 rounded-xl border border-slate-700 text-left text-xs font-mono text-red-300 mb-6 overflow-auto max-h-32 select-all">
               {this.state.error.message || String(this.state.error)}
             </div>
           )}
-          <button
-            onClick={this.handleReload}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-medium rounded-xl flex items-center gap-2 transition shadow-lg shadow-blue-500/20"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>รีโหลดหน้าจอใหม่</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={this.handleReload}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-medium rounded-xl flex items-center gap-2 transition shadow-lg shadow-blue-500/20 cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>ล้างแคช & รีโหลดใหม่</span>
+            </button>
+          </div>
         </div>
       );
     }

@@ -103,11 +103,17 @@ export const FeedView: React.FC<FeedViewProps> = ({
   };
 
   const filteredPosts = posts.filter(post => {
+    if (!post) return false;
     const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
+    const q = (searchQuery || '').trim().toLowerCase();
+    if (!q) return matchesCategory;
+
+    const postTitle = (post.title || '').toLowerCase();
+    const postContent = (post.content || '').toLowerCase();
     const matchesSearch =
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (post.tags && post.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
+      postTitle.includes(q) ||
+      postContent.includes(q) ||
+      (Array.isArray(post.tags) && post.tags.some(t => typeof t === 'string' && t.toLowerCase().includes(q)));
     return matchesCategory && matchesSearch;
   });
 
@@ -410,10 +416,10 @@ export const FeedView: React.FC<FeedViewProps> = ({
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
                       <span className="flex items-center gap-0.5">
                         <MapPin className="w-3 h-3 text-slate-400" />
-                        {post.location.province} {post.location.district ? `(${post.location.district})` : ''}
+                        {post.location?.province || 'พื้นที่ชุมชน'} {post.location?.district ? `(${post.location.district})` : ''}
                       </span>
                       <span>•</span>
-                      <span>{timeAgo(post.createdAt)}</span>
+                      <span>{timeAgo(post.createdAt || Date.now())}</span>
                     </div>
                   </div>
                 </div>
@@ -430,10 +436,10 @@ export const FeedView: React.FC<FeedViewProps> = ({
               {/* Title & Content */}
               <div>
                 <h3 className="font-bold text-sm sm:text-base text-slate-900 leading-snug group-hover:text-blue-700 transition">
-                  {post.title}
+                  {post.title || 'ไม่มีหัวข้อ'}
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-slate-600 line-clamp-3 leading-relaxed">
-                  {post.content}
+                  {post.content || ''}
                 </p>
               </div>
 
@@ -459,7 +465,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
               )}
 
               {/* Images preview */}
-              {post.images && post.images.length > 0 && !post.videoUrl && (
+              {Array.isArray(post.images) && post.images.length > 0 && !post.videoUrl && (
                 <div className="rounded-xl overflow-hidden border border-slate-100 max-h-64 relative">
                   <img
                     src={post.images[0]}
@@ -475,11 +481,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
               )}
 
               {/* Tags */}
-              {post.tags && post.tags.length > 0 && (
+              {Array.isArray(post.tags) && post.tags.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {post.tags.map(tag => (
-                    <span key={tag} className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-medium border border-slate-100">
-                      #{tag}
+                  {post.tags.filter(Boolean).map(tag => (
+                    <span key={String(tag)} className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-medium border border-slate-100">
+                      #{String(tag)}
                     </span>
                   ))}
                 </div>
@@ -498,12 +504,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
                     }`}
                   >
                     <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-rose-600 text-rose-600' : ''}`} />
-                    <span>{post.likes}</span>
+                    <span>{post.likes ?? 0}</span>
                   </button>
 
                   <span className="flex items-center gap-1.5 font-semibold hover:text-blue-600">
                     <MessageSquare className="w-4 h-4 text-blue-500" />
-                    <span>{post.comments.length}</span>
+                    <span>{post.comments?.length || 0}</span>
                   </span>
                 </div>
 

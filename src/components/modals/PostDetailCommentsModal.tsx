@@ -66,9 +66,9 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
               </div>
               <p className="text-xs text-slate-500 flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-slate-400" />
-                {post.location.province} {post.location.district ? `• ${post.location.district}` : ''}
+                {post.location?.province || 'พื้นที่ชุมชน'} {post.location?.district ? `• ${post.location.district}` : ''}
                 <span className="mx-1">•</span>
-                {timeAgo(post.createdAt)}
+                {timeAgo(post.createdAt || Date.now())}
               </p>
             </div>
           </div>
@@ -151,12 +151,12 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
                 }`}
               >
                 <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-rose-600' : ''}`} />
-                {post.likes} ถูกใจ
+                {post.likes ?? 0} ถูกใจ
               </button>
 
               <span className="flex items-center gap-1.5 font-semibold">
                 <MessageSquare className="w-4 h-4 text-blue-500" />
-                {post.comments.length} ความคิดเห็น
+                {post.comments?.length || 0} ความคิดเห็น
               </span>
             </div>
 
@@ -172,16 +172,16 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
           {/* Comments Section */}
           <div className="space-y-3 pt-1">
             <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
-              ความคิดเห็น ({post.comments.length})
+              ความคิดเห็น ({post.comments?.length || 0})
             </h3>
 
-            {post.comments.length === 0 ? (
+            {(!post.comments || post.comments.length === 0) ? (
               <p className="text-xs text-slate-400 py-4 text-center">
                 ยังไม่มีความคิดเห็น เป็นคนแรกที่แสดงความคิดเห็นเลย!
               </p>
             ) : (
               <div className="space-y-2.5">
-                {post.comments.map((comment) => (
+                {(post.comments || []).map((comment) => (
                   <div key={comment.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

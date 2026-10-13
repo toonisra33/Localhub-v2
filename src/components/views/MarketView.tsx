@@ -23,11 +23,14 @@ export const MarketView: React.FC<MarketViewProps> = ({ onOpenCreateItem }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const filteredItems = marketItems.filter(item => {
+    if (!item) return false;
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchesSearch =
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const q = (searchQuery || '').trim().toLowerCase();
+    if (!q) return matchesCategory;
+
+    const itemTitle = (item.title || '').toLowerCase();
+    const itemDesc = (item.description || '').toLowerCase();
+    return matchesCategory && (itemTitle.includes(q) || itemDesc.includes(q));
   });
 
   const categories = [
@@ -106,12 +109,12 @@ export const MarketView: React.FC<MarketViewProps> = ({ onOpenCreateItem }) => {
             >
               <div className="relative h-44 bg-slate-100 overflow-hidden">
                 <img
-                  src={item.images[0]}
-                  alt={item.title}
+                  src={(Array.isArray(item.images) && item.images[0]) || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'}
+                  alt={item.title || 'สินค้า'}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-slate-900/80 backdrop-blur-xs text-white rounded-lg text-xs font-bold">
-                  ฿{item.price.toLocaleString()}
+                  ฿{(item.price ?? 0).toLocaleString()}
                 </div>
                 <button
                   onClick={() => likeMarketItem(item.id)}
@@ -125,20 +128,20 @@ export const MarketView: React.FC<MarketViewProps> = ({ onOpenCreateItem }) => {
 
               <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900 line-clamp-1">{item.title}</h4>
+                  <h4 className="font-bold text-sm text-slate-900 line-clamp-1">{item.title || 'ไม่มีชื่อสินค้า'}</h4>
                   <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
-                    {item.description}
+                    {item.description || ''}
                   </p>
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
                     <img
-                      src={item.sellerAvatar}
-                      alt={item.seller}
+                      src={item.sellerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                      alt={item.seller || 'ร้านค้า'}
                       className="w-5 h-5 rounded-full object-cover"
                     />
-                    <span className="text-slate-600 truncate max-w-[100px]">{item.seller}</span>
+                    <span className="text-slate-600 truncate max-w-[100px]">{item.seller || 'ร้านค้าชุมชน'}</span>
                   </div>
 
                   <a

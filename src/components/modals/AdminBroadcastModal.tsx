@@ -710,7 +710,7 @@ export const AdminBroadcastModal: React.FC = () => {
                               ? 'bg-amber-100 text-amber-700'
                               : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {item.severity.toUpperCase()}
+                            {(item.severity || 'normal').toUpperCase()}
                           </span>
                           <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
                             <MapPin className="w-3 h-3" />

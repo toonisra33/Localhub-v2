@@ -420,9 +420,37 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (!snapshot.empty) {
           const cloudPosts: Post[] = [];
           snapshot.forEach((d) => {
-            cloudPosts.push(d.data() as Post);
+            const raw = (d.data() || {}) as Partial<Post>;
+            cloudPosts.push({
+              id: d.id || raw.id || `post_${Date.now()}`,
+              title: raw.title || 'ไม่มีหัวข้อ',
+              content: raw.content || '',
+              author: raw.author || 'สมาชิกชุมชน',
+              authorRole: raw.authorRole || 'ผู้ใช้ทั่วไป',
+              authorAvatar: raw.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+              isVerified: Boolean(raw.isVerified),
+              category: raw.category || 'general',
+              location: {
+                province: raw.location?.province || DEFAULT_LOCATION.province,
+                district: raw.location?.district || DEFAULT_LOCATION.district,
+                subdistrict: raw.location?.subdistrict || DEFAULT_LOCATION.subdistrict,
+                address: raw.location?.address || ''
+              },
+              createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+              likes: typeof raw.likes === 'number' ? raw.likes : 0,
+              isLiked: Boolean(raw.isLiked),
+              comments: Array.isArray(raw.comments) ? raw.comments : [],
+              shares: typeof raw.shares === 'number' ? raw.shares : 0,
+              images: Array.isArray(raw.images) ? raw.images : [],
+              videoUrl: raw.videoUrl || undefined,
+              videoThumbnail: raw.videoThumbnail || undefined,
+              videoDuration: raw.videoDuration,
+              mediaFileName: raw.mediaFileName,
+              tags: Array.isArray(raw.tags) ? raw.tags.filter(Boolean).map(String) : [],
+              pinned: Boolean(raw.pinned)
+            });
           });
-          cloudPosts.sort((a, b) => b.createdAt - a.createdAt);
+          cloudPosts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           setPosts(cloudPosts);
         } else {
           // Seed real posts to Firestore
@@ -448,9 +476,26 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (!snapshot.empty) {
           const cloudItems: MarketItem[] = [];
           snapshot.forEach((d) => {
-            cloudItems.push(d.data() as MarketItem);
+            const raw = (d.data() || {}) as Partial<MarketItem>;
+            cloudItems.push({
+              id: d.id || raw.id || `market_${Date.now()}`,
+              title: raw.title || 'ไม่มีชื่อสินค้า',
+              description: raw.description || '',
+              price: typeof raw.price === 'number' ? raw.price : 0,
+              category: (raw.category && ['food', 'produce', 'craft', 'secondhand', 'service'].includes(raw.category) ? raw.category : 'produce') as MarketItem['category'],
+              seller: raw.seller || 'ร้านค้าชุมชน',
+              sellerContact: raw.sellerContact || '',
+              sellerAvatar: raw.sellerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+              province: raw.province || DEFAULT_LOCATION.province,
+              district: raw.district || DEFAULT_LOCATION.district,
+              images: Array.isArray(raw.images) && raw.images.length > 0 ? raw.images : ['https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'],
+              createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+              isAvailable: raw.isAvailable !== false,
+              likes: typeof raw.likes === 'number' ? raw.likes : 0,
+              isLiked: Boolean(raw.isLiked)
+            });
           });
-          cloudItems.sort((a, b) => b.createdAt - a.createdAt);
+          cloudItems.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           setMarketItems(cloudItems);
         } else {
           INITIAL_MARKET.forEach((m) => {
@@ -474,9 +519,23 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (!snapshot.empty) {
           const cloudAlerts: AlertReport[] = [];
           snapshot.forEach((d) => {
-            cloudAlerts.push(d.data() as AlertReport);
+            const raw = (d.data() || {}) as Partial<AlertReport>;
+            cloudAlerts.push({
+              id: d.id || raw.id || `alert_${Date.now()}`,
+              title: raw.title || 'รายงานเหตุ',
+              description: raw.description || '',
+              type: (raw.type && ['accident', 'flood', 'fire', 'power_cut', 'road_closed', 'weather'].includes(raw.type) ? raw.type : 'weather') as AlertReport['type'],
+              severity: raw.severity || 'medium',
+              province: raw.province || DEFAULT_LOCATION.province,
+              district: raw.district || DEFAULT_LOCATION.district,
+              subdistrict: raw.subdistrict || DEFAULT_LOCATION.subdistrict,
+              reporter: raw.reporter || 'ประชาชนในพื้นที่',
+              createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+              verifiedCount: typeof raw.verifiedCount === 'number' ? raw.verifiedCount : 1,
+              status: raw.status || 'active'
+            });
           });
-          cloudAlerts.sort((a, b) => b.createdAt - a.createdAt);
+          cloudAlerts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           setAlerts(cloudAlerts);
         } else {
           INITIAL_ALERTS.forEach((a) => {
