@@ -1,6 +1,5 @@
-// LocalHub Background Notification & Service Worker Handler
 // Version tag to force cache invalidation upon updates
-const SW_VERSION = 'localhub-v1.3.0-20261012';
+const SW_VERSION = 'localhub-v1.4.0-20261013';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

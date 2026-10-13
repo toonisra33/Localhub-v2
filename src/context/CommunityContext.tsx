@@ -15,6 +15,7 @@ import {
   googleProvider,
   signInWithPopup,
   signOut,
+  signInAnonymously,
   onAuthStateChanged,
   doc,
   collection,
@@ -423,6 +424,11 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           });
           cloudPosts.sort((a, b) => b.createdAt - a.createdAt);
           setPosts(cloudPosts);
+        } else {
+          // Seed real posts to Firestore
+          INITIAL_POSTS.forEach((p) => {
+            setDoc(doc(db, 'posts', p.id), p).catch(() => {});
+          });
         }
       },
       (err) => {
@@ -446,6 +452,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           });
           cloudItems.sort((a, b) => b.createdAt - a.createdAt);
           setMarketItems(cloudItems);
+        } else {
+          INITIAL_MARKET.forEach((m) => {
+            setDoc(doc(db, 'marketItems', m.id), m).catch(() => {});
+          });
         }
       },
       (err) => {
@@ -468,6 +478,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           });
           cloudAlerts.sort((a, b) => b.createdAt - a.createdAt);
           setAlerts(cloudAlerts);
+        } else {
+          INITIAL_ALERTS.forEach((a) => {
+            setDoc(doc(db, 'alerts', a.id), a).catch(() => {});
+          });
         }
       },
       (err) => {
@@ -529,6 +543,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       } else {
         setCurrentUser(null);
+        // Automatically sign in anonymously so user has a valid UID for Firestore
+        signInAnonymously(auth).catch((e) => {
+          console.warn('Anonymous auth note:', e);
+        });
       }
     });
     return () => unsub();

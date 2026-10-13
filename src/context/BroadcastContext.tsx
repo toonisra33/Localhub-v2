@@ -307,7 +307,54 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       triggerDeviceVibration(incomingSignal.vibrationPattern || [500, 200, 500, 200, 1000]);
     });
 
-    // Cloud Real-Time Listener via Firebase Firestore
+    // Real-Time Broadcasts Listener from Firebase Firestore
+    const unsubBroadcasts = onSnapshot(
+      collection(db, 'broadcasts'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const cloudList: AdminBroadcast[] = [];
+          snapshot.forEach((d) => {
+            cloudList.push(d.data() as AdminBroadcast);
+          });
+          cloudList.sort((a, b) => b.broadcastAt - a.broadcastAt);
+          setBroadcasts(cloudList);
+
+          // Check if any fresh broadcast was added in the last 60 seconds
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added') {
+              const item = change.doc.data() as AdminBroadcast;
+              if (item && item.broadcastAt && Date.now() - item.broadcastAt < 60000) {
+                // Incoming real-time broadcast from cloud! Fire multi-device notification & sound
+                sendSystemNotification({
+                  title: `📢 บรอดแคสต์: ${item.title}`,
+                  message: item.message,
+                  type: 'broadcast',
+                  severity: item.severity,
+                  targetArea: item.targetArea,
+                  link: `broadcast:${item.id}`,
+                  image: item.mediaUrl
+                }).catch(() => {});
+
+                if (item.severity === 'urgent' || item.severity === 'high') {
+                  playSoundAlert(item.severity);
+                  triggerDeviceVibration([500, 200, 500, 200, 800]);
+                }
+              }
+            }
+          });
+        } else {
+          // If Firestore is empty, seed initial broadcasts to Firestore
+          INITIAL_BROADCASTS.forEach((bc) => {
+            setDoc(doc(db, 'broadcasts', bc.id), bc).catch(() => {});
+          });
+        }
+      },
+      (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'broadcasts');
+      }
+    );
+
+    // Cloud Real-Time Listener via Firebase Firestore for siren test
     const unsubCloud = onSnapshot(
       collection(db, 'signalBroadcasts'),
       (snapshot) => {
@@ -321,6 +368,14 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 const audioControl = playSynthesizedAlarm(data.soundType || 'siren', 6);
                 currentSoundStopperRef.current = audioControl.stop;
                 triggerDeviceVibration(data.vibrationPattern || [500, 200, 500, 200, 1000]);
+                // Fire native system notification
+                sendSystemNotification({
+                  title: data.title,
+                  message: data.message,
+                  type: 'test_signal',
+                  severity: data.severity,
+                  vibratePattern: data.vibrationPattern || [500, 200, 500, 200, 1000]
+                }).catch(() => {});
                 return data;
               });
             }
@@ -335,8 +390,9 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => {
       cleanupLocal();
       unsubCloud();
+      unsubBroadcasts();
     };
-  }, []);
+  }, [playSoundAlert]);
 
   const sendBroadcast = async (data: BroadcastInput): Promise<AdminBroadcast> => {
     const now = Date.now();
@@ -383,6 +439,11 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     setBroadcasts(prev => [newBc, ...prev]);
+
+    // Save to Cloud Firestore in real time so all devices immediately receive it
+    setDoc(doc(db, 'broadcasts', newBc.id), newBc).catch(err => {
+      handleFirestoreError(err, OperationType.WRITE, `broadcasts/${newBc.id}`);
+    });
 
     // Send native system background notification (Android WebAPK native banner)
     sendSystemNotification({

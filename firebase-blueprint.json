@@ -86,6 +86,24 @@
         "createdAt": { "type": "string", "description": "Broadcast timestamp" }
       },
       "required": ["type", "title", "severity", "initiatedBy", "createdAt"]
+    },
+    "Broadcast": {
+      "title": "Broadcast",
+      "description": "Official community broadcast and news announcements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Broadcast ID" },
+        "title": { "type": "string", "description": "Broadcast title", "maxLength": 200 },
+        "message": { "type": "string", "description": "Broadcast content text", "maxLength": 5000 },
+        "category": { "type": "string", "enum": ["traffic", "weather", "emergency", "marketing", "general", "utility"], "description": "Category" },
+        "severity": { "type": "string", "enum": ["urgent", "high", "normal", "special"], "description": "Severity level" },
+        "targetArea": { "type": "string", "description": "Target geographic scope" },
+        "adminName": { "type": "string", "description": "Broadcaster name" },
+        "adminRole": { "type": "string", "description": "Broadcaster role" },
+        "mediaUrl": { "type": "string", "description": "Attached media URL" },
+        "broadcastAt": { "type": "number", "description": "Broadcast timestamp" }
+      },
+      "required": ["title", "message", "category", "severity", "broadcastAt"]
     }
   },
   "firestore": {
@@ -108,6 +126,10 @@
     "/signalBroadcasts/{broadcastId}": {
       "schema": "SignalBroadcast",
       "description": "Emergency alerts and siren broadcasts sent by admin"
+    },
+    "/broadcasts/{broadcastId}": {
+      "schema": "Broadcast",
+      "description": "Official announcements and broadcasts"
     }
   }
 }

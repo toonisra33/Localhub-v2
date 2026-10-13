@@ -83,7 +83,15 @@ service cloud.firestore {
     // Broadcasts and Siren Tests
     match /signalBroadcasts/{broadcastId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isSignedIn() || isAdmin();
+    }
+
+    // Official Community Broadcasts
+    match /broadcasts/{broadcastId} {
+      allow read: if true;
+      allow create: if isSignedIn() || isAdmin();
+      allow update: if isSignedIn() || isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

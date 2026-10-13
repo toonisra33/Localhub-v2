@@ -20,6 +20,11 @@ import {
 import { useCommunity } from '../../context/CommunityContext';
 import { useBroadcast } from '../../context/BroadcastContext';
 import { InAppNotification } from '../../types';
+import {
+  sendSystemNotification,
+  playSynthesizedAlarm,
+  triggerDeviceVibration
+} from '../../utils/notificationService';
 
 interface NotificationCenterModalProps {
   isOpen: boolean;
@@ -120,6 +125,31 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
               <X className="w-5 h-5" />
             </button>
           </div>
+        </div>
+
+        {/* Real Web Notification Direct Trigger Bar */}
+        <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-indigo-900 font-bold">
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <span>ทดสอบระบบแจ้งเตือนเข้าเครื่องจริง</span>
+          </div>
+          <button
+            onClick={async () => {
+              playSynthesizedAlarm('announcement', 3);
+              triggerDeviceVibration([300, 100, 300]);
+              await sendSystemNotification({
+                title: '🚨 LocalHub ทดสอบแจ้งเตือนเรียลไทม์',
+                message: 'ระบบแจ้งเตือนพร้อมทำงานสมบูรณ์แบบบนอุปกรณ์ของคุณแล้ว!',
+                type: 'broadcast',
+                severity: 'urgent'
+              });
+              showToast('🔔 ยิงการแจ้งเตือนจริงไปยังอุปกรณ์เรียบร้อยแล้ว!', 'success');
+            }}
+            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>ยิงแจ้งเตือนทันที</span>
+          </button>
         </div>
 
         {/* Admin Emergency Signal Test Bar (Requested in User Screenshot) */}

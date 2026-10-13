@@ -31,6 +31,8 @@ import { AllDevicesTestAlertModal } from './components/modals/AllDevicesTestAler
 import { AdminSignalTestBar } from './components/AdminSignalTestBar';
 import { AdminSignalTestModal } from './components/modals/AdminSignalTestModal';
 import { AppUpdateBanner } from './components/AppUpdateBanner';
+import { NotificationActivationBanner } from './components/NotificationActivationBanner';
+import { InstantCameraModal } from './components/modals/InstantCameraModal';
 
 function AppContent() {
   const {
@@ -45,6 +47,7 @@ function AppContent() {
 
   // Local modal states
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [isInstantCameraOpen, setIsInstantCameraOpen] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [createPostInitialMode, setCreatePostInitialMode] = useState<'camera' | 'gallery' | 'video' | 'standard'>('standard');
   const [createPostInitialImages, setCreatePostInitialImages] = useState<string[]>([]);
@@ -81,6 +84,9 @@ function AppContent() {
       {/* Floating In-App Update Banner */}
       <AppUpdateBanner />
 
+      {/* Explicit Real-Time Web Notification Permission & Test Banner */}
+      <NotificationActivationBanner />
+
       {/* Toast Notification Container */}
       <ToastContainer />
 
@@ -92,6 +98,7 @@ function AppContent() {
         onOpenNotifications={() => setIsNotifModalOpen(true)}
         onOpenCreatePost={() => openCreatePostWith('standard')}
         onOpenCreatePostWithMode={(mode, images) => openCreatePostWith(mode, images || [])}
+        onOpenInstantCamera={() => setIsInstantCameraOpen(true)}
       />
 
       {/* Permanent Admin Signal Test Bar (Directly visible upon opening the app) */}
@@ -109,6 +116,7 @@ function AppContent() {
               onOpenCreatePost={() => openCreatePostWith('standard')}
               onOpenCreatePostWithMode={(mode, images) => openCreatePostWith(mode, images || [])}
               onOpenWeather={() => setActiveTab('weather')}
+              onOpenInstantCamera={() => setIsInstantCameraOpen(true)}
             />
           )}
 
@@ -142,9 +150,17 @@ function AppContent() {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <MobileNav />
+      <MobileNav onOpenInstantCamera={() => setIsInstantCameraOpen(true)} />
 
       {/* Modals */}
+      <InstantCameraModal
+        isOpen={isInstantCameraOpen}
+        onClose={() => setIsInstantCameraOpen(false)}
+        onPhotoCaptured={(mediaUrl, mediaType) => {
+          setIsInstantCameraOpen(false);
+          openCreatePostWith(mediaType === 'video' ? 'video' : 'standard', [mediaUrl]);
+        }}
+      />
       <AllDevicesTestAlertModal />
       <AdminSignalTestModal />
       <AdminBroadcastModal />

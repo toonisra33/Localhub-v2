@@ -33,12 +33,14 @@ interface FeedViewProps {
   onOpenCreatePost: () => void;
   onOpenCreatePostWithMode?: (mode: 'camera' | 'gallery' | 'video' | 'standard', images?: string[]) => void;
   onOpenWeather?: () => void;
+  onOpenInstantCamera?: () => void;
 }
 
 export const FeedView: React.FC<FeedViewProps> = ({
   onOpenCreatePost,
   onOpenCreatePostWithMode,
-  onOpenWeather
+  onOpenWeather,
+  onOpenInstantCamera
 }) => {
   const { posts, location, likePost, openPostDetail, showToast, isAdmin, setIsAdmin } = useCommunity();
   const {
@@ -279,11 +281,14 @@ export const FeedView: React.FC<FeedViewProps> = ({
           {/* Button 1: Direct Native Camera Snap */}
           <button
             onClick={() => {
-              // Direct shutter trigger
-              directCameraInputRef.current?.click();
+              if (onOpenInstantCamera) {
+                onOpenInstantCamera();
+              } else {
+                directCameraInputRef.current?.click();
+              }
             }}
             className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-300 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition active:scale-95 shadow-xs group"
-            title="เปิดกล้องถ่ายภาพแล้วโพสต์ทันที"
+            title="เปิดกล้องถ่ายภาพสดทันที"
           >
             <div className="p-1.5 rounded-full bg-emerald-600 text-white group-hover:scale-110 transition-transform">
               <Camera className="w-4 h-4" />

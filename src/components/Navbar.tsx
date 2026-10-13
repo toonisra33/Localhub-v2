@@ -19,12 +19,14 @@ interface NavbarProps {
   onOpenNotifications: () => void;
   onOpenCreatePost: () => void;
   onOpenCreatePostWithMode?: (mode: 'camera' | 'gallery' | 'video' | 'standard', images?: string[]) => void;
+  onOpenInstantCamera?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenNotifications,
   onOpenCreatePost,
-  onOpenCreatePostWithMode
+  onOpenCreatePostWithMode,
+  onOpenInstantCamera
 }) => {
   const { location, openLocationModal, unreadNotifCount, isAdmin, showToast } = useCommunity();
   const {
@@ -80,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Local<span className="text-blue-600">Hub</span>
               </span>
               <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">
-                v1.3.0
+                v1.4.0
               </span>
             </div>
             <p className="text-[10px] text-slate-400 hidden md:block">
@@ -134,11 +136,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Quick Camera Snap Button */}
           <button
             onClick={() => {
-              // Direct camera shutter
-              navCameraInputRef.current?.click();
+              if (onOpenInstantCamera) {
+                onOpenInstantCamera();
+              } else {
+                navCameraInputRef.current?.click();
+              }
             }}
             className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-300 rounded-xl text-xs font-extrabold transition shadow-xs active:scale-95 group"
-            title="กดเพื่อเปิดกล้องถ่ายภาพแล้วโพสต์ทันที"
+            title="กดเพื่อเปิดกล้องถ่ายภาพสดทันที"
           >
             <Camera className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline">ถ่ายรูปสด</span>

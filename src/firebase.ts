@@ -99,6 +99,18 @@ export async function testFirestoreConnection(): Promise<boolean> {
   }
 }
 
+// Automatic seamless Auth ensuring a valid auth token for Firestore writes
+export async function ensureUserAuthenticated(): Promise<FirebaseUser | null> {
+  if (auth.currentUser) return auth.currentUser;
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (e) {
+    console.warn('Anonymous sign-in not available or disabled in console:', e);
+    return null;
+  }
+}
+
 // Start connection test on load
 testFirestoreConnection();
 
