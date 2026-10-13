@@ -52,6 +52,6 @@ jobs:
         continue-on-error: true
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_LOCALHUB_69FBE }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_LOCALHUB_69FBE || secrets.FIREBASE_SERVICE_ACCOUNT }}'
           channelId: live
           projectId: localhub-69fbe
