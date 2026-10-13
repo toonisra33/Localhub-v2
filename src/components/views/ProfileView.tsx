@@ -33,7 +33,11 @@ export const ProfileView: React.FC = () => {
     isAdmin,
     setIsAdmin,
     openContactAdminModal,
-    showToast
+    showToast,
+    currentUser,
+    isFirebaseConnected,
+    loginWithGoogle,
+    logoutFirebase
   } = useCommunity();
 
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
@@ -55,20 +59,28 @@ export const ProfileView: React.FC = () => {
       {/* Profile Card */}
       <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-xs flex items-center gap-4">
         <img
-          src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"
+          src={currentUser?.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"}
           alt="Profile"
           className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 shadow-md"
         />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-900 truncate">คุณ (ผู้ใช้งาน LocalHub)</h2>
+            <h2 className="text-lg font-bold text-slate-900 truncate">
+              {currentUser?.displayName || 'คุณ (ผู้ใช้งาน LocalHub)'}
+            </h2>
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
               isAdmin ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'
             }`}>
               {isAdmin ? '🛡️ ผู้ดูแลระบบ (Admin)' : '👤 สมาชิกชุมชน'}
             </span>
           </div>
+
+          {currentUser?.email && (
+            <p className="text-xs text-slate-500 mt-0.5 truncate font-mono">
+              {currentUser.email}
+            </p>
+          )}
 
           <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5 text-blue-600" />
@@ -80,6 +92,61 @@ export const ProfileView: React.FC = () => {
               แก้ไข
             </button>
           </p>
+        </div>
+      </div>
+
+      {/* Firebase Cloud & Authentication Card */}
+      <div className="p-5 bg-gradient-to-br from-amber-950 via-slate-900 to-orange-950 text-white rounded-3xl shadow-md border-2 border-amber-500/50 space-y-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl shadow-md text-xl">
+              🔥
+            </span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-extrabold text-sm sm:text-base text-white">
+                  ระบบฐานข้อมูลคลาวด์ Firebase & Google Auth
+                </h3>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-black border ${
+                  isFirebaseConnected
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+                }`}>
+                  {isFirebaseConnected ? '● Cloud Firestore เชื่อมต่อแล้ว' : '○ กำลังเชื่อมต่อ'}
+                </span>
+              </div>
+              <p className="text-xs text-amber-200/90 mt-0.5">
+                เชื่อมต่อ Firestore Database: <code className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-[11px]">localhub-69fbe</code>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          ข้อมูลโพสต์, ตลาดนัดชุมชน, การรายงานภัยพิบัติ และสัญญาณเตือนภัยไซเรน multi-device ทั้งหมดจะถูกซิงก์แบบ Real-time ข้ามทุกอุปกรณ์และมือถือผ่าน Google Cloud Firestore
+        </p>
+
+        <div className="pt-1 flex items-center gap-2 flex-wrap">
+          {currentUser ? (
+            <button
+              onClick={logoutFirebase}
+              className="px-4 py-2 bg-white/15 hover:bg-white/25 active:scale-95 text-white border border-white/20 rounded-xl text-xs font-bold transition flex items-center gap-2"
+            >
+              <span>ออกจากระบบ ({currentUser.email})</span>
+            </button>
+          ) : (
+            <button
+              onClick={loginWithGoogle}
+              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-95 text-slate-950 font-black rounded-xl text-xs transition flex items-center gap-2 shadow-md"
+            >
+              <span>🔑 เข้าสู่ระบบด้วย Google (Google Sign-In)</span>
+            </button>
+          )}
+
+          <div className="text-[11px] text-amber-200/80 flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Admin สิทธิ์พิเศษ: toonisra33@gmail.com</span>
+          </div>
         </div>
       </div>
 

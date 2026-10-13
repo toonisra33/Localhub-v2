@@ -17,6 +17,15 @@ import {
   broadcastTestSignalToAllDevices,
   initTestSignalListener
 } from '../utils/notificationService';
+import {
+  db,
+  doc,
+  collection,
+  onSnapshot,
+  setDoc,
+  handleFirestoreError,
+  OperationType
+} from '../firebase';
 
 export interface BroadcastInput {
   title: string;
@@ -270,7 +279,15 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // 1. Broadcast to all devices via BroadcastChannel, StorageEvent, and Service Worker
       broadcastTestSignalToAllDevices(payload);
 
-      // 2. Play audio & vibration on this originating device
+      // 2. Sync to Firebase Firestore cloud so all remote devices and phones receive the alert in real time
+      setDoc(doc(db, 'signalBroadcasts', payload.id), {
+        ...payload,
+        createdAt: new Date().toISOString()
+      }).catch(err => {
+        handleFirestoreError(err, OperationType.WRITE, `signalBroadcasts/${payload.id}`);
+      });
+
+      // 3. Play audio & vibration on this originating device
       const audioControl = playSynthesizedAlarm(payload.soundType, 6);
       currentSoundStopperRef.current = audioControl.stop;
       triggerDeviceVibration(payload.vibrationPattern);
@@ -279,19 +296,45 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 
   // ==========================================
-  // Multi-Device Test Signal Listener
+  // Multi-Device Test Signal Listener (Local + Firebase Cloud)
   // ==========================================
   useEffect(() => {
-    const cleanup = initTestSignalListener((incomingSignal) => {
-      // Incoming signal from another device or tab
+    const cleanupLocal = initTestSignalListener((incomingSignal) => {
+      // Incoming signal from another local tab or PWA instance
       setActiveTestSignal(incomingSignal);
       const audioControl = playSynthesizedAlarm(incomingSignal.soundType || 'siren', 6);
       currentSoundStopperRef.current = audioControl.stop;
       triggerDeviceVibration(incomingSignal.vibrationPattern || [500, 200, 500, 200, 1000]);
     });
 
+    // Cloud Real-Time Listener via Firebase Firestore
+    const unsubCloud = onSnapshot(
+      collection(db, 'signalBroadcasts'),
+      (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data() as SignalTestPayload;
+            // Fresh alert within 45s
+            if (data && data.timestamp && Date.now() - data.timestamp < 45000) {
+              setActiveTestSignal(prev => {
+                if (prev?.id === data.id) return prev;
+                const audioControl = playSynthesizedAlarm(data.soundType || 'siren', 6);
+                currentSoundStopperRef.current = audioControl.stop;
+                triggerDeviceVibration(data.vibrationPattern || [500, 200, 500, 200, 1000]);
+                return data;
+              });
+            }
+          }
+        });
+      },
+      (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'signalBroadcasts');
+      }
+    );
+
     return () => {
-      cleanup();
+      cleanupLocal();
+      unsubCloud();
     };
   }, []);
 

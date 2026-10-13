@@ -9,6 +9,22 @@ import {
   AlertReport
 } from '../types';
 import { sendSystemNotification } from '../utils/notificationService';
+import {
+  db,
+  auth,
+  googleProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  doc,
+  collection,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+  handleFirestoreError,
+  OperationType,
+  FirebaseUser
+} from '../firebase';
 
 export interface ToastInfo {
   id: string;
@@ -18,6 +34,17 @@ export interface ToastInfo {
 }
 
 interface CommunityContextType {
+  // Firebase Auth & Cloud Sync
+  currentUser: {
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+    photoURL: string | null;
+  } | null;
+  isFirebaseConnected: boolean;
+  loginWithGoogle: () => Promise<void>;
+  logoutFirebase: () => Promise<void>;
+
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
   location: Location;
@@ -374,6 +401,82 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return true; // Default true so user can easily find and test admin signal features
   });
 
+  // Firebase state
+  const [currentUser, setCurrentUser] = useState<{
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+    photoURL: string | null;
+  } | null>(null);
+  const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
+
+  // Real-time Firestore sync: Posts
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, 'posts'),
+      (snapshot) => {
+        setIsFirebaseConnected(true);
+        if (!snapshot.empty) {
+          const cloudPosts: Post[] = [];
+          snapshot.forEach((d) => {
+            cloudPosts.push(d.data() as Post);
+          });
+          cloudPosts.sort((a, b) => b.createdAt - a.createdAt);
+          setPosts(cloudPosts);
+        }
+      },
+      (err) => {
+        setIsFirebaseConnected(false);
+        handleFirestoreError(err, OperationType.LIST, 'posts');
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // Real-time Firestore sync: Market
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, 'marketItems'),
+      (snapshot) => {
+        setIsFirebaseConnected(true);
+        if (!snapshot.empty) {
+          const cloudItems: MarketItem[] = [];
+          snapshot.forEach((d) => {
+            cloudItems.push(d.data() as MarketItem);
+          });
+          cloudItems.sort((a, b) => b.createdAt - a.createdAt);
+          setMarketItems(cloudItems);
+        }
+      },
+      (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'marketItems');
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // Real-time Firestore sync: Alerts
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, 'alerts'),
+      (snapshot) => {
+        setIsFirebaseConnected(true);
+        if (!snapshot.empty) {
+          const cloudAlerts: AlertReport[] = [];
+          snapshot.forEach((d) => {
+            cloudAlerts.push(d.data() as AlertReport);
+          });
+          cloudAlerts.sort((a, b) => b.createdAt - a.createdAt);
+          setAlerts(cloudAlerts);
+        }
+      },
+      (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'alerts');
+      }
+    );
+    return () => unsub();
+  }, []);
+
   // Persist safely without quota exceptions
   useEffect(() => {
     try {
@@ -410,6 +513,48 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.setItem('localhub_notifs', JSON.stringify(notifications));
     } catch {}
   }, [notifications]);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
+      if (user) {
+        setCurrentUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+        });
+        if (user.email === 'toonisra33@gmail.com') {
+          setIsAdmin(true);
+        }
+      } else {
+        setCurrentUser(null);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      showToast(`เข้าสู่ระบบด้วย Google สำเร็จ: ${result.user.displayName || result.user.email}`, 'success');
+      if (result.user.email === 'toonisra33@gmail.com') {
+        setIsAdmin(true);
+      }
+    } catch (err) {
+      console.warn('Google sign-in error:', err);
+      showToast('ไม่สามารถเข้าสู่ระบบ Google ได้ในขณะนี้', 'error');
+    }
+  };
+
+  const logoutFirebase = async () => {
+    try {
+      await signOut(auth);
+      showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
+    } catch (err) {
+      console.warn('Logout error:', err);
+    }
+  };
 
   // Toast helper
   const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'info', link?: string) => {
@@ -484,13 +629,16 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     mediaType?: Post['mediaType'];
     tags?: string[];
   }) => {
+    const authorName = currentUser?.displayName || 'คุณ (ผู้ใช้ปัจจุบัน)';
+    const authorAvatar = currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+
     const newPost: Post = {
       id: `post_${Date.now()}`,
       title: data.title,
       content: data.content,
-      author: 'คุณ (ผู้ใช้ปัจจุบัน)',
+      author: authorName,
       authorRole: isAdmin ? 'ผู้ดูแลระบบ' : 'สมาชิกชุมชน',
-      authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      authorAvatar: authorAvatar,
       category: data.category,
       location: {
         province: location.province,
@@ -513,9 +661,23 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setPosts(prev => [newPost, ...prev]);
     showToast('โพสต์ของคุณเผยแพร่เรียบร้อยแล้ว!', 'success', `post:${newPost.id}`);
+
+    // Real-time Cloud Sync to Firebase Firestore
+    setDoc(doc(db, 'posts', newPost.id), newPost).catch(err => {
+      handleFirestoreError(err, OperationType.WRITE, `posts/${newPost.id}`);
+    });
   };
 
   const likePost = (id: string) => {
+    const targetPost = posts.find(p => p.id === id);
+    if (targetPost) {
+      const isLiked = !targetPost.isLiked;
+      const newLikes = isLiked ? targetPost.likes + 1 : Math.max(0, targetPost.likes - 1);
+      updateDoc(doc(db, 'posts', id), { likes: newLikes }).catch(err => {
+        handleFirestoreError(err, OperationType.UPDATE, `posts/${id}`);
+      });
+    }
+
     setPosts(prev =>
       prev.map(p => {
         if (p.id === id) {
@@ -545,15 +707,27 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const addComment = (postId: string, content: string) => {
+    const authorName = currentUser?.displayName || 'คุณ (ผู้ใช้ปัจจุบัน)';
+    const authorAvatar = currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+
     const newComment: PostComment = {
       id: `c_${Date.now()}`,
-      author: 'คุณ (ผู้ใช้ปัจจุบัน)',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      author: authorName,
+      avatar: authorAvatar,
       content: content.trim(),
       timestamp: Date.now(),
       likes: 0,
       isOfficial: isAdmin
     };
+
+    const targetPost = posts.find(p => p.id === postId);
+    if (targetPost) {
+      updateDoc(doc(db, 'posts', postId), {
+        comments: [...targetPost.comments, newComment]
+      }).catch(err => {
+        handleFirestoreError(err, OperationType.UPDATE, `posts/${postId}`);
+      });
+    }
 
     setPosts(prev =>
       prev.map(p => {
@@ -624,9 +798,23 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
     setMarketItems(prev => [newItem, ...prev]);
     showToast('ลงประกาศสินค้าสำเร็จ!', 'success');
+
+    // Sync to Firestore
+    setDoc(doc(db, 'marketItems', newItem.id), newItem).catch(err => {
+      handleFirestoreError(err, OperationType.WRITE, `marketItems/${newItem.id}`);
+    });
   };
 
   const likeMarketItem = (id: string) => {
+    const targetItem = marketItems.find(m => m.id === id);
+    if (targetItem) {
+      const isLiked = !targetItem.isLiked;
+      const newLikes = isLiked ? targetItem.likes + 1 : Math.max(0, targetItem.likes - 1);
+      updateDoc(doc(db, 'marketItems', id), { likes: newLikes }).catch(err => {
+        handleFirestoreError(err, OperationType.UPDATE, `marketItems/${id}`);
+      });
+    }
+
     setMarketItems(prev =>
       prev.map(m => {
         if (m.id === id) {
@@ -653,6 +841,11 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
     setAlerts(prev => [newAlert, ...prev]);
     showToast('รายงานเหตุการณ์ถูกส่งไปยังศูนย์ประสานงานแล้ว', 'success');
+
+    // Sync to Firestore
+    setDoc(doc(db, 'alerts', newAlert.id), newAlert).catch(err => {
+      handleFirestoreError(err, OperationType.WRITE, `alerts/${newAlert.id}`);
+    });
 
     // Trigger system-level background notification
     sendSystemNotification({
@@ -707,6 +900,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         closeContactAdminModal: () => setIsContactAdminModalOpen(false),
         isAdmin,
         setIsAdmin,
+        currentUser,
+        isFirebaseConnected,
+        loginWithGoogle,
+        logoutFirebase,
       }}
     >
       {children}

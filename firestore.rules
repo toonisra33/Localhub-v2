@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'toonisra33@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Admin List Collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Community Posts
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().title is string && incoming().title.size() <= 200;
+      allow update: if isSignedIn() && (
+        resource.data.authorId == request.auth.uid ||
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'comments', 'shares'])
+      );
+      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    // Marketplace Listings
+    match /marketItems/{itemId} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().title is string && incoming().title.size() <= 150;
+      allow update: if isSignedIn() && (
+        resource.data.sellerId == request.auth.uid ||
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'isAvailable'])
+      );
+      allow delete: if isSignedIn() && (resource.data.sellerId == request.auth.uid || isAdmin());
+    }
+
+    // Alerts and Hazard Reports
+    match /alerts/{alertId} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().title is string && incoming().title.size() <= 200;
+      allow update: if isSignedIn() && (
+        resource.data.reporterId == request.auth.uid ||
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['verifiedCount', 'status'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Broadcasts and Siren Tests
+    match /signalBroadcasts/{broadcastId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

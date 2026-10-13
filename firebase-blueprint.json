@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with roles and admin permissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "User UID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "photoURL": { "type": "string", "description": "Avatar URL" },
+        "role": { "type": "string", "enum": ["admin", "user", "moderator"], "description": "User access role" },
+        "isAdmin": { "type": "boolean", "description": "Whether user has admin privileges" },
+        "createdAt": { "type": "string", "description": "Account creation timestamp" }
+      },
+      "required": ["email", "displayName", "role"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Community bulletin post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique post ID" },
+        "title": { "type": "string", "description": "Post title", "maxLength": 200 },
+        "content": { "type": "string", "description": "Post body text", "maxLength": 5000 },
+        "author": { "type": "string", "description": "Author name", "maxLength": 100 },
+        "authorId": { "type": "string", "description": "Author user ID" },
+        "authorAvatar": { "type": "string", "description": "Author avatar image URL" },
+        "category": { "type": "string", "enum": ["general", "news", "market", "help", "alert", "activity"], "description": "Category" },
+        "images": { "type": "array", "description": "Attached image URLs" },
+        "videoUrl": { "type": "string", "description": "Optional video URL" },
+        "likes": { "type": "number", "description": "Like counter" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["title", "content", "author", "category", "createdAt"]
+    },
+    "MarketItem": {
+      "title": "MarketItem",
+      "description": "Community marketplace listing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Item ID" },
+        "title": { "type": "string", "description": "Product name", "maxLength": 150 },
+        "description": { "type": "string", "description": "Product description", "maxLength": 2000 },
+        "price": { "type": "number", "description": "Item price in THB" },
+        "seller": { "type": "string", "description": "Seller display name" },
+        "sellerId": { "type": "string", "description": "Seller user ID" },
+        "sellerContact": { "type": "string", "description": "Contact info / phone / line" },
+        "category": { "type": "string", "enum": ["food", "produce", "craft", "secondhand", "service"], "description": "Category" },
+        "images": { "type": "array", "description": "Photos of item" },
+        "isAvailable": { "type": "boolean", "description": "Stock availability" },
+        "createdAt": { "type": "string", "description": "Listed timestamp" }
+      },
+      "required": ["title", "price", "seller", "category", "createdAt"]
+    },
+    "AlertReport": {
+      "title": "AlertReport",
+      "description": "Community emergency or hazard warning",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Alert report ID" },
+        "title": { "type": "string", "description": "Alert headline", "maxLength": 200 },
+        "description": { "type": "string", "description": "Alert details", "maxLength": 2000 },
+        "type": { "type": "string", "enum": ["accident", "flood", "fire", "power_cut", "road_closed", "weather"], "description": "Hazard type" },
+        "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"], "description": "Alert severity level" },
+        "reporter": { "type": "string", "description": "Reporter name" },
+        "reporterId": { "type": "string", "description": "Reporter UID" },
+        "verifiedCount": { "type": "number", "description": "Verification count" },
+        "status": { "type": "string", "enum": ["active", "resolved", "investigating"], "description": "Status" },
+        "createdAt": { "type": "string", "description": "Report timestamp" }
+      },
+      "required": ["title", "description", "type", "severity", "reporter", "createdAt"]
+    },
+    "SignalBroadcast": {
+      "title": "SignalBroadcast",
+      "description": "Admin emergency broadcast and siren alert log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Signal broadcast ID" },
+        "type": { "type": "string", "enum": ["admin_local", "all_devices"], "description": "Signal scope" },
+        "title": { "type": "string", "description": "Broadcast signal title" },
+        "message": { "type": "string", "description": "Broadcast message" },
+        "severity": { "type": "string", "enum": ["urgent", "high", "normal", "special"], "description": "Alert level" },
+        "soundType": { "type": "string", "description": "Siren/sound type" },
+        "initiatedBy": { "type": "string", "description": "Admin initiator" },
+        "createdAt": { "type": "string", "description": "Broadcast timestamp" }
+      },
+      "required": ["type", "title", "severity", "initiatedBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data and role attributes"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Community posts and announcements"
+    },
+    "/marketItems/{itemId}": {
+      "schema": "MarketItem",
+      "description": "Community marketplace products"
+    },
+    "/alerts/{alertId}": {
+      "schema": "AlertReport",
+      "description": "Community alerts and warnings"
+    },
+    "/signalBroadcasts/{broadcastId}": {
+      "schema": "SignalBroadcast",
+      "description": "Emergency alerts and siren broadcasts sent by admin"
+    }
+  }
+}
