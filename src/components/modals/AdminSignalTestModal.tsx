@@ -49,34 +49,41 @@ export const AdminSignalTestModal: React.FC = () => {
   if (!isSignalTestModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setOpenSignalTestModal(false);
+      }}
+    >
+      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh]">
         {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="p-2 bg-red-600 rounded-xl shadow-md shadow-red-600/30 animate-pulse">
-              <Activity className="w-5 h-5 text-white" />
+        <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="p-2 bg-red-600 rounded-xl shadow-md shadow-red-600/30 animate-pulse shrink-0">
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-extrabold text-base sm:text-lg leading-tight">
-                  คอนโซลทดสอบสัญญาณแจ้งเตือน & แรงสั่นสะเทือน
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="font-extrabold text-sm sm:text-base leading-tight truncate">
+                  ทดสอบสัญญาณแจ้งเตือนฉุกเฉิน
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
-                  Play Store Ready
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold">
+                  Admin
                 </span>
               </div>
-              <p className="text-xs text-slate-300">
-                ระบบทดสอบสัญญาณเตือนภัยฉุกเฉินสำหรับผู้ดูแลระบบ (Admin Test Console)
+              <p className="text-[11px] text-slate-300 truncate">
+                ทดสอบเสียงไซเรน & แรงสั่นสะเทือน
               </p>
             </div>
           </div>
 
           <button
             onClick={() => setOpenSignalTestModal(false)}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-90 text-white transition shrink-0 ml-2 shadow-xs"
+            title="ปิดหน้าต่าง (กากบาท)"
+            aria-label="ปิดหน้าต่าง"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
@@ -296,12 +303,13 @@ export const AdminSignalTestModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
           <button
             onClick={() => setOpenSignalTestModal(false)}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition"
+            className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
           >
-            ปิดหน้าต่าง
+            <X className="w-4 h-4" />
+            <span>ปิดหน้าต่างทดสอบ</span>
           </button>
         </div>
       </div>

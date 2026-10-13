@@ -1,4 +1,4 @@
-export type Tab = 'home' | 'map' | 'broadcasts' | 'feed' | 'dashboard' | 'profile' | 'market' | 'alerts' | 'weather';
+export type Tab = 'feed' | 'broadcasts' | 'market' | 'alerts' | 'map' | 'weather' | 'profile';
 
 export type BroadcastCategory = 'news' | 'marketing' | 'announcement' | 'emergency' | 'weather' | 'traffic';
 export type BroadcastSeverity = 'urgent' | 'high' | 'normal' | 'special';

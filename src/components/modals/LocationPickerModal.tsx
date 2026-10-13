@@ -4,7 +4,7 @@ import { useCommunity } from '../../context/CommunityContext';
 import { THAI_PROVINCES, ALL_PROVINCES_LIST } from '../../data/thaiData';
 
 export const LocationPickerModal: React.FC = () => {
-  const { isLocationModalOpen, closeLocationModal, location, setLocation, openLocationPermissionModal, showToast } = useCommunity();
+  const { isLocationModalOpen, closeLocationModal, location, setLocation, requestRealLocation, showToast } = useCommunity();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProvince, setSelectedProvince] = useState(location.province);
   const [selectedDistrict, setSelectedDistrict] = useState(location.district || '');
@@ -29,7 +29,12 @@ export const LocationPickerModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeLocationModal();
+      }}
+    >
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -47,18 +52,35 @@ export const LocationPickerModal: React.FC = () => {
           </button>
         </div>
 
-        {/* GPS Quick Action */}
-        <div className="p-4 border-b border-slate-100 bg-blue-50/50">
+        {/* GPS Quick Action & Popular Chips */}
+        <div className="p-3.5 border-b border-slate-100 bg-blue-50/50 space-y-2">
           <button
-            onClick={() => {
-              closeLocationModal();
-              openLocationPermissionModal();
-            }}
-            className="w-full py-2.5 px-3 bg-white hover:bg-blue-50 border border-blue-200 rounded-xl text-blue-600 text-xs font-bold flex items-center justify-center gap-2 transition shadow-xs"
+            onClick={() => requestRealLocation()}
+            className="w-full py-2.5 px-3 bg-white hover:bg-blue-50 border border-blue-200 rounded-xl text-blue-600 text-xs font-bold flex items-center justify-center gap-2 transition shadow-xs active:scale-98"
           >
-            <Navigation className="w-4 h-4 fill-blue-600" />
-            ใช้ตำแหน่งปัจจุบันอัตโนมัติ (ตรวจจับด้วย GPS)
+            <Navigation className="w-4 h-4 fill-blue-600 text-blue-600" />
+            ตรวจจับพิกัด GPS จริงอัตโนมัติ
           </button>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-slate-500 font-semibold">แนะนำ:</span>
+            {['เชียงใหม่', 'กรุงเทพมหานคร', 'ขอนแก่น', 'ชลบุรี', 'ภูเก็ต', 'สงขลา'].map(prov => (
+              <button
+                key={prov}
+                type="button"
+                onClick={() => {
+                  setSelectedProvince(prov);
+                  setSelectedDistrict('');
+                }}
+                className={`px-2 py-0.5 rounded-lg text-[11px] font-medium transition ${
+                  selectedProvince === prov
+                    ? 'bg-blue-600 text-white font-bold'
+                    : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                }`}
+              >
+                {prov}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content */}

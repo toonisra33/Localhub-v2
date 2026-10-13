@@ -110,9 +110,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
   const categories = [
     { id: 'all', label: 'ทั้งหมด' },
-    { id: 'alert', label: '🚨 แจ้งเหตุด่วน' },
-    { id: 'market', label: '🛍️ ซื้อ-ขาย/บริการ' },
-    { id: 'news', label: '📰 ข่าวสารชุมชน' },
+    { id: 'news', label: '📰 ข่าวสาร' },
     { id: 'help', label: '🤝 ช่วยเหลือ/ของหาย' },
     { id: 'activity', label: '🎉 กิจกรรม' },
     { id: 'general', label: '💬 พูดคุย' },
@@ -179,7 +177,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             onClick={onOpenCreatePost}
             className="flex-1 text-left px-4 py-2.5 bg-slate-100 hover:bg-slate-200/70 rounded-xl text-xs sm:text-sm text-slate-500 font-medium transition"
           >
-            มีอะไรเกิดขึ้นในพื้นที่? แชร์กับเพื่อนบ้าน...
+            แชร์เรื่องราว ข่าวสาร หรือถามเพื่อนบ้านใน {location.province}...
           </button>
           <button
             onClick={onOpenCreatePost}

@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { BroadcastProvider, useBroadcast } from './context/BroadcastContext';
 import { CommunityProvider, useCommunity } from './context/CommunityContext';
-import { Volume2 } from 'lucide-react';
+import { Volume2, X } from 'lucide-react';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
 import { Navbar } from './components/Navbar';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { MobileNav } from './components/MobileNav';
 
 // Views
-import { HomeView } from './components/views/HomeView';
-import { DashboardView } from './components/views/DashboardView';
 import { FeedView } from './components/views/FeedView';
 import { BroadcastListView } from './components/views/BroadcastListView';
 import { MarketView } from './components/views/MarketView';
@@ -74,9 +72,11 @@ function AppContent() {
           </div>
           <button
             onClick={stopLocalDeviceTest}
-            className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition ml-2 shrink-0"
+            className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition ml-2 shrink-0 flex items-center gap-1 shadow-xs"
+            title="ปิดการทดสอบ (กากบาท)"
           >
-            หยุด
+            <X className="w-3.5 h-3.5" />
+            <span>หยุด</span>
           </button>
         </aside>
       )}
@@ -105,14 +105,6 @@ function AppContent() {
 
         {/* Center Dynamic Tab View */}
         <section className="flex-1 min-w-0">
-          {activeTab === 'home' && (
-            <HomeView
-              onOpenCreatePost={() => openCreatePostWith('standard')}
-              onOpenInstantCamera={() => setIsInstantCameraOpen(true)}
-              onOpenNotifications={() => setIsNotifModalOpen(true)}
-            />
-          )}
-
           {activeTab === 'feed' && (
             <FeedView
               onOpenCreatePost={() => openCreatePostWith('standard')}
@@ -122,20 +114,8 @@ function AppContent() {
             />
           )}
 
-          {activeTab === 'dashboard' && (
-            <DashboardView />
-          )}
-
           {activeTab === 'broadcasts' && (
             <BroadcastListView />
-          )}
-
-          {activeTab === 'map' && (
-            <MapView />
-          )}
-
-          {activeTab === 'profile' && (
-            <ProfileView />
           )}
 
           {activeTab === 'weather' && (
@@ -152,18 +132,16 @@ function AppContent() {
           {activeTab === 'market' && (
             <MarketView onOpenCreateItem={() => setIsCreateMarketModalOpen(true)} />
           )}
+
+          {activeTab === 'map' && (
+            <MapView />
+          )}
+
+          {activeTab === 'profile' && (
+            <ProfileView />
+          )}
         </section>
       </main>
-
-      {/* Floating Community Assistant / Chat Button matching screenshots */}
-      <button
-        onClick={() => openCreatePostWith('standard')}
-        className="fixed bottom-20 lg:bottom-8 right-4 lg:right-8 z-40 w-12 h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-full shadow-2xl flex items-center justify-center border-2 border-emerald-400/50 active:scale-95 transition group"
-        title="ติดต่อศูนย์ควบคุม / สร้างโพสต์ด่วน"
-      >
-        <span className="text-xl">💬</span>
-        <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900 animate-pulse" />
-      </button>
 
       {/* Mobile Bottom Navigation Bar */}
       <MobileNav onOpenInstantCamera={() => setIsInstantCameraOpen(true)} />

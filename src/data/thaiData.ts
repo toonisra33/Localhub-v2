@@ -59,3 +59,51 @@ export const ALL_PROVINCES_LIST = [
   'สุพรรณบุรี', 'สุราษฎร์ธานี', 'สุรินทร์', 'หนองคาย', 'หนองบัวลำภู', 'อ่างทอง', 'อำนาจเจริญ', 'อุดรธานี',
   'อุตรดิตถ์', 'อุทัยธานี', 'อุบลราชธานี'
 ];
+
+export const THAI_PROVINCE_COORDINATES: Record<string, { lat: number; lng: number; district?: string }> = {
+  'กรุงเทพมหานคร': { lat: 13.7563, lng: 100.5018, district: 'พระนคร' },
+  'นนทบุรี': { lat: 13.8621, lng: 100.5144, district: 'เมืองนนทบุรี' },
+  'ปทุมธานี': { lat: 14.0208, lng: 100.5250, district: 'เมืองปทุมธานี' },
+  'สมุทรปราการ': { lat: 13.5991, lng: 100.5968, district: 'เมืองสมุทรปราการ' },
+  'สมุทรสาคร': { lat: 13.5475, lng: 100.2744, district: 'เมืองสมุทรสาคร' },
+  'นครปฐม': { lat: 13.8196, lng: 100.0601, district: 'เมืองนครปฐม' },
+  'พระนครศรีอยุธยา': { lat: 14.3532, lng: 100.5684, district: 'พระนครศรีอยุธยา' },
+  'เชียงใหม่': { lat: 18.7883, lng: 98.9853, district: 'เมืองเชียงใหม่' },
+  'เชียงราย': { lat: 19.9105, lng: 99.8406, district: 'เมืองเชียงราย' },
+  'ลำปาง': { lat: 18.2888, lng: 99.4928, district: 'เมืองลำปาง' },
+  'ลำพูน': { lat: 18.5745, lng: 99.0087, district: 'เมืองลำพูน' },
+  'แม่ฮ่องสอน': { lat: 19.3021, lng: 97.9654, district: 'เมืองแม่ฮ่องสอน' },
+  'พิษณุโลก': { lat: 16.8211, lng: 100.2659, district: 'เมืองพิษณุโลก' },
+  'นครสวรรค์': { lat: 15.7047, lng: 100.1371, district: 'เมืองนครสวรรค์' },
+  'ชลบุรี': { lat: 13.3611, lng: 100.9847, district: 'เมืองชลบุรี' },
+  'ระยอง': { lat: 12.6814, lng: 101.2816, district: 'เมืองระยอง' },
+  'จันทบุรี': { lat: 12.6114, lng: 102.1039, district: 'เมืองจันทบุรี' },
+  'ขอนแก่น': { lat: 16.4419, lng: 102.8359, district: 'เมืองขอนแก่น' },
+  'นครราชสีมา': { lat: 14.9799, lng: 102.0978, district: 'เมืองนครราชสีมา' },
+  'อุดรธานี': { lat: 17.4138, lng: 102.7872, district: 'เมืองอุดรธานี' },
+  'อุบลราชธานี': { lat: 15.2287, lng: 104.8594, district: 'เมืองอุบลราชธานี' },
+  'ภูเก็ต': { lat: 7.8804, lng: 98.3923, district: 'เมืองภูเก็ต' },
+  'สุราษฎร์ธานี': { lat: 9.1382, lng: 99.3215, district: 'เมืองสุราษฎร์ธานี' },
+  'สงขลา': { lat: 7.1898, lng: 100.5954, district: 'หาดใหญ่' },
+  'กระบี่': { lat: 8.0863, lng: 98.9063, district: 'เมืองกระบี่' },
+  'ตรัง': { lat: 7.5563, lng: 99.6114, district: 'เมืองตรัง' }
+};
+
+export function findNearestThaiProvince(lat: number, lng: number): { province: string; district: string } {
+  let closest = 'เชียงใหม่';
+  let district = 'เมืองเชียงใหม่';
+  let minDistance = Infinity;
+
+  for (const [name, coord] of Object.entries(THAI_PROVINCE_COORDINATES)) {
+    const dLat = coord.lat - lat;
+    const dLng = coord.lng - lng;
+    const dist = dLat * dLat + dLng * dLng;
+    if (dist < minDistance) {
+      minDistance = dist;
+      closest = name;
+      district = coord.district || 'เมือง';
+    }
+  }
+
+  return { province: closest, district };
+}

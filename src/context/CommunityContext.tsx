@@ -9,6 +9,7 @@ import {
   AlertReport
 } from '../types';
 import { sendSystemNotification } from '../utils/notificationService';
+import { findNearestThaiProvince } from '../data/thaiData';
 import {
   db,
   auth,
@@ -336,7 +337,7 @@ const INITIAL_NOTIFICATIONS: InAppNotification[] = [
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [activeTab, setActiveTab] = useState<Tab>('feed');
 
   const [location, setLocation] = useState<Location>(() => {
     try {
@@ -347,6 +348,15 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     return DEFAULT_LOCATION;
   });
+
+  // Persist location setting whenever changed
+  useEffect(() => {
+    try {
+      localStorage.setItem('localhub_location', JSON.stringify(location));
+    } catch (e) {
+      console.warn('Failed to save location to localStorage:', e);
+    }
+  }, [location]);
 
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isLocationPermissionModalOpen, setIsLocationPermissionModalOpen] = useState(false);
@@ -744,32 +754,47 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setOpenedPost(null);
   }, []);
 
-  // Request browser location
+  // Request browser location with reverse geocoding to Thai province
   const requestRealLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      showToast('เบราว์เซอร์ไม่รองรับการระบุพิกัด GPS', 'error');
+      showToast('เบราว์เซอร์ไม่รองรับการระบุพิกัด GPS โปรดเลือกจังหวัดด้วยตนเอง', 'error');
       setIsLocationPermissionModalOpen(false);
+      setIsLocationModalOpen(true);
       return;
     }
+
+    showToast('กำลังค้นหาตำแหน่ง GPS ของคุณ...', 'info');
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        setLocation(prev => ({
-          ...prev,
+        const nearest = findNearestThaiProvince(latitude, longitude);
+
+        const newLoc: Location = {
+          province: nearest.province,
+          district: nearest.district,
+          subdistrict: '',
           lat: latitude,
           lng: longitude,
-          displayName: `พิกัดปัจจุบัน (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`
-        }));
-        showToast('อัปเดตตำแหน่งจาก GPS เรียบร้อยแล้ว', 'success');
+          displayName: `${nearest.province} (GPS: ${latitude.toFixed(2)}, ${longitude.toFixed(2)})`
+        };
+
+        setLocation(newLoc);
+        try {
+          localStorage.setItem('localhub_location', JSON.stringify(newLoc));
+        } catch {}
+
+        showToast(`อัปเดตพิกัด GPS: ${nearest.province} (${nearest.district}) เรียบร้อยแล้ว`, 'success');
         setIsLocationPermissionModalOpen(false);
+        setIsLocationModalOpen(false);
       },
       (err) => {
         console.warn('Geolocation error:', err);
-        showToast('ไม่สามารถระบุพิกัดได้ โปรดเลือกจังหวัดด้วยตนเอง', 'info');
+        showToast('ไม่สามารถดึงพิกัด GPS อัตโนมัติได้ โปรดเลือกจังหวัดของคุณ', 'info');
         setIsLocationPermissionModalOpen(false);
+        setIsLocationModalOpen(true);
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 }
     );
   }, [showToast]);
 

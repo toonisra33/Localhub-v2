@@ -1,16 +1,15 @@
 import React from 'react';
 import {
-  Home,
-  Compass,
-  Globe,
-  Users,
-  BarChart3,
-  User,
+  MessageSquare,
+  Radio,
   ShoppingBag,
   AlertTriangle,
-  CloudSun,
+  Compass,
+  User,
+  Shield,
   HelpCircle,
-  Activity
+  Activity,
+  CloudSun
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { useBroadcast } from '../context/BroadcastContext';
@@ -20,27 +19,20 @@ export const DesktopSidebar: React.FC = () => {
   const { activeTab, setActiveTab, openContactAdminModal, isAdmin } = useCommunity();
   const { setOpenSignalTestModal } = useBroadcast();
 
-  // Exactly matching the 6 primary tabs + secondary features
-  const primaryNavItems: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
-    { id: 'home', label: 'หน้าหลัก', icon: <Home className="w-5 h-5" /> },
-    { id: 'map', label: 'รอบตัว', icon: <Compass className="w-5 h-5" />, badge: 'GPS' },
-    { id: 'broadcasts', label: 'ศูนย์ข่าว', icon: <Globe className="w-5 h-5" />, badge: 'LIVE' },
-    { id: 'feed', label: 'ฟีดชุมชน', icon: <Users className="w-5 h-5" /> },
-    { id: 'dashboard', label: 'แดชบอร์ด', icon: <BarChart3 className="w-5 h-5" /> },
-    { id: 'profile', label: 'ฉัน', icon: <User className="w-5 h-5" /> },
-  ];
-
-  const secondaryNavItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'market', label: 'ตลาดนัดชุมชน', icon: <ShoppingBag className="w-4 h-4" /> },
-    { id: 'alerts', label: 'รายงานเหตุฉุกเฉิน', icon: <AlertTriangle className="w-4 h-4" /> },
-    { id: 'weather', label: 'พยากรณ์อากาศสด', icon: <CloudSun className="w-4 h-4" /> },
+  const navItems: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
+    { id: 'feed', label: 'ฟีดชุมชน', icon: <MessageSquare className="w-5 h-5" /> },
+    { id: 'broadcasts', label: 'บรอดแคสต์ทางการ', icon: <Radio className="w-5 h-5" />, badge: 'LIVE' },
+    { id: 'weather', label: 'พยากรณ์อากาศสด', icon: <CloudSun className="w-5 h-5" />, badge: 'สด' },
+    { id: 'alerts', label: 'รายงานเหตุฉุกเฉิน', icon: <AlertTriangle className="w-5 h-5" /> },
+    { id: 'market', label: 'ตลาดนัดชุมชน', icon: <ShoppingBag className="w-5 h-5" /> },
+    { id: 'map', label: 'แผนที่เรดาร์', icon: <Compass className="w-5 h-5" /> },
+    { id: 'profile', label: 'บัญชี & สิทธิ์', icon: <User className="w-5 h-5" /> },
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-4 sticky top-20 self-start">
-      {/* Primary Navigation */}
+    <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-6 sticky top-20 self-start">
       <div className="bg-white rounded-3xl border border-slate-200/90 p-3 shadow-xs space-y-1">
-        {primaryNavItems.map((item) => {
+        {navItems.map((item) => {
           const isActive = activeTab === item.id;
 
           return (
@@ -49,7 +41,7 @@ export const DesktopSidebar: React.FC = () => {
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
                 isActive
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
@@ -72,36 +64,14 @@ export const DesktopSidebar: React.FC = () => {
         })}
       </div>
 
-      {/* Secondary Quick Access Services */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-3 shadow-xs space-y-1">
-        <span className="text-[11px] font-bold text-slate-400 px-3 py-1 block">
-          บริการด่วนเพิ่มเติม
-        </span>
-        {secondaryNavItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition ${
-                isActive ? 'bg-slate-100 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Contact Admin Banner */}
-      <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-3xl p-4 space-y-2.5">
+      {/* Community Help card */}
+      <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-3xl p-4.5 space-y-3">
         <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs">
           <HelpCircle className="w-4 h-4 text-indigo-600" />
           <span>ต้องการประชาสัมพันธ์?</span>
         </div>
-        <p className="text-[11px] text-slate-600 leading-relaxed">
-          ติดต่อทีมแอดมินเพื่อขอกระจายเสียงบรอดแคสต์ฟรี
+        <p className="text-xs text-slate-600 leading-relaxed">
+          มีกิจกรรม งานบุญ หรือข่าวสารชุมชน ติดต่อทีมแอดมินเพื่อขอกระจายเสียงบรอดแคสต์ฟรี
         </p>
         <button
           onClick={openContactAdminModal}
@@ -111,17 +81,21 @@ export const DesktopSidebar: React.FC = () => {
         </button>
       </div>
 
-      {/* Admin Siren Test Card (Only if Admin toonisra33@gmail.com) */}
+      {/* Admin Signal Test card */}
       {isAdmin && (
         <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-3xl p-4 space-y-2.5">
           <div className="flex items-center gap-2 text-red-900 font-extrabold text-xs">
             <Activity className="w-4 h-4 text-red-600 animate-pulse" />
             <span>ทดสอบสัญญาณเตือนภัย</span>
           </div>
+          <p className="text-[11px] text-slate-600 leading-tight">
+            ทดสอบเสียงไซเรน & ระบบสั่นสะเทือน ทั้งเฉพาะเครื่องนี้หรือทุกอุปกรณ์
+          </p>
           <button
             onClick={() => setOpenSignalTestModal(true)}
             className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
           >
+            <Activity className="w-3.5 h-3.5" />
             <span>เปิดแผงทดสอบสัญญาณ</span>
           </button>
         </div>
