@@ -212,6 +212,16 @@ export const ProfileView: React.FC = () => {
               <RotateCcw className={`w-4 h-4 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
               <span>{isCheckingUpdate ? 'กำลังตรวจสอบ...' : '🔍 ตรวจสอบเวอร์ชันใหม่'}</span>
             </button>
+
+            {/* Button 3: Download Complete Source Code ZIP */}
+            <a
+              href="./localhub-latest-source.zip"
+              download="localhub-latest-source.zip"
+              className="col-span-1 sm:col-span-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md text-center"
+            >
+              <Download className="w-4 h-4" />
+              <span>📦 ดาวน์โหลดไฟล์ซอร์สโค้ดโปรเจกต์ฉบับเต็มล่าสุด (ZIP) เพื่ออัปโหลดขึ้น GitHub ทันที</span>
+            </a>
           </div>
         </div>
 

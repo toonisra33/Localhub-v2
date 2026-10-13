@@ -18,6 +18,26 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
+    <script>
+      // Automated Cache Invalidation & Instant Live Update
+      (function() {
+        var APP_VERSION = '1.5.0-20261013-live';
+        var stored = localStorage.getItem('localhub_cache_key');
+        if (stored !== APP_VERSION) {
+          localStorage.setItem('localhub_cache_key', APP_VERSION);
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) {
+                if (!k.includes('google-fonts') && !k.includes('gstatic')) {
+                  return caches.delete(k);
+                }
+              }));
+            }).catch(function() {});
+          }
+        }
+      })();
+    </script>
+
     <title>LocalHub</title>
     <meta name="description" content="LocalHub ศูนย์รวมข้อมูล ข่าวสาร บรอดแคสเตือนภัย และตลาดนัดชุมชนใกล้ตัวคุณ" />
     <meta property="og:title" content="LocalHub" />

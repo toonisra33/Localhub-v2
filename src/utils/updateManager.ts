@@ -1,9 +1,9 @@
 // LocalHub App Update & Cache Invalidation Manager
 // Solves issues where installed Android Play Store apps / PWAs show old cached versions
 
-export const APP_VERSION = '1.4.0';
+export const APP_VERSION = '1.5.0';
 export const BUILD_DATE = '2026-10-13';
-export const BUILD_ID = 'localhub_build_20261013_v140_live';
+export const BUILD_ID = 'localhub_build_20261013_v150_live';
 
 let updateCallback: ((hasUpdate: boolean) => void) | null = null;
 let updateWorker: ServiceWorker | null = null;

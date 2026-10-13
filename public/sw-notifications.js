@@ -1,5 +1,5 @@
 // Version tag to force cache invalidation upon updates
-const SW_VERSION = 'localhub-v1.4.0-20261013';
+const SW_VERSION = 'localhub-v1.5.0-20261013-live';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
