@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: 'pages'
@@ -26,40 +24,23 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: 'npm'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci || npm install
 
       - name: Build Application (Vite Build)
         run: npm run build
 
-      # 1. Deploy to gh-pages branch (Always succeeds, creates and updates gh-pages branch with built files)
+      - name: Prepare SPA routing and Jekyll bypass
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
       - name: Deploy to gh-pages branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
           branch: gh-pages
-
-      # 2. Setup GitHub Pages (Tries to enable Pages via API if not enabled; continue-on-error ensures job never fails)
-      - name: Setup GitHub Pages
-        id: pages_setup
-        continue-on-error: true
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      # 3. Upload Build Artifact for GitHub Actions Pages
-      - name: Upload Build Artifact
-        if: steps.pages_setup.outcome == 'success'
-        continue-on-error: true
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './dist'
-
-      # 4. Deploy to GitHub Pages environment
-      - name: Deploy to GitHub Pages
-        if: steps.pages_setup.outcome == 'success'
-        continue-on-error: true
-        id: deployment
-        uses: actions/deploy-pages@v4
+          clean: true
