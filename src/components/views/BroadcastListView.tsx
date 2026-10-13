@@ -38,7 +38,7 @@ export const BroadcastListView: React.FC = () => {
     testAllDevicesSignal,
     dismissTestSignal
   } = useBroadcast();
-  const { isAdmin, location, showToast } = useCommunity();
+  const { isAdmin, setIsAdmin, location, showToast } = useCommunity();
   const [severityFilter, setSeverityFilter] = useState<string>('all');
 
   const filtered = broadcasts.filter(b => {
@@ -73,7 +73,7 @@ export const BroadcastListView: React.FC = () => {
       </div>
 
       {/* Admin Signal Test Control Bar (Visible when in Admin Mode) */}
-      {isAdmin && (
+      {isAdmin ? (
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
@@ -166,6 +166,25 @@ export const BroadcastListView: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-white shadow-xs flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-slate-300">
+            <span className="p-1 bg-slate-800 rounded-lg text-slate-400">
+              <Shield className="w-4 h-4" />
+            </span>
+            <span>ต้องการทดสอบสัญญาณเตือนภัยเฉพาะเครื่องหรือทุกอุปกรณ์?</span>
+          </div>
+          <button
+            onClick={() => {
+              setIsAdmin(true);
+              showToast('เปิดโหมด Admin แล้ว! แสดงปุ่มทดสอบสัญญาณเตือนภัย', 'success');
+            }}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>เปิดโหมด Admin</span>
+          </button>
         </div>
       )}
 

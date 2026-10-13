@@ -46,8 +46,16 @@ function AppContent() {
   // Local modal states
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+  const [createPostInitialMode, setCreatePostInitialMode] = useState<'camera' | 'gallery' | 'video' | 'standard'>('standard');
+  const [createPostInitialImages, setCreatePostInitialImages] = useState<string[]>([]);
   const [isCreateMarketModalOpen, setIsCreateMarketModalOpen] = useState(false);
   const [isReportAlertModalOpen, setIsReportAlertModalOpen] = useState(false);
+
+  const openCreatePostWith = (mode: 'camera' | 'gallery' | 'video' | 'standard' = 'standard', images: string[] = []) => {
+    setCreatePostInitialMode(mode);
+    setCreatePostInitialImages(images);
+    setIsCreatePostModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 lg:pb-8 selection:bg-blue-500 selection:text-white">
@@ -82,7 +90,8 @@ function AppContent() {
       {/* Global Navbar */}
       <Navbar
         onOpenNotifications={() => setIsNotifModalOpen(true)}
-        onOpenCreatePost={() => setIsCreatePostModalOpen(true)}
+        onOpenCreatePost={() => openCreatePostWith('standard')}
+        onOpenCreatePostWithMode={(mode, images) => openCreatePostWith(mode, images || [])}
       />
 
       {/* Permanent Admin Signal Test Bar (Directly visible upon opening the app) */}
@@ -97,7 +106,8 @@ function AppContent() {
         <section className="flex-1 min-w-0">
           {activeTab === 'feed' && (
             <FeedView
-              onOpenCreatePost={() => setIsCreatePostModalOpen(true)}
+              onOpenCreatePost={() => openCreatePostWith('standard')}
+              onOpenCreatePostWithMode={(mode, images) => openCreatePostWith(mode, images || [])}
               onOpenWeather={() => setActiveTab('weather')}
             />
           )}
@@ -157,7 +167,13 @@ function AppContent() {
 
       <CreatePostModal
         isOpen={isCreatePostModalOpen}
-        onClose={() => setIsCreatePostModalOpen(false)}
+        initialMode={createPostInitialMode}
+        initialImages={createPostInitialImages}
+        onClose={() => {
+          setIsCreatePostModalOpen(false);
+          setCreatePostInitialImages([]);
+          setCreatePostInitialMode('standard');
+        }}
       />
 
       <CreateMarketItemModal

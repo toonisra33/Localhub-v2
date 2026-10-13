@@ -299,6 +299,59 @@ export const AdminBroadcastModal: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {activeTab === 'create' ? (
             <form onSubmit={handleSend} className="space-y-4">
+              {/* Quick Signal Test Action Bar (Always visible in Broadcast Console) */}
+              <div className="p-3.5 bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 rounded-2xl border border-red-500/50 text-white space-y-2.5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-red-600 text-white rounded-lg animate-pulse">
+                      <Activity className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <div className="text-xs font-black text-white flex items-center gap-1.5">
+                        <span>⚡ ทดสอบสัญญาณเตือนภัย & ระบบสั่น (Admin Signal Test)</span>
+                      </div>
+                      <div className="text-[10px] text-slate-300">
+                        เลือกทดสอบเฉพาะเครื่องนี้ หรือทดสอบส่งสัญญาณพร้อมกันทุกอุปกรณ์
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('test')}
+                    className="text-[11px] px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg transition"
+                  >
+                    ตั้งค่าเสียง ⚙️
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      testLocalDeviceSignal('siren', 5);
+                      showToast('🔊 ทดสอบเสียงและระบบสั่นเฉพาะเครื่องแอดมินนี้เรียบร้อย (ไม่ส่งไปยังประชาชน)', 'info');
+                    }}
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    <span>ทดสอบเฉพาะเครื่องนี้</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      testAllDevicesSignal();
+                      showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
+                    }}
+                    className="px-3 py-2 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm animate-pulse"
+                  >
+                    <Radio className="w-3.5 h-3.5" />
+                    <span>ทดสอบทุกอุปกรณ์</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Severity & Category Selection */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

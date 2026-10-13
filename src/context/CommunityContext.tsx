@@ -366,9 +366,21 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
   const [isContactAdminModalOpen, setIsContactAdminModalOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(true); // default true so user can easily test broadcast features
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('localhub_is_admin');
+      if (stored !== null) return JSON.parse(stored);
+    } catch {}
+    return true; // Default true so user can easily find and test admin signal features
+  });
 
   // Persist safely without quota exceptions
+  useEffect(() => {
+    try {
+      localStorage.setItem('localhub_is_admin', JSON.stringify(isAdmin));
+    } catch {}
+  }, [isAdmin]);
+
   useEffect(() => {
     try {
       localStorage.setItem('localhub_location', JSON.stringify(location));
