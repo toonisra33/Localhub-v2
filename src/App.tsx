@@ -3,6 +3,9 @@ import { BroadcastProvider, useBroadcast } from './context/BroadcastContext';
 import { CommunityProvider, useCommunity } from './context/CommunityContext';
 import { Volume2, X } from 'lucide-react';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
+import { PWAInstallBanner } from './components/pwa/PWAInstallBanner';
+import { NotificationActivationBanner } from './components/NotificationActivationBanner';
+import { AdminSignalTestBar } from './components/AdminSignalTestBar';
 import { Navbar } from './components/Navbar';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { MobileNav } from './components/MobileNav';
@@ -95,11 +98,20 @@ function AppContent() {
       {/* Floating In-App Update Banner */}
       <AppUpdateBanner />
 
-      {/* Toast Notification Container */}
-      <ToastContainer />
+      {/* PWA Mobile Installation Banner & Guide */}
+      <PWAInstallBanner />
+
+      {/* Push Notification Activation & Test Banner */}
+      <NotificationActivationBanner />
 
       {/* Top Emergency & Announcement Broadcast Banner */}
       <AdminBroadcastBanner />
+
+      {/* Admin Signal Test Bar (Top Control Console) */}
+      <AdminSignalTestBar />
+
+      {/* Toast Notification Container */}
+      <ToastContainer />
 
       {/* Global Navbar */}
       <Navbar

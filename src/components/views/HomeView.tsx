@@ -233,10 +233,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <span className="text-[11px] text-slate-400">แตะเพื่อเปิดบริการ</span>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5">
           <button
             onClick={openContactAdminModal}
-            className="p-2 sm:p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-1.5 sm:p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
             <div className="p-1.5 sm:p-2 bg-indigo-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <Megaphone className="w-4 h-4" />
@@ -246,7 +246,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <button
             onClick={() => (onOpenReportAlert ? onOpenReportAlert() : setActiveTab('alerts'))}
-            className="p-2 sm:p-3 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-1.5 sm:p-3 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
             <div className="p-1.5 sm:p-2 bg-rose-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <AlertTriangle className="w-4 h-4" />
@@ -261,7 +261,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               }
               setOpenAdminModal(true);
             }}
-            className="p-2 sm:p-3 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-1.5 sm:p-3 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
             <div className="p-1.5 sm:p-2 bg-blue-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <Radio className="w-4 h-4" />
@@ -271,7 +271,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <button
             onClick={() => setActiveTab('market')}
-            className="p-2 sm:p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-1.5 sm:p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
             <div className="p-1.5 sm:p-2 bg-emerald-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <ShoppingBag className="w-4 h-4" />
@@ -281,7 +281,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <button
             onClick={() => setActiveTab('map')}
-            className="hidden sm:flex p-2 sm:p-3 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-xl sm:rounded-2xl flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-1.5 sm:p-3 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
             <div className="p-1.5 sm:p-2 bg-teal-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <MapPin className="w-4 h-4" />
