@@ -51,8 +51,8 @@ export const MapView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="hidden xs:inline-flex px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] sm:text-xs font-bold border border-emerald-400/30 items-center gap-1">
-            Google Maps
+          <span className="hidden xs:inline-flex px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30 items-center gap-1">
+            Google Maps สด
           </span>
           <button
             onClick={openLocationModal}

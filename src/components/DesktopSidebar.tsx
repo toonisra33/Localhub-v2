@@ -21,13 +21,13 @@ export const DesktopSidebar: React.FC = () => {
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
     { id: 'home', label: 'หน้าหลัก', icon: <Home className="w-5 h-5" /> },
+    { id: 'map', label: 'รอบตัว / แผนที่', icon: <MapPin className="w-5 h-5" />, badge: 'LIVE' },
     { id: 'feed', label: 'ฟีดชุมชน', icon: <Users className="w-5 h-5" /> },
-    { id: 'broadcasts', label: 'บรอดแคสต์ทางการ', icon: <Radio className="w-5 h-5" /> },
-    { id: 'alerts', label: 'รายงานเหตุฉุกเฉิน', icon: <AlertTriangle className="w-5 h-5" /> },
-    { id: 'weather', label: 'พยากรณ์อากาศสด', icon: <CloudSun className="w-5 h-5" /> },
     { id: 'market', label: 'ตลาดนัดชุมชน', icon: <Store className="w-5 h-5" /> },
-    { id: 'map', label: 'แผนที่รอบตัว', icon: <MapPin className="w-5 h-5" />, badge: 'LIVE' },
     { id: 'profile', label: 'บัญชีของฉัน', icon: <User className="w-5 h-5" /> },
+    { id: 'broadcasts', label: 'บรอดแคสต์ทางการ', icon: <Radio className="w-5 h-5" /> },
+    { id: 'weather', label: 'พยากรณ์อากาศสด', icon: <CloudSun className="w-5 h-5" /> },
+    { id: 'alerts', label: 'รายงานเหตุฉุกเฉิน', icon: <AlertTriangle className="w-5 h-5" /> },
   ];
 
   return (

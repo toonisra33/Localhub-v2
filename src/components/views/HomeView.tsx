@@ -256,17 +256,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <button
             onClick={() => {
-              if (!isAdmin) {
-                setIsAdmin(true);
-              }
-              setOpenAdminModal(true);
+              showToast('เปิดรายชื่อร้านอาหารและเมนูยอดนิยมรอบตัว', 'info');
+              setActiveTab('market');
             }}
-            className="p-1.5 sm:p-3 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-1.5 sm:p-3 bg-amber-50 hover:bg-amber-100 border border-amber-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
-            <div className="p-1.5 sm:p-2 bg-blue-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
-              <Radio className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 bg-amber-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
+              <UtensilsCrossed className="w-4 h-4" />
             </div>
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">บรอดแคสต์</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">กินอะไรดี</span>
           </button>
 
           <button
