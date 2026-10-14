@@ -5,7 +5,9 @@ import {
   Radio,
   Plus,
   ChevronDown,
-  Camera
+  Camera,
+  User,
+  Shield
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { saveMediaFile } from '../utils/mediaStorage';
@@ -23,7 +25,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCreatePostWithMode,
   onOpenInstantCamera
 }) => {
-  const { location, openLocationModal, unreadNotifCount, showToast, setActiveTab } = useCommunity();
+  const {
+    location,
+    openLocationModal,
+    unreadNotifCount,
+    showToast,
+    setActiveTab,
+    currentUser,
+    isAdmin,
+    openLoginModal
+  } = useCommunity();
 
   const navCameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -127,6 +138,40 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             )}
           </button>
+
+          {/* User Account / Login Button */}
+          {currentUser && currentUser.email ? (
+            <button
+              onClick={openLoginModal}
+              className="flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 rounded-xl hover:bg-slate-100 transition active:scale-95 group shrink-0"
+              title={`บัญชี: ${currentUser.displayName || currentUser.email} (${isAdmin ? 'Admin' : 'User'})`}
+            >
+              <div className="relative">
+                <img
+                  src={currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                  alt="avatar"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover ring-2 ring-slate-200 group-hover:ring-emerald-500"
+                />
+                {isAdmin && (
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-red-600 rounded-full ring-2 ring-white flex items-center justify-center text-[7px] text-white font-black" title="Admin">
+                    🛡️
+                  </span>
+                )}
+              </div>
+              <span className="text-xs font-bold text-slate-700 hidden lg:inline max-w-[80px] truncate">
+                {currentUser.displayName?.split(' ')[0] || 'บัญชี'}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={openLoginModal}
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 border border-slate-200 hover:border-emerald-200 rounded-xl text-xs font-bold transition active:scale-95 shrink-0"
+              title="เข้าสู่ระบบ"
+            >
+              <User className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">เข้าสู่ระบบ</span>
+            </button>
+          )}
 
           {/* Quick Post button */}
           <button

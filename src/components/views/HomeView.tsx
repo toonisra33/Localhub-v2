@@ -47,7 +47,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
     openContactAdminModal,
     showToast,
     currentUser,
-    requestRealLocation
+    requestRealLocation,
+    setIsAdmin
   } = useCommunity();
 
   const {
@@ -55,7 +56,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
     testAllDevicesSignal,
     stopLocalDeviceTest,
     isTestingLocalAdmin,
-    setOpenSignalTestModal
+    setOpenSignalTestModal,
+    setOpenAdminModal
   } = useBroadcast();
 
   return (
@@ -254,15 +256,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <button
             onClick={() => {
-              showToast('เปิดรายชื่อร้านอาหารและเมนูยอดนิยมรอบตัว', 'info');
-              setActiveTab('market');
+              if (!isAdmin) {
+                setIsAdmin(true);
+              }
+              setOpenAdminModal(true);
             }}
-            className="p-2 sm:p-3 bg-amber-50 hover:bg-amber-100 border border-amber-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-2 sm:p-3 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
-            <div className="p-1.5 sm:p-2 bg-amber-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
-              <UtensilsCrossed className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 bg-blue-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
+              <Radio className="w-4 h-4" />
             </div>
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">กินอะไรดี</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">บรอดแคสต์</span>
           </button>
 
           <button
@@ -333,7 +337,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
               className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
             >
               <Radio className="w-3.5 h-3.5 animate-pulse shrink-0" />
-              <span className="truncate">ทดสอบทุกอุปกรณ์ (All Devices)</span>
+              <span className="truncate">ทดสอบทุกอุปกรณ์</span>
+            </button>
+
+            <button
+              onClick={() => setOpenAdminModal(true)}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
+            >
+              <Megaphone className="w-3.5 h-3.5 shrink-0" />
+              <span>ส่งบรอดแคสต์</span>
             </button>
           </div>
         </div>

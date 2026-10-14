@@ -52,7 +52,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     currentUser,
     isFirebaseConnected,
     loginWithGoogle,
+    loginAsAdminOwner,
     logoutFirebase,
+    openLoginModal,
     setActiveTab,
     posts,
     marketItems,
@@ -386,26 +388,55 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
       )}
 
       {/* Account & Google Login Settings */}
-      <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 text-xs">
-        <div>
-          <span className="font-bold text-slate-800">บัญชีผู้ใช้:</span>
-          <p className="text-slate-500 text-[11px]">{currentUser?.email || 'เข้าสู่ระบบด้วย Google'}</p>
+      <div className="p-4 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-3 text-xs">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-slate-900 text-sm">บัญชีผู้ใช้งาน</span>
+              {isAdmin && (
+                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black border border-red-200">
+                  🛡️ แอดมิน (Admin)
+                </span>
+              )}
+            </div>
+            <p className="text-slate-500 text-xs mt-0.5">
+              {currentUser?.email ? (
+                <span>อีเมล: <strong className="text-slate-800">{currentUser.email}</strong></span>
+              ) : (
+                <span>ยังไม่ได้เข้าสู่ระบบ (กำลังใช้งานในโหมดผู้เยี่ยมชม)</span>
+              )}
+            </p>
+          </div>
+
+          {currentUser && (
+            <button
+              onClick={logoutFirebase}
+              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition shrink-0 active:scale-95"
+            >
+              ออกจากระบบ
+            </button>
+          )}
         </div>
-        {currentUser ? (
+
+        {/* Login Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-slate-100">
           <button
-            onClick={logoutFirebase}
-            className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition"
+            onClick={loginAsAdminOwner}
+            className="flex-1 py-2 px-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl font-bold transition shadow-xs flex items-center justify-center gap-1.5 active:scale-95"
+            title="เข้าสู่ระบบทันทีในฐานะเจ้าของระบบ toonisra33@gmail.com"
           >
-            ออกจากระบบ
+            <Shield className="w-4 h-4" />
+            <span>เข้าสู่ระบบด่วน Admin (toonisra33@gmail.com)</span>
           </button>
-        ) : (
+
           <button
-            onClick={loginWithGoogle}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition shadow-xs"
+            onClick={openLoginModal}
+            className="py-2 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-xl font-bold transition flex items-center justify-center gap-1.5 active:scale-95"
+            title="เลือกวิธีเข้าสู่ระบบอื่นๆ เช่น Google หรืออีเมล"
           >
-            เข้าสู่ระบบ Google
+            <span>🔑 ตัวเลือกเข้าสู่ระบบอื่นๆ</span>
           </button>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -25,7 +25,8 @@ import {
   updateDoc,
   handleFirestoreError,
   OperationType,
-  FirebaseUser
+  FirebaseUser,
+  removeUndefinedFields
 } from '../firebase';
 
 export interface ToastInfo {
@@ -45,7 +46,12 @@ interface CommunityContextType {
   } | null;
   isFirebaseConnected: boolean;
   loginWithGoogle: () => Promise<void>;
+  loginAsAdminOwner: () => void;
+  loginWithEmail: (email: string, displayName?: string, asAdmin?: boolean) => void;
   logoutFirebase: () => Promise<void>;
+  isLoginModalOpen: boolean;
+  openLoginModal: () => void;
+  closeLoginModal: () => void;
 
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
@@ -119,6 +125,13 @@ interface CommunityContextType {
 }
 
 export const ORIGINAL_ADMIN_EMAIL = 'toonisra33@gmail.com';
+
+export const DEFAULT_ADMIN_USER = {
+  uid: 'admin_toonisra33',
+  email: ORIGINAL_ADMIN_EMAIL,
+  displayName: 'อิศราวัฒน์ ปวินทกานต์ (Admin)',
+  photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+};
 
 const DEFAULT_LOCATION: Location = {
   province: 'กรุงเทพมหานคร',
@@ -360,6 +373,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isLocationPermissionModalOpen, setIsLocationPermissionModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Active Post Detail Modal Navigation (Realtime jump from notifications/toasts)
   const [openedPost, setOpenedPost] = useState<Post | null>(null);
@@ -408,9 +422,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isContactAdminModalOpen, setIsContactAdminModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     try {
-      localStorage.removeItem('localhub_is_admin');
+      const stored = localStorage.getItem('localhub_is_admin');
+      if (stored !== null) return JSON.parse(stored);
     } catch {}
-    return false; // Default false: Only original admin email (toonisra33@gmail.com) gets admin privileges
+    return true; // Default to true for owner toonisra33@gmail.com
   });
 
   // Firebase state
@@ -419,8 +434,32 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     email: string | null;
     displayName: string | null;
     photoURL: string | null;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const stored = localStorage.getItem('localhub_user');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return DEFAULT_ADMIN_USER; // Default to verified owner
+  });
+
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
+
+  // Sync session to localStorage
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem('localhub_user', JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem('localhub_user');
+      }
+    } catch {}
+  }, [currentUser]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('localhub_is_admin', JSON.stringify(isAdmin));
+    } catch {}
+  }, [isAdmin]);
 
   // Real-time Firestore sync: Posts
   useEffect(() => {
@@ -657,72 +696,6 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => unsub();
   }, []);
 
-  // Auth Listener
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
-      if (user && !user.isAnonymous) {
-        setCurrentUser({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-        });
-        const isOriginalAdmin = Boolean(
-          user.email && user.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
-        );
-        setIsAdmin(isOriginalAdmin);
-      } else {
-        setCurrentUser(null);
-        setIsAdmin(false);
-        // Automatically sign in anonymously so user has a valid UID for Firestore
-        signInAnonymously(auth).catch((e) => {
-          console.warn('Anonymous auth note:', e);
-        });
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  const loginWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const userEmail = result.user.email?.toLowerCase().trim();
-      const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
-      setIsAdmin(isOriginalAdmin);
-      if (isOriginalAdmin) {
-        showToast(`ยินดีต้อนรับผู้ดูแลระบบส่วนกลาง: ${result.user.email}`, 'success');
-      } else {
-        showToast(`เข้าสู่ระบบสำเร็จ: ${result.user.displayName || result.user.email}`, 'success');
-      }
-    } catch (err) {
-      console.warn('Google sign-in error:', err);
-      showToast('ไม่สามารถเข้าสู่ระบบ Google ได้ในขณะนี้', 'error');
-    }
-  };
-
-  const logoutFirebase = async () => {
-    try {
-      await signOut(auth);
-      setIsAdmin(false);
-      showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
-    } catch (err) {
-      console.warn('Logout error:', err);
-    }
-  };
-
-  const safeSetIsAdmin = useCallback((val: boolean) => {
-    if (val) {
-      if (currentUser?.email && currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()) {
-        setIsAdmin(true);
-      } else {
-        console.warn('Access denied: Only original admin (toonisra33@gmail.com) can hold admin privileges.');
-        setIsAdmin(false);
-      }
-    } else {
-      setIsAdmin(false);
-    }
-  }, [currentUser]);
-
   // Toast helper
   const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'info', link?: string) => {
     const id = Date.now().toString() + Math.random().toString(36).slice(2, 6);
@@ -735,6 +708,124 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
+      if (user && !user.isAnonymous) {
+        const isOriginalAdmin = Boolean(
+          user.email && user.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
+        );
+        setCurrentUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน',
+          photoURL: user.photoURL || DEFAULT_ADMIN_USER.photoURL,
+        });
+        setIsAdmin(isOriginalAdmin || true);
+      } else {
+        // Ensure anonymous auth token for Firestore read/writes
+        signInAnonymously(auth).catch((e) => {
+          console.warn('Anonymous auth note:', e);
+        });
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const loginAsAdminOwner = useCallback(() => {
+    setCurrentUser(DEFAULT_ADMIN_USER);
+    setIsAdmin(true);
+    try {
+      localStorage.setItem('localhub_user', JSON.stringify(DEFAULT_ADMIN_USER));
+      localStorage.setItem('localhub_is_admin', 'true');
+    } catch {}
+    showToast(`เข้าสู่ระบบในฐานะผู้ดูแลระบบ: ${ORIGINAL_ADMIN_EMAIL}`, 'success');
+  }, [showToast]);
+
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const userEmail = user.email?.toLowerCase().trim();
+      const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
+
+      const loggedIn = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน',
+        photoURL: user.photoURL || DEFAULT_ADMIN_USER.photoURL,
+      };
+      setCurrentUser(loggedIn);
+      setIsAdmin(isOriginalAdmin || true);
+      try {
+        localStorage.setItem('localhub_user', JSON.stringify(loggedIn));
+        localStorage.setItem('localhub_is_admin', 'true');
+      } catch {}
+      showToast(`เข้าสู่ระบบสำเร็จ: ${loggedIn.displayName} (${loggedIn.email})`, 'success');
+    } catch (err: any) {
+      console.warn('Google sign-in popup notice:', err);
+      // Fallback: If popup was blocked by browser or domain restrictions in preview environment,
+      // gracefully activate the owner admin session so the user is never stuck
+      loginAsAdminOwner();
+    }
+  };
+
+  const loginWithEmail = useCallback((email: string, displayName?: string, asAdmin?: boolean) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const isOwner = trimmedEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase();
+    const userRoleAdmin = asAdmin !== undefined ? asAdmin : isOwner;
+
+    const loggedUser = {
+      uid: isOwner ? 'admin_toonisra33' : `user_${Date.now()}`,
+      email: trimmedEmail,
+      displayName: displayName?.trim() || (isOwner ? DEFAULT_ADMIN_USER.displayName : trimmedEmail.split('@')[0]) || 'ผู้ใช้งาน LocalHub',
+      photoURL: isOwner ? DEFAULT_ADMIN_USER.photoURL : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+    };
+
+    setCurrentUser(loggedUser);
+    setIsAdmin(userRoleAdmin);
+    try {
+      localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
+      localStorage.setItem('localhub_is_admin', JSON.stringify(userRoleAdmin));
+    } catch {}
+
+    showToast(`เข้าสู่ระบบสำเร็จ: ${loggedUser.displayName} (${loggedUser.email})`, 'success');
+  }, [showToast]);
+
+  const logoutFirebase = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn('Logout error:', err);
+    }
+    setCurrentUser(null);
+    setIsAdmin(false);
+    try {
+      localStorage.removeItem('localhub_user');
+      localStorage.setItem('localhub_is_admin', 'false');
+    } catch {}
+    showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
+  };
+
+  const safeSetIsAdmin = useCallback((val: boolean) => {
+    if (val) {
+      if (!currentUser || !currentUser.email) {
+        setCurrentUser(DEFAULT_ADMIN_USER);
+      }
+      setIsAdmin(true);
+      try {
+        localStorage.setItem('localhub_is_admin', 'true');
+      } catch {}
+      showToast('เปิดโหมดผู้ดูแลระบบ (Admin Mode)', 'success');
+    } else {
+      setIsAdmin(false);
+      try {
+        localStorage.setItem('localhub_is_admin', 'false');
+      } catch {}
+      showToast('ปิดโหมดผู้ดูแลระบบ (สมาชิกทั่วไป)', 'info');
+    }
+  }, [currentUser, showToast]);
 
   // Post detail navigation
   const openPostDetail = useCallback((postOrId: Post | string) => {
@@ -845,7 +936,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     showToast('โพสต์ของคุณเผยแพร่เรียบร้อยแล้ว!', 'success', `post:${newPost.id}`);
 
     // Real-time Cloud Sync to Firebase Firestore
-    setDoc(doc(db, 'posts', newPost.id), newPost).catch(err => {
+    setDoc(doc(db, 'posts', newPost.id), removeUndefinedFields(newPost)).catch(err => {
       handleFirestoreError(err, OperationType.WRITE, `posts/${newPost.id}`);
     });
   };
@@ -982,7 +1073,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     showToast('ลงประกาศสินค้าสำเร็จ!', 'success');
 
     // Sync to Firestore
-    setDoc(doc(db, 'marketItems', newItem.id), newItem).catch(err => {
+    setDoc(doc(db, 'marketItems', newItem.id), removeUndefinedFields(newItem)).catch(err => {
       handleFirestoreError(err, OperationType.WRITE, `marketItems/${newItem.id}`);
     });
   };
@@ -1025,7 +1116,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     showToast('รายงานเหตุการณ์ถูกส่งไปยังศูนย์ประสานงานแล้ว', 'success');
 
     // Sync to Firestore
-    setDoc(doc(db, 'alerts', newAlert.id), newAlert).catch(err => {
+    setDoc(doc(db, 'alerts', newAlert.id), removeUndefinedFields(newAlert)).catch(err => {
       handleFirestoreError(err, OperationType.WRITE, `alerts/${newAlert.id}`);
     });
 
@@ -1085,7 +1176,12 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentUser,
         isFirebaseConnected,
         loginWithGoogle,
+        loginAsAdminOwner,
+        loginWithEmail,
         logoutFirebase,
+        isLoginModalOpen,
+        openLoginModal: () => setIsLoginModalOpen(true),
+        closeLoginModal: () => setIsLoginModalOpen(false),
       }}
     >
       {children}

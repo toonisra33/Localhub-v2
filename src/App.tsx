@@ -30,6 +30,7 @@ import { ContactAdminModal } from './components/modals/ContactAdminModal';
 import { ToastContainer } from './components/modals/ToastContainer';
 import { AllDevicesTestAlertModal } from './components/modals/AllDevicesTestAlertModal';
 import { AdminSignalTestModal } from './components/modals/AdminSignalTestModal';
+import { LoginModal } from './components/modals/LoginModal';
 import { AppUpdateBanner } from './components/AppUpdateBanner';
 import { InstantCameraModal } from './components/modals/InstantCameraModal';
 
@@ -177,6 +178,7 @@ function AppContent() {
       <AllDevicesTestAlertModal />
       <AdminSignalTestModal />
       <AdminBroadcastModal />
+      <LoginModal />
 
       <NotificationCenterModal
         isOpen={isNotifModalOpen}

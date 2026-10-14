@@ -16,7 +16,7 @@ import { useBroadcast } from '../context/BroadcastContext';
 import { Tab } from '../types';
 
 export const DesktopSidebar: React.FC = () => {
-  const { activeTab, setActiveTab, openContactAdminModal, isAdmin } = useCommunity();
+  const { activeTab, setActiveTab, openContactAdminModal, isAdmin, currentUser, openLoginModal } = useCommunity();
   const { setOpenSignalTestModal } = useBroadcast();
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
@@ -65,6 +65,32 @@ export const DesktopSidebar: React.FC = () => {
             </button>
           );
         })}
+      </div>
+
+      {/* Account Widget */}
+      <div
+        onClick={openLoginModal}
+        className="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-xs group"
+        title="จัดการบัญชี / เข้าสู่ระบบ"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <img
+            src={currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+            alt="avatar"
+            className="w-8 h-8 rounded-full object-cover ring-1.5 ring-slate-200 group-hover:ring-emerald-500 shrink-0"
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-800 truncate">
+              {currentUser?.displayName || 'ผู้เยี่ยมชม'}
+            </p>
+            <p className="text-[10px] text-slate-500 truncate">
+              {currentUser?.email ? (isAdmin ? '🛡️ ผู้ดูแลระบบ' : '👤 สมาชิก') : 'แตะเพื่อเข้าสู่ระบบ'}
+            </p>
+          </div>
+        </div>
+        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 group-hover:bg-emerald-100 px-2 py-0.5 rounded-lg shrink-0">
+          {currentUser?.email ? 'จัดการ' : 'ล็อกอิน'}
+        </span>
       </div>
 
       {/* Contact Admin / Community Notice Card */}

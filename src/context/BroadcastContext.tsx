@@ -23,8 +23,10 @@ import {
   collection,
   onSnapshot,
   setDoc,
+  deleteDoc,
   handleFirestoreError,
-  OperationType
+  OperationType,
+  removeUndefinedFields
 } from '../firebase';
 
 export interface BroadcastInput {
@@ -280,10 +282,11 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       broadcastTestSignalToAllDevices(payload);
 
       // 2. Sync to Firebase Firestore cloud so all remote devices and phones receive the alert in real time
-      setDoc(doc(db, 'signalBroadcasts', payload.id), {
+      const sanitizedSignal = removeUndefinedFields({
         ...payload,
         createdAt: new Date().toISOString()
-      }).catch(err => {
+      });
+      setDoc(doc(db, 'signalBroadcasts', payload.id), sanitizedSignal).catch(err => {
         handleFirestoreError(err, OperationType.WRITE, `signalBroadcasts/${payload.id}`);
       });
 
@@ -474,7 +477,8 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setBroadcasts(prev => [newBc, ...prev]);
 
     // Save to Cloud Firestore in real time so all devices immediately receive it
-    setDoc(doc(db, 'broadcasts', newBc.id), newBc).catch(err => {
+    const sanitizedBc = removeUndefinedFields(newBc);
+    setDoc(doc(db, 'broadcasts', newBc.id), sanitizedBc).catch(err => {
       handleFirestoreError(err, OperationType.WRITE, `broadcasts/${newBc.id}`);
     });
 
@@ -528,6 +532,9 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // remove from dismissed
     setDismissedIds(prev => prev.filter(id => id !== broadcast.id));
 
+    // Sync rebroadcast to Firestore
+    setDoc(doc(db, 'broadcasts', rebroadcasted.id), removeUndefinedFields(rebroadcasted)).catch(() => {});
+
     // Send native system background notification for re-broadcast
     sendSystemNotification({
       title: `📢 [ส่งซ้ำ] ${rebroadcasted.title}`,
@@ -550,6 +557,7 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteBroadcast = (id: string) => {
     setBroadcasts(prev => prev.filter(b => b.id !== id));
+    deleteDoc(doc(db, 'broadcasts', id)).catch(() => {});
   };
 
   // Find the top un-dismissed broadcast

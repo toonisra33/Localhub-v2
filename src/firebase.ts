@@ -84,6 +84,22 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   return errInfo;
 }
 
+// Utility to recursively strip undefined properties before sending to Firestore
+export function removeUndefinedFields<T extends Record<string, any>>(obj: T): Partial<T> {
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+        result[key] = removeUndefinedFields(value);
+      } else {
+        result[key] = value;
+      }
+    }
+  }
+  return result;
+}
+
+
 // Connection test on boot
 export async function testFirestoreConnection(): Promise<boolean> {
   try {

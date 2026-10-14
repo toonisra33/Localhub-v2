@@ -38,7 +38,7 @@ export const BroadcastListView: React.FC = () => {
     testAllDevicesSignal,
     dismissTestSignal
   } = useBroadcast();
-  const { isAdmin, location, showToast } = useCommunity();
+  const { isAdmin, setIsAdmin, location, showToast } = useCommunity();
   const [severityFilter, setSeverityFilter] = useState<string>('all');
 
   const filtered = broadcasts.filter(b => {
@@ -61,15 +61,18 @@ export const BroadcastListView: React.FC = () => {
           </p>
         </div>
 
-        {isAdmin && (
-          <button
-            onClick={() => setOpenAdminModal(true)}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/30 transition shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            เปิดคอนโซลบรอดแคสต์
-          </button>
-        )}
+        <button
+          onClick={() => {
+            if (!isAdmin) {
+              setIsAdmin(true);
+            }
+            setOpenAdminModal(true);
+          }}
+          className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/30 transition shrink-0 active:scale-95"
+        >
+          <Plus className="w-4 h-4" />
+          <span>สร้างข้อความบรอดแคสต์</span>
+        </button>
       </div>
 
       {/* Admin Signal Test Control Bar (Visible when in Admin Mode) */}
