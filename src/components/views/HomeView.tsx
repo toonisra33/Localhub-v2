@@ -20,7 +20,8 @@ import {
   CloudSun,
   Store,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { useBroadcast } from '../../context/BroadcastContext';
@@ -48,6 +49,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     showToast,
     currentUser,
     requestRealLocation,
+    isLocatingGps,
     setIsAdmin
   } = useCommunity();
 
@@ -133,18 +135,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </button>
             </div>
             <p className="text-[10px] sm:text-[11px] text-slate-400 truncate mt-0.5">
-              ต.{location.subdistrict || 'ลาดยาว'} • หมู่บ้านพหลโยธินวิลล่า
+              {location.addressDetails || `${location.subdistrict ? `ต.${location.subdistrict} • ` : ''}${location.district ? `อ.${location.district} • ` : ''}จ.${location.province}`}
             </p>
           </div>
 
           {/* Big Green Real GPS Button */}
           <button
             onClick={() => requestRealLocation()}
-            className="px-3 py-2 sm:px-3.5 sm:py-2.5 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition shrink-0"
+            disabled={isLocatingGps}
+            className={`px-3 py-2 sm:px-3.5 sm:py-2.5 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition shrink-0 ${
+              isLocatingGps ? 'opacity-85 cursor-wait' : ''
+            }`}
             title="ตรวจจับพิกัด GPS จริง ณ ตำแหน่งที่คุณอยู่"
           >
-            <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white shrink-0" />
-            <span>GPS จริง</span>
+            {isLocatingGps ? (
+              <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin shrink-0" />
+            ) : (
+              <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white shrink-0" />
+            )}
+            <span>{isLocatingGps ? 'จับสัญญาณ...' : 'GPS จริง'}</span>
           </button>
         </div>
       </div>

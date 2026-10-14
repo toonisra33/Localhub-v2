@@ -43,10 +43,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   } = useCommunity();
 
   const {
-    setOpenAdminModal,
-    testLocalDeviceSignal,
-    testAllDevicesSignal,
-    setOpenSignalTestModal
+    setOpenAdminModal
   } = useBroadcast();
 
   if (!isOpen) return null;
@@ -151,61 +148,6 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             <span>ยิงแจ้งเตือนทันที</span>
           </button>
         </div>
-
-        {/* Admin Emergency Signal Test Bar (Requested in User Screenshot) */}
-        {isAdmin && (
-          <div className="p-3.5 bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 border-b border-red-500/40 text-white space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 bg-red-600 text-white rounded-lg animate-pulse">
-                  <Activity className="w-4 h-4" />
-                </span>
-                <div>
-                  <div className="text-xs font-black text-white flex items-center gap-1.5">
-                    <span>⚡ ทดสอบสัญญาณเตือนภัย & ระบบสั่น (Admin Test)</span>
-                  </div>
-                  <div className="text-[10px] text-slate-300">
-                    เลือกทดสอบเฉพาะเครื่องแอดมิน หรือทดสอบส่งสัญญาณพร้อมกันทุกอุปกรณ์
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setOpenSignalTestModal(true)}
-                className="p-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg transition"
-                title="เปิดคอนโซลตั้งค่าเสียงและระบบสั่น"
-              >
-                <Sliders className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-0.5">
-              {/* Button 1: Test this device only */}
-              <button
-                onClick={() => {
-                  testLocalDeviceSignal('siren', 5);
-                  showToast('🔊 ทดสอบเสียงและระบบสั่นเฉพาะเครื่องแอดมินนี้เรียบร้อย (ไม่ส่งไปยังประชาชน)', 'info');
-                }}
-                className="px-2.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
-              >
-                <Play className="w-3.5 h-3.5" />
-                <span>ทดสอบเฉพาะเครื่องนี้</span>
-              </button>
-
-              {/* Button 2: Test all devices */}
-              <button
-                onClick={() => {
-                  testAllDevicesSignal();
-                  showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
-                }}
-                className="px-2.5 py-2 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm animate-pulse"
-              >
-                <Radio className="w-3.5 h-3.5" />
-                <span>ทดสอบทุกอุปกรณ์</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Notification List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5">

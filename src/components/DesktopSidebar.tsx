@@ -9,15 +9,13 @@ import {
   AlertTriangle,
   CloudSun,
   Megaphone,
-  Activity
+  ShieldAlert
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
-import { useBroadcast } from '../context/BroadcastContext';
 import { Tab } from '../types';
 
 export const DesktopSidebar: React.FC = () => {
   const { activeTab, setActiveTab, openContactAdminModal, isAdmin, currentUser, openLoginModal } = useCommunity();
-  const { setOpenSignalTestModal } = useBroadcast();
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
     { id: 'home', label: 'หน้าหลัก', icon: <Home className="w-5 h-5" /> },
@@ -28,6 +26,9 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'broadcasts', label: 'บรอดแคสต์ทางการ', icon: <Radio className="w-5 h-5" /> },
     { id: 'weather', label: 'พยากรณ์อากาศสด', icon: <CloudSun className="w-5 h-5" /> },
     { id: 'alerts', label: 'รายงานเหตุฉุกเฉิน', icon: <AlertTriangle className="w-5 h-5" /> },
+    ...(isAdmin
+      ? [{ id: 'admin' as Tab, label: 'แดชบอร์ดแอดมิน', icon: <ShieldAlert className="w-5 h-5 text-red-500" />, badge: 'ADMIN' }]
+      : [])
   ];
 
   return (
@@ -35,6 +36,7 @@ export const DesktopSidebar: React.FC = () => {
       <div className="bg-white rounded-3xl border border-slate-200/90 p-3 shadow-xs space-y-1">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
+          const isAdminItem = item.id === 'admin';
 
           return (
             <button
@@ -42,12 +44,16 @@ export const DesktopSidebar: React.FC = () => {
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
                 isActive
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  ? isAdminItem
+                    ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                    : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : isAdminItem
+                  ? 'text-red-700 hover:text-red-900 hover:bg-red-50 border border-red-200/60'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className={isActive ? 'text-white' : 'text-slate-500'}>
+                <span className={isActive ? 'text-white' : isAdminItem ? 'text-red-600' : 'text-slate-500'}>
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
@@ -56,7 +62,11 @@ export const DesktopSidebar: React.FC = () => {
               {item.badge && (
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : isAdminItem
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-emerald-100 text-emerald-800'
                   }`}
                 >
                   {item.badge}
@@ -109,26 +119,6 @@ export const DesktopSidebar: React.FC = () => {
           ขอส่งบรอดแคสต์
         </button>
       </div>
-
-      {/* Admin Signal Test Card */}
-      {isAdmin && (
-        <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-3xl p-4 space-y-2.5">
-          <div className="flex items-center gap-2 text-red-900 font-extrabold text-xs">
-            <Activity className="w-4 h-4 text-red-600 animate-pulse" />
-            <span>ทดสอบสัญญาณเตือนภัย</span>
-          </div>
-          <p className="text-[11px] text-slate-600 leading-tight">
-            ทดสอบเสียงไซเรน & ระบบสั่นสะเทือน ทั้งเฉพาะเครื่องนี้หรือทุกอุปกรณ์
-          </p>
-          <button
-            onClick={() => setOpenSignalTestModal(true)}
-            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>เปิดแผงทดสอบสัญญาณ</span>
-          </button>
-        </div>
-      )}
     </aside>
   );
 };

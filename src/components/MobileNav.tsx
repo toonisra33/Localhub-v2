@@ -4,7 +4,8 @@ import {
   MapPin,
   Users,
   Store,
-  User
+  User,
+  ShieldAlert
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { Tab } from '../types';
@@ -14,13 +15,16 @@ interface MobileNavProps {
 }
 
 export const MobileNav: React.FC<MobileNavProps> = () => {
-  const { activeTab, setActiveTab } = useCommunity();
+  const { activeTab, setActiveTab, isAdmin } = useCommunity();
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: 'หน้าหลัก', icon: <Home className="w-5 h-5" /> },
     { id: 'map', label: 'รอบตัว', icon: <MapPin className="w-5 h-5" /> },
-    { id: 'feed', label: 'ฟีดชุมชน', icon: <Users className="w-5 h-5" /> },
+    { id: 'feed', label: 'ฟีด', icon: <Users className="w-5 h-5" /> },
     { id: 'market', label: 'ตลาด', icon: <Store className="w-5 h-5" /> },
+    ...(isAdmin
+      ? [{ id: 'admin' as Tab, label: 'แอดมิน', icon: <ShieldAlert className="w-5 h-5" /> }]
+      : []),
     { id: 'profile', label: 'ฉัน', icon: <User className="w-5 h-5" /> },
   ];
 
@@ -39,15 +43,21 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
             <div
               className={`p-1.5 rounded-2xl transition-all ${
                 isActive
-                  ? 'bg-emerald-100 text-emerald-800 scale-105 shadow-xs'
+                  ? item.id === 'admin'
+                    ? 'bg-red-100 text-red-700 scale-105 shadow-xs'
+                    : 'bg-emerald-100 text-emerald-800 scale-105 shadow-xs'
+                  : item.id === 'admin'
+                  ? 'text-red-500'
                   : 'text-slate-500'
               }`}
             >
               {item.icon}
             </div>
-            <span className="text-[10px] mt-0.5 tracking-tight">{item.label}</span>
+            <span className={`text-[10px] mt-0.5 tracking-tight ${isActive ? (item.id === 'admin' ? 'text-red-700 font-bold' : 'text-emerald-700 font-bold') : 'text-slate-500 font-medium'}`}>
+              {item.label}
+            </span>
             {isActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-0.5"></span>
+              <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${item.id === 'admin' ? 'bg-red-600' : 'bg-emerald-600'}`}></span>
             )}
           </button>
         );

@@ -125,6 +125,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden md:inline">ถ่ายรูปสด</span>
           </button>
 
+          {/* Admin Dashboard Quick Button */}
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('admin')}
+              className="flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-300 rounded-xl text-xs font-black transition active:scale-95 shrink-0 shadow-2xs"
+              title="เปิดแดชบอร์ดแอดมิน & ระบบทดสอบสัญญาณ"
+            >
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+              <span className="hidden sm:inline">แดชบอร์ดแอดมิน</span>
+              <span className="sm:hidden text-[11px]">แอดมิน</span>
+            </button>
+          )}
+
           {/* Notification Bell */}
           <button
             onClick={onOpenNotifications}

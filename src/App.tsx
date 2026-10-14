@@ -5,7 +5,6 @@ import { Volume2, X } from 'lucide-react';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
 import { PWAInstallBanner } from './components/pwa/PWAInstallBanner';
 import { NotificationActivationBanner } from './components/NotificationActivationBanner';
-import { AdminSignalTestBar } from './components/AdminSignalTestBar';
 import { Navbar } from './components/Navbar';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { MobileNav } from './components/MobileNav';
@@ -19,6 +18,7 @@ import { AlertsView } from './components/views/AlertsView';
 import { MapView } from './components/views/MapView';
 import { ProfileView } from './components/views/ProfileView';
 import { WeatherForecastView } from './components/views/WeatherForecastView';
+import { AdminDashboardView } from './components/views/AdminDashboardView';
 
 // Modals
 import { AdminBroadcastModal } from './components/modals/AdminBroadcastModal';
@@ -107,9 +107,6 @@ function AppContent() {
       {/* Top Emergency & Announcement Broadcast Banner */}
       <AdminBroadcastBanner />
 
-      {/* Admin Signal Test Bar (Top Control Console) */}
-      <AdminSignalTestBar />
-
       {/* Toast Notification Container */}
       <ToastContainer />
 
@@ -171,6 +168,10 @@ function AppContent() {
 
           {activeTab === 'profile' && (
             <ProfileView onOpenCreatePost={() => openCreatePostWith('standard')} />
+          )}
+
+          {activeTab === 'admin' && (
+            <AdminDashboardView />
           )}
         </section>
       </main>

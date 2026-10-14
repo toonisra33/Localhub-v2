@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { sendSystemNotification } from '../utils/notificationService';
 import { findNearestThaiProvince } from '../data/thaiData';
+import { getRealDeviceGps, reverseGeocodeCoords } from '../services/geolocationService';
 import {
   db,
   auth,
@@ -63,7 +64,8 @@ interface CommunityContextType {
   isLocationPermissionModalOpen: boolean;
   openLocationPermissionModal: () => void;
   closeLocationPermissionModal: () => void;
-  requestRealLocation: () => void;
+  requestRealLocation: () => Promise<void>;
+  isLocatingGps: boolean;
 
   // Post detail modal & jump
   openedPost: Post | null;
@@ -374,6 +376,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isLocationPermissionModalOpen, setIsLocationPermissionModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isLocatingGps, setIsLocatingGps] = useState(false);
 
   // Active Post Detail Modal Navigation (Realtime jump from notifications/toasts)
   const [openedPost, setOpenedPost] = useState<Post | null>(null);
@@ -845,48 +848,44 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setOpenedPost(null);
   }, []);
 
-  // Request browser location with reverse geocoding to Thai province
-  const requestRealLocation = useCallback(() => {
-    if (!navigator.geolocation) {
+  // Request browser location with real reverse geocoding to Thai physical address
+  const requestRealLocation = useCallback(async () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
       showToast('เบราว์เซอร์ไม่รองรับการระบุพิกัด GPS โปรดเลือกจังหวัดด้วยตนเอง', 'error');
       setIsLocationPermissionModalOpen(false);
       setIsLocationModalOpen(true);
       return;
     }
 
-    showToast('กำลังค้นหาตำแหน่ง GPS ของคุณ...', 'info');
+    setIsLocatingGps(true);
+    showToast('🛰️ กำลังตรวจจับสัญญาณดาวเทียม GPS และระบุพื้นที่จริงของคุณ...', 'info');
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const nearest = findNearestThaiProvince(latitude, longitude);
+    try {
+      const coords = await getRealDeviceGps();
+      const realLocation = await reverseGeocodeCoords(coords.lat, coords.lng);
 
-        const newLoc: Location = {
-          province: nearest.province,
-          district: nearest.district,
-          subdistrict: '',
-          lat: latitude,
-          lng: longitude,
-          displayName: `${nearest.province} (GPS: ${latitude.toFixed(2)}, ${longitude.toFixed(2)})`
-        };
+      setLocation(realLocation);
+      try {
+        localStorage.setItem('localhub_location', JSON.stringify(realLocation));
+      } catch {}
 
-        setLocation(newLoc);
-        try {
-          localStorage.setItem('localhub_location', JSON.stringify(newLoc));
-        } catch {}
-
-        showToast(`อัปเดตพิกัด GPS: ${nearest.province} (${nearest.district}) เรียบร้อยแล้ว`, 'success');
-        setIsLocationPermissionModalOpen(false);
-        setIsLocationModalOpen(false);
-      },
-      (err) => {
-        console.warn('Geolocation error:', err);
-        showToast('ไม่สามารถดึงพิกัด GPS อัตโนมัติได้ โปรดเลือกจังหวัดของคุณ', 'info');
-        setIsLocationPermissionModalOpen(false);
-        setIsLocationModalOpen(true);
-      },
-      { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 }
-    );
+      showToast(`📍 พบตำแหน่งจริง: ${realLocation.displayName}`, 'success');
+      setIsLocationPermissionModalOpen(false);
+      setIsLocationModalOpen(false);
+    } catch (err: any) {
+      console.warn('Geolocation error:', err);
+      let errMsg = 'ไม่สามารถดึงพิกัด GPS อัตโนมัติได้ โปรดเลือกจังหวัดของคุณ';
+      if (err?.code === 1) { // PERMISSION_DENIED
+        errMsg = 'เบราว์เซอร์ไม่อนุญาตการเข้าถึง GPS กรุณาเปิดสิทธิ์ Location ในเบราว์เซอร์ หรือเลือกพื้นที่ด้านล่าง';
+      } else if (err?.code === 3) { // TIMEOUT
+        errMsg = 'หมดเวลาค้นหาสัญญาณดาวเทียม GPS กรุณาลองใหม่อีกครั้ง หรือเลือกพื้นที่ด้านล่าง';
+      }
+      showToast(errMsg, 'error');
+      setIsLocationPermissionModalOpen(false);
+      setIsLocationModalOpen(true);
+    } finally {
+      setIsLocatingGps(false);
+    }
   }, [showToast]);
 
   const createPost = (data: {
@@ -1147,6 +1146,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         openLocationPermissionModal: () => setIsLocationPermissionModalOpen(true),
         closeLocationPermissionModal: () => setIsLocationPermissionModalOpen(false),
         requestRealLocation,
+        isLocatingGps,
         openedPost,
         openPostDetail,
         closePostDetail,

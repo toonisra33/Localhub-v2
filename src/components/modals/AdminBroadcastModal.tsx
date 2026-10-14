@@ -56,25 +56,12 @@ export const AdminBroadcastModal: React.FC = () => {
     reBroadcastItem,
     broadcasts,
     deleteBroadcast,
-    playSoundAlert,
-    isTestingLocalAdmin,
-    isTestingAllDevices,
-    testLocalDeviceSignal,
-    stopLocalDeviceTest,
-    testAllDevicesSignal,
-    dismissTestSignal
+    playSoundAlert
   } = useBroadcast();
 
   const { showToast, addInAppNotification } = useCommunity();
 
-  const [activeTab, setActiveTab] = useState<'create' | 'history' | 'test'>('create');
-
-  // Test Tab States
-  const [localSoundType, setLocalSoundType] = useState<TestSoundType>('siren');
-  const [localDurationSec, setLocalDurationSec] = useState<number>(5);
-  const [allDevicesTitle, setAllDevicesTitle] = useState('🚨 [ทดสอบระบบ] สัญญาณแจ้งเตือนฉุกเฉินทุกอุปกรณ์');
-  const [allDevicesMessage, setAllDevicesMessage] = useState('ผู้ดูแลระบบ (Admin) กำลังทดสอบสัญญาณเตือนภัย เสียงไซเรน และการสั่นสะเทือนพร้อมกันทุกอุปกรณ์ที่ติดตั้ง LocalHub');
-  const [allDevicesSoundType, setAllDevicesSoundType] = useState<TestSoundType>('siren');
+  const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
 
   // Form states
   const [title, setTitle] = useState('');
@@ -288,79 +275,12 @@ export const AdminBroadcastModal: React.FC = () => {
               {broadcasts.length}
             </span>
           </button>
-          <button
-            onClick={() => setActiveTab('test')}
-            className={`pb-2.5 px-4 font-semibold text-sm border-b-2 transition flex items-center gap-1.5 ${
-              activeTab === 'test'
-                ? 'border-red-600 text-red-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5 text-red-500 animate-pulse" />
-            ทดสอบสัญญาณแจ้งเตือน
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-red-100 text-red-700 font-bold">
-              ทดสอบ
-            </span>
-          </button>
         </div>
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {activeTab === 'create' ? (
             <form onSubmit={handleSend} className="space-y-4">
-              {/* Quick Signal Test Action Bar (Always visible in Broadcast Console) */}
-              <div className="p-3.5 bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 rounded-2xl border border-red-500/50 text-white space-y-2.5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1.5 bg-red-600 text-white rounded-lg animate-pulse">
-                      <Activity className="w-4 h-4" />
-                    </span>
-                    <div>
-                      <div className="text-xs font-black text-white flex items-center gap-1.5">
-                        <span>⚡ ทดสอบสัญญาณเตือนภัย & ระบบสั่น (Admin Signal Test)</span>
-                      </div>
-                      <div className="text-[10px] text-slate-300">
-                        เลือกทดสอบเฉพาะเครื่องนี้ หรือทดสอบส่งสัญญาณพร้อมกันทุกอุปกรณ์
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('test')}
-                    className="text-[11px] px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg transition"
-                  >
-                    ตั้งค่าเสียง ⚙️
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      testLocalDeviceSignal('siren', 5);
-                      showToast('🔊 ทดสอบเสียงและระบบสั่นเฉพาะเครื่องแอดมินนี้เรียบร้อย (ไม่ส่งไปยังประชาชน)', 'info');
-                    }}
-                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                    <span>ทดสอบเฉพาะเครื่องนี้</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      testAllDevicesSignal();
-                      showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
-                    }}
-                    className="px-3 py-2 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm animate-pulse"
-                  >
-                    <Radio className="w-3.5 h-3.5" />
-                    <span>ทดสอบทุกอุปกรณ์</span>
-                  </button>
-                </div>
-              </div>
-
               {/* Severity & Category Selection */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -697,7 +617,7 @@ export const AdminBroadcastModal: React.FC = () => {
                 </div>
               </div>
             </form>
-          ) : activeTab === 'history' ? (
+          ) : (
             <div className="space-y-3">
               {broadcasts.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 text-sm">
@@ -761,227 +681,7 @@ export const AdminBroadcastModal: React.FC = () => {
                 ))
               )}
             </div>
-          ) : (
-            /* Tab 3: Signal Test Console */
-            <div className="space-y-5">
-              {/* Header Info */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-red-400 animate-pulse" />
-                  <span className="text-xs font-bold text-red-300 uppercase tracking-wider">
-                    Console ทดสอบระบบสัญญาณฉุกเฉิน
-                  </span>
-                </div>
-                <h3 className="font-bold text-base">ระบบทดสอบสัญญาณเตือนภัยและการสั่นสะเทือน</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  ผู้ดูแลระบบสามารถเลือกทดสอบเฉพาะเครื่องของแอดมิน เพื่อตรวจสอบความพร้อมของลำโพงและการสั่น หรือทดสอบส่งสัญญาณพร้อมกันทุกอุปกรณ์ที่ติดตั้งแอพ
-                </p>
-              </div>
-
-              {/* Mode 1: Local Device Only Test */}
-              <div className="p-4 sm:p-5 rounded-2xl border-2 border-emerald-200 bg-emerald-50/30 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      โหมด 1: ทดสอบเฉพาะ Admin (เครื่องนี้เท่านั้น)
-                    </div>
-                    <h4 className="font-bold text-sm text-slate-900">
-                      ทดสอบเสียงและการสั่นสะเทือนเฉพาะอุปกรณ์ที่คุณกำลังใช้งาน
-                    </h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      ระบบการสั่นและเสียงแจ้งเตือนจะดังเฉพาะเครื่องที่ admin กำลังทดสอบอยู่เท่านั้น จะไม่มีการส่งสัญญาณออกไปยังเครื่องของประชาชนหรืออุปกรณ์อื่น
-                    </p>
-                  </div>
-                </div>
-
-                {/* Local Sound Type & Duration */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      ประเภทเสียงสัญญาณทดสอบ
-                    </label>
-                    <select
-                      value={localSoundType}
-                      onChange={(e) => setLocalSoundType(e.target.value as TestSoundType)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium"
-                    >
-                      <option value="siren">🚨 ไซเรนฉุกเฉินระดับสูงสุด (Urgent Siren 700-1100Hz)</option>
-                      <option value="urgent">⚠️ เสียงเตือนภัยด่วนจังหวะถี่ (High Pulse Beep)</option>
-                      <option value="high">📢 เสียงเตือน 2 ระดับความถี่ (Dual Tone Alert)</option>
-                      <option value="announcement">✨ เสียงกริ่งประกาศทั่วไป (Chime Arpeggio)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      ระยะเวลาทดสอบ
-                    </label>
-                    <select
-                      value={localDurationSec}
-                      onChange={(e) => setLocalDurationSec(Number(e.target.value))}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium"
-                    >
-                      <option value={3}>3 วินาที (ทดสอบด่วน)</option>
-                      <option value={5}>5 วินาที (ค่ามาตรฐาน)</option>
-                      <option value={8}>8 วินาที (ทดสอบระบบต่อเนื่อง)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Local Test Trigger & Controls */}
-                <div className="p-3.5 rounded-xl bg-white border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-xl transition ${
-                      isTestingLocalAdmin ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-700'
-                    }`}>
-                      {isTestingLocalAdmin ? <Volume2 className="w-5 h-5 animate-bounce" /> : <Smartphone className="w-5 h-5" />}
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-800">
-                        {isTestingLocalAdmin ? '🔊 กำลังส่งเสียงไซเรน & สั่นเฉพาะเครื่องนี้...' : 'สถานะ: พร้อมทดสอบเฉพาะเครื่องนี้'}
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {isTestingLocalAdmin ? 'ไม่มีสัญญาณส่งต่อไปยังอุปกรณ์อื่น' : 'กดปุ่มเพื่อทดสอบเสียงและความสั่นสะเทือน'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    {isTestingLocalAdmin ? (
-                      <button
-                        type="button"
-                        onClick={stopLocalDeviceTest}
-                        className="w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
-                      >
-                        <Square className="w-3.5 h-3.5" />
-                        หยุดการทดสอบทันที
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          testLocalDeviceSignal(localSoundType, localDurationSec);
-                          showToast('เริ่มทดสอบเสียงและการสั่นเฉพาะเครื่องนี้แล้ว', 'info');
-                        }}
-                        className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
-                      >
-                        <Play className="w-3.5 h-3.5" />
-                        เริ่มทดสอบ (เครื่องนี้เท่านั้น)
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Diagnostics Status on Local Device */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-                  <div className="p-2 rounded-lg bg-white border border-slate-200 flex items-center gap-2">
-                    <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Web Audio: <b>พร้อมใช้งาน</b></span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-white border border-slate-200 flex items-center gap-2">
-                    <Smartphone className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Vibration API: <b>{isVibrationSupported() ? 'รองรับการสั่น' : 'ไม่รองรับ (PC)'}</b></span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-white border border-slate-200 flex items-center gap-2">
-                    <BellRing className="w-3.5 h-3.5 text-purple-600" />
-                    <span>สิทธิ์แจ้งเตือน: <b>{getNotificationPermission() === 'granted' ? 'ได้รับสิทธิ์แล้ว' : 'รอขอสิทธิ์'}</b></span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Mode 2: All Devices Broadcast Test */}
-              <div className="p-4 sm:p-5 rounded-2xl border-2 border-red-300 bg-red-50/30 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 text-[11px] font-bold">
-                      <Radio className="w-3.5 h-3.5 text-red-600 animate-pulse" />
-                      โหมด 2: ทดสอบการแจ้งเตือนทุกอุปกรณ์ (Broadcast Test)
-                    </div>
-                    <h4 className="font-bold text-sm text-slate-900">
-                      ส่งสัญญาณเตือนภัย เสียงไซเรน และการสั่นไปยังทุกอุปกรณ์ที่ติดตั้งแอพ
-                    </h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      การแจ้งเตือนและการสั่นจะแสดงผลกับทุกอุปกรณ์ที่ติดตั้งแอพพลิเคชั่น LocalHub พร้อมกันทันที ผ่าน Web Push, Background Service Worker และ Broadcast Channel
-                    </p>
-                  </div>
-                </div>
-
-                {/* Test Broadcast Inputs */}
-                <div className="space-y-3 bg-white p-3.5 rounded-xl border border-red-200">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      หัวข้อสัญญาณทดสอบทุกอุปกรณ์
-                    </label>
-                    <input
-                      type="text"
-                      value={allDevicesTitle}
-                      onChange={(e) => setAllDevicesTitle(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      ข้อความคำอธิบายการทดสอบ
-                    </label>
-                    <textarea
-                      value={allDevicesMessage}
-                      onChange={(e) => setAllDevicesMessage(e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 font-normal resize-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      ประเภทเสียงไซเรนทุกเครื่อง
-                    </label>
-                    <select
-                      value={allDevicesSoundType}
-                      onChange={(e) => setAllDevicesSoundType(e.target.value as TestSoundType)}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 font-medium"
-                    >
-                      <option value="siren">🚨 ไซเรนฉุกเฉินระดับสูงสุด (Urgent Siren)</option>
-                      <option value="urgent">⚠️ เสียงเตือนภัยด่วนจังหวะถี่ (High Pulse Beep)</option>
-                      <option value="high">📢 เสียงเตือน 2 ระดับความถี่ (Dual Tone Alert)</option>
-                    </select>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-2 text-xs text-amber-800">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>
-                      สัญญาณนี้จะปรากฏเป็นหน้าต่างแจ้งเตือนฉุกเฉินและสั่นสะเทือนบนทุกหน้าจอที่กำลังเปิดหรือติดตั้ง LocalHub
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-1">
-                    {isTestingAllDevices && (
-                      <button
-                        type="button"
-                        onClick={dismissTestSignal}
-                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold transition flex items-center justify-center gap-1.5"
-                      >
-                        <VolumeX className="w-3.5 h-3.5" />
-                        ปิดสัญญาณเสียง
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        testAllDevicesSignal(allDevicesTitle, allDevicesMessage, allDevicesSoundType);
-                        showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์เรียบร้อยแล้ว!', 'success');
-                      }}
-                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white text-xs font-bold shadow-md shadow-red-600/30 transition flex items-center justify-center gap-2"
-                    >
-                      <Radio className="w-4 h-4 animate-pulse" />
-                      ส่งสัญญาณทดสอบทุกอุปกรณ์ทันที
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+          
           )}
         </div>
       </div>

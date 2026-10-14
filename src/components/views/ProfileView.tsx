@@ -21,6 +21,7 @@ import {
   RotateCcw,
   ExternalLink,
   ChevronDown,
+  ChevronRight,
   Settings,
   Edit3,
   Bookmark,
@@ -341,49 +342,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
         </div>
       </div>
 
-      {/* Admin Broadcast & Alert Controls (Exclusively for Admin) */}
+      {/* Admin Dashboard Quick Access (Exclusively for Admin) */}
       {isAdmin && (
-        <div className="p-5 bg-gradient-to-br from-red-950 via-slate-900 to-rose-950 text-white rounded-3xl shadow-lg border-2 border-red-500/40 space-y-3.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="p-2 bg-red-600 text-white rounded-xl shadow-md animate-pulse">
+        <div className="p-5 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white rounded-3xl shadow-lg border-2 border-red-500/40 space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 bg-red-600 text-white rounded-xl shadow-md animate-pulse shrink-0">
                 <Activity className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="font-extrabold text-sm text-white">เครื่องมือแอดมิน (Admin Tools)</h3>
-                <p className="text-[11px] text-red-200">ยืนยันสิทธิ์สำหรับ: toonisra33@gmail.com</p>
+                <h3 className="font-extrabold text-sm text-white">ศูนย์ควบคุมและแดชบอร์ดแอดมิน (Admin Dashboard)</h3>
+                <p className="text-[11px] text-red-200">ระบบทดสอบสัญญาณเสียง สถิติ และการจัดการระบบแบบรวมศูนย์</p>
               </div>
             </div>
             <button
-              onClick={() => setOpenSignalTestModal(true)}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition shadow-xs"
+              onClick={() => setActiveTab('admin')}
+              className="px-4 py-2 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-1.5 shrink-0"
             >
-              เปิดแผงทดสอบ
+              <span>เข้าสู่แดชบอร์ดแอดมิน</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <button
-              onClick={() => {
-                testLocalDeviceSignal('siren', 5);
-                showToast('▶️ ทดสอบเสียงและระบบสั่นเฉพาะเครื่องนี้ (Admin Only)', 'info');
-              }}
-              className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
-            >
-              <Play className="w-3.5 h-3.5" />
-              <span>ทดสอบเฉพาะเครื่องนี้</span>
-            </button>
-            <button
-              onClick={() => {
-                testAllDevicesSignal();
-                showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
-              }}
-              className="py-2.5 px-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
-            >
-              <Radio className="w-3.5 h-3.5 animate-pulse" />
-              <span>ทดสอบทุกอุปกรณ์</span>
-            </button>
-          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            ระบบทดสอบสัญญาณเสียงไซเรนฉุกเฉินและระบบสั่นสะเทือนถูกย้ายมารวมไว้ที่ <strong>แดชบอร์ดแอดมิน</strong> ที่เดียว โดยแยกอิสระออกจากการส่งข่าวบรอดแคสต์
+          </p>
         </div>
       )}
 

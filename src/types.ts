@@ -1,4 +1,4 @@
-export type Tab = 'feed' | 'broadcasts' | 'alerts' | 'weather' | 'market' | 'map' | 'profile' | 'home';
+export type Tab = 'home' | 'feed' | 'broadcasts' | 'alerts' | 'weather' | 'market' | 'map' | 'profile' | 'admin';
 
 export type BroadcastCategory = 'news' | 'marketing' | 'announcement' | 'emergency' | 'weather' | 'traffic';
 export type BroadcastSeverity = 'urgent' | 'high' | 'normal' | 'special';
@@ -130,6 +130,8 @@ export interface Location {
   lat?: number;
   lng?: number;
   displayName?: string;
+  road?: string;
+  addressDetails?: string;
 }
 
 export interface InAppNotification {

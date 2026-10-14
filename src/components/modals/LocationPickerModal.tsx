@@ -7,7 +7,8 @@ import {
   Globe,
   Check,
   ArrowRight,
-  Home
+  Home,
+  RefreshCw
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { Location } from '../../types';
@@ -42,7 +43,15 @@ const POPULAR_PLACES: PlaceItem[] = [
 ];
 
 export const LocationPickerModal: React.FC = () => {
-  const { isLocationModalOpen, closeLocationModal, location, setLocation, requestRealLocation, showToast } = useCommunity();
+  const {
+    isLocationModalOpen,
+    closeLocationModal,
+    location,
+    setLocation,
+    requestRealLocation,
+    isLocatingGps,
+    showToast
+  } = useCommunity();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
 
@@ -133,6 +142,7 @@ export const LocationPickerModal: React.FC = () => {
         {/* Modal Scrollable Body */}
         <div className="p-3.5 sm:p-5 flex-1 overflow-y-auto space-y-3.5">
           {/* Card: พื้นที่ปัจจุบันที่คุณเลือก (Matching Screenshot 5) */}
+          {/* Card: พื้นที่ปัจจุบันที่คุณเลือก */}
           <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-50/70 border-2 border-emerald-300 flex items-start justify-between gap-2.5 shadow-xs">
             <div className="flex items-start gap-2.5 min-w-0 flex-1">
               <span className="p-1.5 sm:p-2 bg-emerald-600 text-white rounded-xl shrink-0 mt-0.5">
@@ -143,11 +153,18 @@ export const LocationPickerModal: React.FC = () => {
                   พื้นที่ปัจจุบันที่คุณเลือก
                 </span>
                 <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm truncate mt-0.5">
-                  {location.subdistrict ? `${location.subdistrict} (${location.district || location.province})` : location.displayName}
+                  {location.subdistrict
+                    ? `${location.subdistrict} (${location.district || location.province})`
+                    : (location.displayName || location.province)}
                 </h4>
                 <p className="text-[10px] sm:text-[11px] text-slate-500 leading-tight truncate mt-0.5">
-                  หมู่บ้านพหลโยธินวิลล่า ต.{location.subdistrict || 'ลาดยาว'}, อ.{location.district || 'จตุจักร'}, จ.{location.province}
+                  {location.addressDetails || `${location.subdistrict ? `ต.${location.subdistrict}, ` : ''}${location.district ? `อ.${location.district}, ` : ''}จ.${location.province}`}
                 </p>
+                {location.lat && location.lng && (
+                  <span className="inline-block mt-1 px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-bold">
+                    🛰️ พิกัดจริง: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                  </span>
+                )}
               </div>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[9px] sm:text-[10px] font-black shrink-0">
@@ -155,21 +172,30 @@ export const LocationPickerModal: React.FC = () => {
             </span>
           </div>
 
-          {/* Big Green Real GPS Button (Matching Screenshot 5) */}
+          {/* Big Green Real GPS Button */}
           <button
             onClick={() => requestRealLocation()}
-            className="w-full p-3 sm:p-3.5 bg-gradient-to-tr from-emerald-700 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-500 active:scale-98 text-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg shadow-emerald-700/25 transition text-left flex items-center justify-between gap-2.5 group"
+            disabled={isLocatingGps}
+            className={`w-full p-3 sm:p-3.5 bg-gradient-to-tr from-emerald-700 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-500 active:scale-98 text-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg shadow-emerald-700/25 transition text-left flex items-center justify-between gap-2.5 group ${
+              isLocatingGps ? 'opacity-85 cursor-wait' : ''
+            }`}
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <span className="p-2 sm:p-2.5 bg-white/20 rounded-xl shrink-0 text-white group-hover:scale-110 transition-transform">
-                <Navigation className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
+                {isLocatingGps ? (
+                  <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                ) : (
+                  <Navigation className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
+                )}
               </span>
               <div className="min-w-0 flex-1">
                 <h4 className="font-extrabold text-xs sm:text-sm leading-tight truncate">
-                  ค้นหาพิกัด GPS จริง ณ ตำแหน่งที่คุณอยู่
+                  {isLocatingGps ? 'กำลังค้นหาพิกัด GPS จริง...' : 'ค้นหาพิกัด GPS จริง ณ ตำแหน่งที่คุณอยู่'}
                 </h4>
                 <p className="text-[10px] sm:text-[11px] text-emerald-100 leading-tight mt-0.5 truncate">
-                  ระบบจะอัปเดตและตรวจจับพิกัดแบบเรียลไทม์อัตโนมัติ
+                  {isLocatingGps
+                    ? 'กำลังเชื่อมต่อดาวเทียมและตรวจหาพื้นที่จริง...'
+                    : 'ระบบจะอัปเดตและตรวจจับพิกัดแบบเรียลไทม์อัตโนมัติ'}
                 </p>
               </div>
             </div>
