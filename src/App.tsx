@@ -63,17 +63,26 @@ function AppContent() {
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 lg:pb-8 selection:bg-blue-500 selection:text-white">
       {/* Floating Local Admin Test Status Pill */}
       {isTestingLocalAdmin && (
-        <aside aria-label="สถานะการทดสอบสัญญาณ" className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-emerald-500/60 flex items-center gap-3 backdrop-blur-md animate-bounce-subtle">
-          <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl animate-pulse">
-            <Volume2 className="w-4 h-4" />
-          </span>
-          <div className="text-xs">
-            <div className="font-bold text-emerald-400">กำลังทดสอบสัญญาณเสียง & ระบบสั่น (เฉพาะเครื่องนี้)</div>
-            <div className="text-[10px] text-slate-400">ไม่มีการส่งสัญญาณออกไปยังเครื่องของประชาชน</div>
+        <aside
+          aria-label="สถานะการทดสอบสัญญาณ"
+          className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-md px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-emerald-500/60 flex items-center justify-between gap-2 sm:gap-3 backdrop-blur-md animate-bounce-subtle"
+        >
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+            <span className="p-1 sm:p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl animate-pulse shrink-0">
+              <Volume2 className="w-4 h-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-bold text-emerald-400 text-[11px] sm:text-xs truncate">
+                กำลังทดสอบสัญญาณเสียง & ระบบสั่น (เฉพาะเครื่องนี้)
+              </div>
+              <div className="text-[9px] sm:text-[10px] text-slate-400 truncate">
+                ไม่มีการส่งสัญญาณออกไปยังเครื่องของประชาชน
+              </div>
+            </div>
           </div>
           <button
             onClick={stopLocalDeviceTest}
-            className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition ml-2 shrink-0 flex items-center gap-1 shadow-xs"
+            className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1 shadow-xs active:scale-95"
             title="ปิดการทดสอบ (กากบาท)"
           >
             <X className="w-3.5 h-3.5" />

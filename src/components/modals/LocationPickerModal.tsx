@@ -149,25 +149,25 @@ export const LocationPickerModal: React.FC = () => {
         if (e.target === e.currentTarget) closeLocationModal();
       }}
     >
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-[calc(100vw-1.5rem)] max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header (Matching Screenshot 5) */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
-              <Globe className="w-5 h-5" />
+        <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+            <span className="p-1.5 sm:p-2 bg-emerald-100 text-emerald-700 rounded-xl shrink-0">
+              <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
             </span>
-            <div>
-              <h3 className="font-extrabold text-slate-900 text-sm sm:text-base leading-tight">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-tight truncate">
                 เลือกหรือเปลี่ยนพื้นที่ใช้งาน
               </h3>
-              <p className="text-[11px] text-slate-400">
-                ใช้งานได้ทุกที่บนโลก (ทั่วโลกไม่มีการล็อคขอบเขต)
+              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                ใช้งานได้ทุกที่ (ไม่มีการล็อคขอบเขต)
               </p>
             </div>
           </div>
           <button
             onClick={closeLocationModal}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl transition"
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-700 rounded-xl transition shrink-0 ml-1.5"
             title="ปิดหน้าต่าง (กากบาท)"
           >
             <X className="w-5 h-5" />
@@ -175,26 +175,26 @@ export const LocationPickerModal: React.FC = () => {
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-4 sm:p-5 flex-1 overflow-y-auto space-y-4">
+        <div className="p-3.5 sm:p-5 flex-1 overflow-y-auto space-y-3.5">
           {/* Card: พื้นที่ปัจจุบันที่คุณเลือก (Matching Screenshot 5) */}
-          <div className="p-4 rounded-2xl bg-emerald-50/70 border-2 border-emerald-300 flex items-start justify-between gap-3 shadow-xs">
-            <div className="flex items-start gap-3 min-w-0">
-              <span className="p-2 bg-emerald-600 text-white rounded-xl shrink-0 mt-0.5">
-                <MapPin className="w-4 h-4" />
+          <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-50/70 border-2 border-emerald-300 flex items-start justify-between gap-2.5 shadow-xs">
+            <div className="flex items-start gap-2.5 min-w-0 flex-1">
+              <span className="p-1.5 sm:p-2 bg-emerald-600 text-white rounded-xl shrink-0 mt-0.5">
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </span>
-              <div className="min-w-0">
-                <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wide">
+              <div className="min-w-0 flex-1">
+                <span className="text-[9px] sm:text-[10px] font-black uppercase text-emerald-800 tracking-wide block">
                   พื้นที่ปัจจุบันที่คุณเลือก
                 </span>
-                <h4 className="font-extrabold text-slate-900 text-sm truncate mt-0.5">
+                <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm truncate mt-0.5">
                   {location.subdistrict ? `${location.subdistrict} (${location.district || location.province})` : location.displayName}
                 </h4>
-                <p className="text-[11px] text-slate-500 leading-tight truncate mt-0.5">
+                <p className="text-[10px] sm:text-[11px] text-slate-500 leading-tight truncate mt-0.5">
                   หมู่บ้านพหลโยธินวิลล่า ต.{location.subdistrict || 'ลาดยาว'}, อ.{location.district || 'จตุจักร'}, จ.{location.province}
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[10px] font-black shrink-0">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[9px] sm:text-[10px] font-black shrink-0">
               ✓ ใช้งานอยู่
             </span>
           </div>
@@ -202,17 +202,17 @@ export const LocationPickerModal: React.FC = () => {
           {/* Big Green Real GPS Button (Matching Screenshot 5) */}
           <button
             onClick={() => requestRealLocation()}
-            className="w-full p-4 bg-gradient-to-tr from-emerald-700 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-500 active:scale-98 text-white rounded-2xl shadow-lg shadow-emerald-700/25 transition text-left flex items-center justify-between gap-3 group"
+            className="w-full p-3 sm:p-3.5 bg-gradient-to-tr from-emerald-700 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-500 active:scale-98 text-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg shadow-emerald-700/25 transition text-left flex items-center justify-between gap-2.5 group"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="p-2.5 bg-white/20 rounded-xl shrink-0 text-white group-hover:scale-110 transition-transform">
-                <Navigation className="w-5 h-5 fill-white" />
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <span className="p-2 sm:p-2.5 bg-white/20 rounded-xl shrink-0 text-white group-hover:scale-110 transition-transform">
+                <Navigation className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
               </span>
-              <div className="min-w-0">
-                <h4 className="font-extrabold text-sm sm:text-base leading-tight">
+              <div className="min-w-0 flex-1">
+                <h4 className="font-extrabold text-xs sm:text-sm leading-tight truncate">
                   ค้นหาพิกัด GPS จริง ณ ตำแหน่งที่คุณอยู่
                 </h4>
-                <p className="text-[11px] text-emerald-100 leading-tight mt-0.5">
+                <p className="text-[10px] sm:text-[11px] text-emerald-100 leading-tight mt-0.5 truncate">
                   ระบบจะอัปเดตและตรวจจับพิกัดแบบเรียลไทม์อัตโนมัติ
                 </p>
               </div>

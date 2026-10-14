@@ -127,34 +127,34 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onOpenFullForecast
       <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header */}
-      <div className="flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-2">
-          <span className="p-1.5 bg-sky-500/20 text-sky-300 rounded-xl">
+      <div className="flex items-center justify-between gap-2 relative z-10 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="p-1.5 bg-sky-500/20 text-sky-300 rounded-xl shrink-0">
             <Compass className="w-4 h-4" />
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <h3 className="text-xs font-bold tracking-tight text-white">
-                สภาพอากาศ & พยากรณ์สด (Live Weather)
+              <h3 className="text-xs font-bold tracking-tight text-white truncate">
+                สภาพอากาศ & พยากรณ์สด
               </h3>
-              <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold flex items-center gap-0.5">
+              <span className="hidden sm:inline-flex px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-semibold items-center gap-0.5 shrink-0">
                 <CheckCircle2 className="w-2.5 h-2.5" />
-                ข้อมูลดาวเทียมสด
+                สด
               </span>
             </div>
-            <p className="text-[11px] text-sky-200 flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-sky-300" />
-              <span>{current.locationName} ({location.province})</span>
+            <p className="text-[10px] sm:text-[11px] text-sky-200 flex items-center gap-1 truncate">
+              <MapPin className="w-3 h-3 text-sky-300 shrink-0" />
+              <span className="truncate">{current.locationName} ({location.province})</span>
               <span>•</span>
-              <span>อัปเดต {current.updatedAt} น.</span>
+              <span className="shrink-0">{current.updatedAt} น.</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             onClick={() => loadWeather(true)}
-            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-sky-200 rounded-xl text-[11px] font-medium transition flex items-center gap-1"
+            className="px-2 py-1 sm:px-2.5 sm:py-1 bg-white/10 hover:bg-white/20 text-sky-200 rounded-xl text-[10px] sm:text-[11px] font-medium transition flex items-center gap-1 active:scale-95 shrink-0"
             title="ตรวจจับพิกัด GPS อุปกรณ์จริงของคุณ"
           >
             <span>📍 GPS สด</span>
@@ -163,7 +163,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onOpenFullForecast
           <button
             onClick={() => loadWeather(false)}
             disabled={isLoading}
-            className="p-1.5 bg-white/10 hover:bg-white/20 text-sky-200 rounded-xl transition"
+            className="p-1.5 bg-white/10 hover:bg-white/20 text-sky-200 rounded-xl transition shrink-0 active:scale-95"
             title="รีเฟรชข้อมูลสภาพอากาศ"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />

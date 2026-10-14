@@ -86,47 +86,47 @@ export const AdminBroadcastBanner: React.FC = () => {
         isUrgent ? 'animate-emergency-pulse' : ''
       }`}
     >
-      <div className={`px-3 py-2.5 sm:px-6 sm:py-3 border-b ${getSeverityStyle(activeBroadcast.severity)}`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-sm">
+      <div className={`px-2.5 py-2 sm:px-6 sm:py-3 border-b overflow-hidden w-full max-w-full ${getSeverityStyle(activeBroadcast.severity)}`}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-3 text-xs sm:text-sm w-full min-w-0">
           {/* Left badge & title */}
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <span className="flex-shrink-0 flex items-center justify-center p-1.5 bg-white/15 rounded-lg backdrop-blur-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
+            <span className="flex-shrink-0 flex items-center justify-center p-1 sm:p-1.5 bg-white/15 rounded-lg backdrop-blur-sm">
               {isUrgent ? (
-                <AlertTriangle className="w-5 h-5 text-white animate-bounce" />
+                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-bounce" />
               ) : (
-                <BellRing className="w-5 h-5 text-white" />
+                <BellRing className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               )}
             </span>
 
-            <div className="flex items-center gap-2 flex-wrap min-w-0">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-white/20 text-white backdrop-blur-xs">
-                {activeBroadcast.severity === 'urgent' && '🚨 ด่วนที่สุด'}
-                {activeBroadcast.severity === 'high' && '⚠️ แจ้งเตือนสำคัญ'}
-                {activeBroadcast.severity === 'special' && '✨ ข่าวพิเศษ'}
-                {activeBroadcast.severity === 'normal' && '📢 ประชาสัมพันธ์'}
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden flex-1">
+              <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-semibold bg-white/20 text-white backdrop-blur-xs">
+                {activeBroadcast.severity === 'urgent' && '🚨 ด่วน'}
+                {activeBroadcast.severity === 'high' && '⚠️ เตือน'}
+                {activeBroadcast.severity === 'special' && '✨ ข่าว'}
+                {activeBroadcast.severity === 'normal' && '📢 ข่าว'}
               </span>
 
               {activeBroadcast.targetArea && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-black/20 text-white/95">
+                <span className="hidden sm:inline-flex shrink-0 items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-black/20 text-white/95 truncate max-w-[100px]">
                   <MapPin className="w-3 h-3 text-white/80" />
                   {activeBroadcast.targetArea}
                 </span>
               )}
 
-              <p className="font-semibold text-white truncate max-w-[280px] sm:max-w-md md:max-w-xl">
+              <p className="font-semibold text-white truncate text-xs sm:text-sm min-w-0 flex-1">
                 {activeBroadcast.title}
               </p>
             </div>
           </div>
 
           {/* Right Action buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-xs px-2.5 py-1 rounded-md bg-white/15 hover:bg-white/25 text-white font-medium flex items-center gap-1 transition"
+              className="text-[10px] sm:text-xs px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-white/15 hover:bg-white/25 text-white font-medium flex items-center gap-0.5 sm:gap-1 transition shrink-0"
             >
-              {isExpanded ? 'ย่อลง' : 'อ่านต่อ'}
-              <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+              <span>{isExpanded ? 'ย่อ' : 'อ่านต่อ'}</span>
+              <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
             </button>
 
             <button
@@ -135,28 +135,28 @@ export const AdminBroadcastBanner: React.FC = () => {
                 if (!soundEnabled) playSoundAlert(activeBroadcast.severity);
               }}
               title={soundEnabled ? 'ปิดเสียงแจ้งเตือน' : 'เปิดเสียงแจ้งเตือน'}
-              className="p-1.5 rounded-md hover:bg-white/20 text-white transition"
+              className="p-1 sm:p-1.5 rounded-md hover:bg-white/20 text-white transition shrink-0"
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 opacity-70" />}
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-70" />}
             </button>
 
             <button
               onClick={() => dismissBroadcast(activeBroadcast.id)}
               title="ปิดแถบแจ้งเตือนนี้"
-              className="p-1.5 rounded-md hover:bg-white/20 text-white transition"
+              className="p-1 sm:p-1.5 rounded-md hover:bg-white/20 text-white transition shrink-0"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
 
         {/* Expanded Details Accordion */}
         {isExpanded && (
-          <div className="max-w-7xl mx-auto mt-2.5 pt-2.5 border-t border-white/20 text-sm text-white/95 animate-fadeIn">
+          <div className="max-w-7xl mx-auto mt-2.5 pt-2.5 border-t border-white/20 text-xs sm:text-sm text-white/95 animate-fadeIn">
             <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
-              <div className="space-y-1.5 max-w-3xl">
-                <p className="leading-relaxed text-white/95">{activeBroadcast.message}</p>
-                <div className="flex items-center gap-4 text-xs text-white/75 pt-1">
+              <div className="space-y-1.5 max-w-3xl min-w-0 flex-1">
+                <p className="leading-relaxed text-white/95 break-words">{activeBroadcast.message}</p>
+                <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-white/75 pt-1 flex-wrap">
                   <span>ผู้ประกาศ: {activeBroadcast.adminName}</span>
                   <span>•</span>
                   <span>เวลา: {activeBroadcast.broadcastDateStr}</span>

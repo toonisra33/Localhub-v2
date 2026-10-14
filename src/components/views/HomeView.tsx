@@ -112,25 +112,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
 
         {/* Location Banner with Big Real GPS Button (Matching Screenshot 3) */}
-        <div className="mt-4 p-3.5 bg-slate-900/90 rounded-2xl border border-slate-700/80 flex items-center justify-between gap-3 shadow-inner">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-bold mb-0.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>พื้นที่ปัจจุบัน</span>
+        <div className="mt-3.5 p-3 sm:p-3.5 bg-slate-900/90 rounded-2xl border border-slate-700/80 flex items-center justify-between gap-2.5 shadow-inner min-w-0">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-emerald-400 font-bold mb-0.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+              <span className="truncate">พื้นที่ปัจจุบัน</span>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-extrabold text-white text-sm sm:text-base tracking-tight truncate">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h3 className="font-extrabold text-white text-xs sm:text-base tracking-tight truncate">
                 {location.district ? `${location.district}, ${location.province}` : location.province}
               </h3>
               <button
                 onClick={openLocationModal}
-                className="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition"
+                className="px-1.5 py-0.5 bg-white/10 hover:bg-white/20 text-slate-200 rounded-md text-[10px] sm:text-[11px] font-semibold flex items-center gap-0.5 transition shrink-0"
               >
                 <span>เปลี่ยน</span>
                 <ChevronDown className="w-3 h-3" />
               </button>
             </div>
-            <p className="text-[11px] text-slate-400 truncate mt-0.5">
+            <p className="text-[10px] sm:text-[11px] text-slate-400 truncate mt-0.5">
               ต.{location.subdistrict || 'ลาดยาว'} • หมู่บ้านพหลโยธินวิลล่า
             </p>
           </div>
@@ -138,10 +138,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {/* Big Green Real GPS Button */}
           <button
             onClick={() => requestRealLocation()}
-            className="px-3.5 py-2.5 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition shrink-0"
+            className="px-3 py-2 sm:px-3.5 sm:py-2.5 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition shrink-0"
             title="ตรวจจับพิกัด GPS จริง ณ ตำแหน่งที่คุณอยู่"
           >
-            <Navigation className="w-4 h-4 fill-white" />
+            <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white shrink-0" />
             <span>GPS จริง</span>
           </button>
         </div>
@@ -231,25 +231,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <span className="text-[11px] text-slate-400">แตะเพื่อเปิดบริการ</span>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-2.5">
           <button
             onClick={openContactAdminModal}
-            className="p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-2 sm:p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
-            <div className="p-2 bg-indigo-600 text-white rounded-xl mb-1.5 shadow-sm">
+            <div className="p-1.5 sm:p-2 bg-indigo-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <Megaphone className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-bold text-slate-800">ติดต่อแอดมิน</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">ติดต่อแอดมิน</span>
           </button>
 
           <button
             onClick={() => (onOpenReportAlert ? onOpenReportAlert() : setActiveTab('alerts'))}
-            className="p-3 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-2 sm:p-3 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
-            <div className="p-2 bg-rose-600 text-white rounded-xl mb-1.5 shadow-sm">
+            <div className="p-1.5 sm:p-2 bg-rose-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <AlertTriangle className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-bold text-slate-800">แจ้งเหตุ</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">แจ้งเหตุ</span>
           </button>
 
           <button
@@ -257,47 +257,47 @@ export const HomeView: React.FC<HomeViewProps> = ({
               showToast('เปิดรายชื่อร้านอาหารและเมนูยอดนิยมรอบตัว', 'info');
               setActiveTab('market');
             }}
-            className="p-3 bg-amber-50 hover:bg-amber-100 border border-amber-100 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-2 sm:p-3 bg-amber-50 hover:bg-amber-100 border border-amber-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
-            <div className="p-2 bg-amber-600 text-white rounded-xl mb-1.5 shadow-sm">
+            <div className="p-1.5 sm:p-2 bg-amber-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <UtensilsCrossed className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-bold text-slate-800">กินอะไรดี</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">กินอะไรดี</span>
           </button>
 
           <button
             onClick={() => setActiveTab('market')}
-            className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="p-2 sm:p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
-            <div className="p-2 bg-emerald-600 text-white rounded-xl mb-1.5 shadow-sm">
+            <div className="p-1.5 sm:p-2 bg-emerald-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <ShoppingBag className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-bold text-slate-800">ตลาดนัด</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">ตลาดนัด</span>
           </button>
 
           <button
             onClick={() => setActiveTab('map')}
-            className="hidden sm:flex p-3 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-2xl flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+            className="hidden sm:flex p-2 sm:p-3 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-xl sm:rounded-2xl flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
-            <div className="p-2 bg-teal-600 text-white rounded-xl mb-1.5 shadow-sm">
+            <div className="p-1.5 sm:p-2 bg-teal-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
               <MapPin className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-bold text-slate-800">รอบตัวฉัน</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">รอบตัวฉัน</span>
           </button>
         </div>
       </div>
 
       {/* Admin Emergency Alert Console (For toonisra33@gmail.com only) */}
       {isAdmin && (
-        <div className="p-4 bg-gradient-to-r from-red-950 via-slate-900 to-rose-950 rounded-3xl text-white border-2 border-red-500/40 shadow-lg space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-red-300">
-              <Activity className="w-4 h-4 text-red-400 animate-pulse" />
-              <span>ระบบทดสอบสัญญาณเตือนภัยฉุกเฉิน (Admin Test)</span>
+        <div className="p-3.5 sm:p-4 bg-gradient-to-r from-red-950 via-slate-900 to-rose-950 rounded-2xl sm:rounded-3xl text-white border-2 border-red-500/40 shadow-lg space-y-2.5">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-bold text-red-300 min-w-0 flex-1 truncate">
+              <Activity className="w-4 h-4 text-red-400 animate-pulse shrink-0" />
+              <span className="truncate">ระบบทดสอบสัญญาณเตือนภัย (Admin Test)</span>
             </div>
             <button
               onClick={() => setOpenSignalTestModal(true)}
-              className="text-[11px] text-slate-300 hover:text-white underline"
+              className="text-[10px] sm:text-[11px] text-slate-300 hover:text-white underline shrink-0"
             >
               เปิดแผงตั้งค่า
             </button>
@@ -307,7 +307,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {isTestingLocalAdmin ? (
               <button
                 onClick={stopLocalDeviceTest}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm"
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
               >
                 <Square className="w-3.5 h-3.5" />
                 <span>หยุดเสียงเครื่องนี้</span>
@@ -318,7 +318,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   testLocalDeviceSignal('siren', 5);
                   showToast('▶️ ทดสอบเสียงและระบบสั่นเฉพาะเครื่องนี้ (Admin Only)', 'info');
                 }}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm"
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>ทดสอบเฉพาะเครื่องนี้</span>
@@ -330,10 +330,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 testAllDevicesSignal();
                 showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
               }}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm"
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
             >
-              <Radio className="w-3.5 h-3.5 animate-pulse" />
-              <span>ทดสอบทุกอุปกรณ์ (All Devices)</span>
+              <Radio className="w-3.5 h-3.5 animate-pulse shrink-0" />
+              <span className="truncate">ทดสอบทุกอุปกรณ์ (All Devices)</span>
             </button>
           </div>
         </div>

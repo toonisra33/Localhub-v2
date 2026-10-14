@@ -37,26 +37,26 @@ export const MapView: React.FC = () => {
   return (
     <div className="space-y-3 max-w-4xl mx-auto animate-fadeIn pb-14">
       {/* Top Header Floating Bar (Matching Screenshot 2) */}
-      <div className="bg-slate-950 text-white rounded-3xl p-3.5 sm:p-4 border border-slate-800 shadow-lg flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold">
+      <div className="bg-slate-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-800 shadow-lg flex items-center justify-between gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1 truncate">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shrink-0">
             <MapPin className="w-4 h-4 text-slate-950" />
           </div>
-          <span className="font-extrabold text-base text-white tracking-tight">
+          <span className="font-extrabold text-sm sm:text-base text-white tracking-tight truncate">
             Local<span className="text-emerald-400">Hub</span>
           </span>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30">
+          <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] sm:text-[10px] font-bold border border-emerald-400/30 shrink-0">
             ● LIVE
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30 flex items-center gap-1">
-            Google Maps สด
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="hidden xs:inline-flex px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] sm:text-xs font-bold border border-emerald-400/30 items-center gap-1">
+            Google Maps
           </span>
           <button
             onClick={openLocationModal}
-            className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition"
+            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shrink-0"
           >
             <span>🗺️ แผนที่</span>
           </button>
@@ -348,11 +348,11 @@ export const MapView: React.FC = () => {
         )}
 
         {/* Bottom Radius Selection Pill Bar (Matching Screenshot 2) */}
-        <div className="absolute bottom-4 left-3 right-3 sm:left-6 sm:right-6 z-30">
-          <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1.5 text-white shadow-2xl flex items-center justify-between text-xs">
+        <div className="absolute bottom-3 left-2 right-2 sm:bottom-4 sm:left-6 sm:right-6 z-30">
+          <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1 sm:p-1.5 text-white shadow-2xl flex items-center justify-between text-xs gap-1">
             <button
               onClick={() => setSelectedRadius('1')}
-              className={`flex-1 py-2 text-center rounded-xl font-bold transition ${
+              className={`flex-1 py-1.5 sm:py-2 text-center rounded-xl font-bold transition text-[10px] sm:text-xs ${
                 selectedRadius === '1' ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -360,7 +360,7 @@ export const MapView: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedRadius('5')}
-              className={`flex-1 py-2 text-center rounded-xl font-bold transition ${
+              className={`flex-1 py-1.5 sm:py-2 text-center rounded-xl font-bold transition text-[10px] sm:text-xs ${
                 selectedRadius === '5' ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -368,7 +368,7 @@ export const MapView: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedRadius('10')}
-              className={`flex-1 py-2 text-center rounded-xl font-bold transition ${
+              className={`flex-1 py-1.5 sm:py-2 text-center rounded-xl font-bold transition text-[10px] sm:text-xs ${
                 selectedRadius === '10' ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -376,7 +376,7 @@ export const MapView: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedRadius('district')}
-              className={`flex-1 py-2 text-center rounded-xl font-bold transition text-[11px] leading-tight ${
+              className={`flex-1 py-1.5 sm:py-2 text-center rounded-xl font-bold transition text-[9px] sm:text-[11px] leading-tight truncate px-1 ${
                 selectedRadius === 'district' ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -384,7 +384,7 @@ export const MapView: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedRadius('province')}
-              className={`flex-1 py-2 text-center rounded-xl font-bold transition text-[11px] leading-tight ${
+              className={`flex-1 py-1.5 sm:py-2 text-center rounded-xl font-bold transition text-[9px] sm:text-[11px] leading-tight truncate px-1 ${
                 selectedRadius === 'province' ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
