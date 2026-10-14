@@ -2,7 +2,6 @@ import React from 'react';
 import {
   MapPin,
   Bell,
-  Radio,
   Sparkles,
   AlertTriangle,
   Calendar,
@@ -10,10 +9,6 @@ import {
   Camera,
   Navigation,
   ChevronDown,
-  Volume2,
-  Activity,
-  Play,
-  Square,
   UtensilsCrossed,
   HelpCircle,
   Megaphone,
@@ -24,7 +19,6 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
-import { useBroadcast } from '../../context/BroadcastContext';
 
 interface HomeViewProps {
   onOpenCreatePost: () => void;
@@ -50,17 +44,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
     currentUser,
     requestRealLocation,
     isLocatingGps,
-    setIsAdmin
+    posts,
+    marketItems,
+    alerts
   } = useCommunity();
-
-  const {
-    testLocalDeviceSignal,
-    testAllDevicesSignal,
-    stopLocalDeviceTest,
-    isTestingLocalAdmin,
-    setOpenSignalTestModal,
-    setOpenAdminModal
-  } = useBroadcast();
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn pb-12">
@@ -135,7 +122,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </button>
             </div>
             <p className="text-[10px] sm:text-[11px] text-slate-400 truncate mt-0.5">
-              {location.addressDetails || `${location.subdistrict ? `ต.${location.subdistrict} • ` : ''}${location.district ? `อ.${location.district} • ` : ''}จ.${location.province}`}
+              {location.lat && location.lng
+                ? `📍 พิกัด GPS จริง: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)} • ${location.displayName || `จ.${location.province}`}`
+                : `${location.district ? `อ.${location.district} • ` : ''}จ.${location.province}`}
             </p>
           </div>
 
@@ -153,7 +142,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             ) : (
               <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white shrink-0" />
             )}
-            <span>{isLocatingGps ? 'จับสัญญาณ...' : 'GPS จริง'}</span>
+            <span>{isLocatingGps ? 'กำลังระบุ GPS...' : 'GPS จริง'}</span>
           </button>
         </div>
       </div>
@@ -179,7 +168,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         </div>
 
-        {/* 2x2 Daily Digest Grid */}
+        {/* 2x2 Daily Digest Grid - 100% Real Connected Data */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           <button
             onClick={() => setActiveTab('weather')}
@@ -189,8 +178,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <CloudSun className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-900 truncate">มีเมฆบางส่วน 31°C</div>
-              <div className="text-[10px] text-slate-500">พยากรณ์ฝน 15% คุณภาพอากาศดี</div>
+              <div className="text-xs font-bold text-slate-900 truncate">พยากรณ์อากาศสดประจำวัน</div>
+              <div className="text-[10px] text-slate-500 truncate">เรดาร์เมฆฝน & สภาพอากาศตามพิกัดจริง</div>
             </div>
           </button>
 
@@ -202,8 +191,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <AlertTriangle className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-900 truncate">ปิดถนน 1 จุด (ถ.พหลโยธิน)</div>
-              <div className="text-[10px] text-slate-500">งานซ่อมท่อระบายน้ำ เลี่ยงชั่วโมงเร่งด่วน</div>
+              <div className="text-xs font-bold text-slate-900 truncate">
+                {alerts.length > 0 ? `🚨 เตือนภัย (${alerts.length} เหตุการณ์)` : 'เหตุการณ์ในพื้นที่'}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate">
+                {alerts.length > 0 ? alerts[0].title : 'ไม่มีเหตุการณ์วิกฤติตรวจพบในขณะนี้'}
+              </div>
             </div>
           </button>
 
@@ -215,8 +208,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <Calendar className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-900 truncate">กิจกรรม 3 งานจัดขึ้นสัปดาห์นี้</div>
-              <div className="text-[10px] text-slate-500">ตลาดนัดวัดเสมียน และงานบริจาคเลือด</div>
+              <div className="text-xs font-bold text-slate-900 truncate">
+                {posts.length > 0 ? `ฟีดชุมชน (${posts.length} โพสต์สด)` : 'ฟีดข่าวสารชุมชน'}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate">
+                {posts.length > 0 ? posts[0].title : 'พูดคุยแลกเปลี่ยนเรื่องราวกับเพื่อนบ้าน'}
+              </div>
             </div>
           </button>
 
@@ -228,8 +225,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <Store className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-900 truncate">ร้านใหม่ 2 ร้านแถวพหลโยธิน</div>
-              <div className="text-[10px] text-slate-500">ร้านกาแฟ & ร้านผลไม้สวนสด</div>
+              <div className="text-xs font-bold text-slate-900 truncate">
+                {marketItems.length > 0 ? `ตลาดชุมชน (${marketItems.length} รายการ)` : 'ตลาดนัดชุมชน'}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate">
+                {marketItems.length > 0 ? marketItems[0].title : 'ซื้อขายสินค้าและของกินในท้องถิ่น'}
+              </div>
             </div>
           </button>
         </div>
@@ -298,65 +299,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
-      {/* Admin Emergency Alert Console (For toonisra33@gmail.com only) */}
-      {isAdmin && (
-        <div className="p-3.5 sm:p-4 bg-gradient-to-r from-red-950 via-slate-900 to-rose-950 rounded-2xl sm:rounded-3xl text-white border-2 border-red-500/40 shadow-lg space-y-2.5">
-          <div className="flex items-center justify-between gap-2 min-w-0">
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-bold text-red-300 min-w-0 flex-1 truncate">
-              <Activity className="w-4 h-4 text-red-400 animate-pulse shrink-0" />
-              <span className="truncate">ระบบทดสอบสัญญาณเตือนภัย (Admin Test)</span>
-            </div>
-            <button
-              onClick={() => setOpenSignalTestModal(true)}
-              className="text-[10px] sm:text-[11px] text-slate-300 hover:text-white underline shrink-0"
-            >
-              เปิดแผงตั้งค่า
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {isTestingLocalAdmin ? (
-              <button
-                onClick={stopLocalDeviceTest}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
-              >
-                <Square className="w-3.5 h-3.5" />
-                <span>หยุดเสียงเครื่องนี้</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  testLocalDeviceSignal('siren', 5);
-                  showToast('▶️ ทดสอบเสียงและระบบสั่นเฉพาะเครื่องนี้ (Admin Only)', 'info');
-                }}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
-              >
-                <Play className="w-3.5 h-3.5" />
-                <span>ทดสอบเฉพาะเครื่องนี้</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                testAllDevicesSignal();
-                showToast('📡 ส่งสัญญาณเตือนและระบบสั่นไปยังทุกอุปกรณ์แล้ว!', 'success');
-              }}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
-            >
-              <Radio className="w-3.5 h-3.5 animate-pulse shrink-0" />
-              <span className="truncate">ทดสอบทุกอุปกรณ์</span>
-            </button>
-
-            <button
-              onClick={() => setOpenAdminModal(true)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shadow-sm active:scale-95"
-            >
-              <Megaphone className="w-3.5 h-3.5 shrink-0" />
-              <span>ส่งบรอดแคสต์</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Share / Post Box */}
       <div className="p-3.5 sm:p-4 bg-white rounded-3xl border border-slate-200/90 shadow-xs flex items-center gap-3">

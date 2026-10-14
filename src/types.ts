@@ -58,6 +58,7 @@ export interface Post {
     subdistrict?: string;
     address?: string;
   };
+  coordinates?: { lat: number; lng: number };
   createdAt: number;
   likes: number;
   isLiked?: boolean;
@@ -156,6 +157,7 @@ export interface MarketItem {
   images: string[];
   province: string;
   district: string;
+  coordinates?: { lat: number; lng: number };
   category: 'food' | 'produce' | 'craft' | 'secondhand' | 'service';
   condition?: 'new' | 'used';
   createdAt: number;

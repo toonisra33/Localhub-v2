@@ -32,7 +32,7 @@ export const BroadcastListView: React.FC = () => {
     reBroadcastItem,
     playSoundAlert
   } = useBroadcast();
-  const { isAdmin, setIsAdmin, location, showToast } = useCommunity();
+  const { isAdmin, location, showToast, openLoginModal } = useCommunity();
   const [severityFilter, setSeverityFilter] = useState<string>('all');
 
   const filtered = broadcasts.filter(b => {
@@ -58,7 +58,9 @@ export const BroadcastListView: React.FC = () => {
         <button
           onClick={() => {
             if (!isAdmin) {
-              setIsAdmin(true);
+              openLoginModal();
+              showToast('เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถสร้างข้อความบรอดแคสต์ได้ กรุณาเข้าสู่ระบบด้วยบัญชีแอดมิน', 'info');
+              return;
             }
             setOpenAdminModal(true);
           }}

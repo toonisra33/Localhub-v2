@@ -201,30 +201,6 @@ export const LocationPickerModal: React.FC = () => {
             </div>
           </button>
 
-          {/* Profile Address Quick Switch Card (Matching Screenshot 5) */}
-          <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="p-2 bg-sky-50 text-sky-600 rounded-xl shrink-0">
-                <Home className="w-4 h-4" />
-              </span>
-              <div className="min-w-0 text-xs">
-                <span className="text-[10px] text-slate-400 block">ที่อยู่โปรไฟล์ของคุณ</span>
-                <span className="font-bold text-slate-800 truncate block">
-                  พื้นที่{location.province}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                showToast(`สลับไปยังพื้นที่ ${location.province} เรียบร้อย`, 'info');
-              }}
-              className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition"
-            >
-              <span>สลับ</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
           {/* Search Input for World and Local Cities */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-700">

@@ -562,6 +562,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 subdistrict: raw.location?.subdistrict || raw.subdistrict || DEFAULT_LOCATION.subdistrict,
                 address: raw.location?.village || raw.location?.address || ''
               },
+              coordinates: raw.coordinates || (raw.location?.lat && raw.location?.lng ? { lat: raw.location.lat, lng: raw.location.lng } : undefined),
               createdAt: createdAtMs,
               likes: likesCount,
               isLiked: Boolean(raw.isLiked || (Array.isArray(raw.likedBy) && currentUser && raw.likedBy.includes(currentUser.uid))),
@@ -626,6 +627,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               sellerAvatar: typeof raw.sellerAvatar === 'string' ? raw.sellerAvatar : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
               province: raw.location?.province || raw.province || DEFAULT_LOCATION.province,
               district: raw.location?.district || raw.district || DEFAULT_LOCATION.district,
+              coordinates: raw.coordinates || (raw.location?.lat && raw.location?.lng ? { lat: raw.location.lat, lng: raw.location.lng } : undefined),
               images: Array.isArray(raw.images) && raw.images.length > 0 ? raw.images : ['https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'],
               createdAt: createdAtMs,
               isAvailable: raw.isAvailable !== false,
@@ -917,6 +919,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         district: location.district,
         subdistrict: location.subdistrict,
       },
+      coordinates: (location.lat && location.lng) ? { lat: location.lat, lng: location.lng } : undefined,
       createdAt: Date.now(),
       likes: 0,
       shares: 0,
@@ -1067,6 +1070,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: `m_${Date.now()}`,
       createdAt: Date.now(),
       likes: 0,
+      coordinates: item.coordinates || ((location.lat && location.lng) ? { lat: location.lat, lng: location.lng } : undefined)
     };
     setMarketItems(prev => [newItem, ...prev]);
     showToast('ลงประกาศสินค้าสำเร็จ!', 'success');
@@ -1110,6 +1114,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: Date.now(),
       verifiedCount: 1,
       status: 'active',
+      coordinates: alertData.coordinates || ((location.lat && location.lng) ? { lat: location.lat, lng: location.lng } : undefined)
     };
     setAlerts(prev => [newAlert, ...prev]);
     showToast('รายงานเหตุการณ์ถูกส่งไปยังศูนย์ประสานงานแล้ว', 'success');

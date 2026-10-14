@@ -140,7 +140,7 @@ export const WeatherForecastView: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-sky-200 mt-0.5">
-                เชื่อมต่อสถานีดาวเทียม & แบบจำลอง TMD Open-Meteo ตามพิกัดจริง อัปเดตทุก 15 นาที
+                เชื่อมต่อสถานีดาวเทียมตรวจวัดสภาพอากาศ TMD & Open-Meteo ตามพิกัด GPS จริง อัปเดตทุก 15 นาที
               </p>
             </div>
           </div>

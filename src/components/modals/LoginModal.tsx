@@ -26,23 +26,12 @@ export const LoginModal: React.FC = () => {
     showToast
   } = useCommunity();
 
-  const [activeTab, setActiveTab] = useState<'quick' | 'email'>('quick');
   const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [nameInput, setNameInput] = useState('');
-  const [asAdminCheck, setAsAdminCheck] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isLoginModalOpen) return null;
-
-  const handleQuickAdmin = () => {
-    setIsLoading(true);
-    try {
-      loginAsAdminOwner();
-      closeLoginModal();
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -62,9 +51,13 @@ export const LoginModal: React.FC = () => {
       showToast('กรุณากรอกอีเมลของคุณ', 'error');
       return;
     }
+    if (!passwordInput.trim()) {
+      showToast('กรุณากรอกรหัสผ่านของคุณ', 'error');
+      return;
+    }
     setIsLoading(true);
     try {
-      loginWithEmail(emailInput.trim(), nameInput.trim() || undefined, asAdminCheck);
+      loginWithEmail(emailInput.trim(), nameInput.trim() || undefined);
       closeLoginModal();
     } finally {
       setIsLoading(false);
@@ -87,7 +80,7 @@ export const LoginModal: React.FC = () => {
             </span>
             <div>
               <h2 className="font-bold text-base sm:text-lg leading-tight">เข้าสู่ระบบ LocalHub</h2>
-              <p className="text-xs text-slate-300">ยืนยันตัวตนเพื่อเข้าถึงสิทธิ์บรอดแคสต์และโพสต์</p>
+              <p className="text-xs text-slate-300">ยืนยันตัวตนเพื่อเข้าสู่ระบบตามสิทธิ์การใช้งานปกติ</p>
             </div>
           </div>
 
@@ -148,69 +141,29 @@ export const LoginModal: React.FC = () => {
             </div>
           )}
 
-          {/* Tab Selector */}
-          <div className="flex bg-slate-100 p-1 rounded-2xl">
+          {/* Normal Standard Login Methods */}
+          <div className="space-y-3 pt-1">
+            {/* Google Sign In */}
             <button
-              onClick={() => setActiveTab('quick')}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
-                activeTab === 'quick' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
-              }`}
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="w-full p-3.5 bg-white hover:bg-slate-50 text-slate-800 border-2 border-slate-200 hover:border-emerald-500 rounded-2xl font-bold transition flex items-center justify-between active:scale-[0.98] shadow-xs"
             >
-              🚀 เข้าสู่ระบบด่วน
-            </button>
-            <button
-              onClick={() => setActiveTab('email')}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
-                activeTab === 'email' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              ✉️ เข้าสู่ระบบด้วยอีเมล
-            </button>
-          </div>
-
-          {activeTab === 'quick' ? (
-            <div className="space-y-3 pt-1">
-              {/* Option 1: Admin 1-Click Login */}
-              <button
-                onClick={handleQuickAdmin}
-                disabled={isLoading}
-                className="w-full p-4 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-bold shadow-md shadow-red-600/20 transition flex items-center justify-between group active:scale-[0.98] text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-xs group-hover:scale-110 transition-transform">
-                    <Shield className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-extrabold">เข้าสู่ระบบ Admin ทันที</span>
-                      <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px] font-bold">1-Click</span>
-                    </div>
-                    <p className="text-xs text-red-100 mt-0.5">{ORIGINAL_ADMIN_EMAIL}</p>
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-base">
+                  🌐
                 </div>
-                <ArrowRight className="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform" />
-              </button>
-
-              {/* Option 2: Google Sign In */}
-              <button
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                className="w-full p-3.5 bg-white hover:bg-slate-50 text-slate-800 border-2 border-slate-200 hover:border-slate-300 rounded-2xl font-bold transition flex items-center justify-between active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-base">
-                    🌐
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs font-bold text-slate-800">เข้าสู่ระบบด้วย Google Account</p>
-                    <p className="text-[11px] text-slate-500">Google OAuth / Firebase Authentication</p>
-                  </div>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-slate-800">เข้าสู่ระบบด้วย Google Account</p>
+                  <p className="text-[11px] text-slate-500">Google OAuth / Firebase Authentication</p>
                 </div>
-                <LogIn className="w-4 h-4 text-slate-400" />
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleCustomEmailLogin} className="space-y-3 pt-1">
+              </div>
+              <LogIn className="w-4 h-4 text-emerald-600" />
+            </button>
+
+            {/* Email & Password Normal Sign In Form */}
+            <form onSubmit={handleCustomEmailLogin} className="space-y-3 pt-2 border-t border-slate-100">
+              <div className="text-xs font-bold text-slate-700">หรือระบุอีเมลและรหัสผ่านเพื่อเข้าสู่ระบบปกติ:</div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   อีเมล (Email) <span className="text-red-500">*</span>
@@ -230,6 +183,23 @@ export const LoginModal: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
+                  รหัสผ่าน (Password) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="กรอกรหัสผ่านของคุณ"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-hidden transition"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   ชื่อที่แสดง (Display Name)
                 </label>
                 <div className="relative">
@@ -238,23 +208,10 @@ export const LoginModal: React.FC = () => {
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    placeholder="เช่น อิศราวัฒน์ (Admin) หรือ นายสมชาย"
+                    placeholder="เช่น อิศราวัฒน์ หรือ สมชาย"
                     className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-hidden transition"
                   />
                 </div>
-              </div>
-
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-slate-800">เปิดสิทธิ์ผู้ดูแลระบบ (Admin Role)</p>
-                  <p className="text-[11px] text-slate-500">เพื่อส่งบรอดแคสต์และทดสอบไซเรน</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={asAdminCheck}
-                  onChange={(e) => setAsAdminCheck(e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 rounded-sm focus:ring-emerald-500"
-                />
               </div>
 
               <button
@@ -263,10 +220,10 @@ export const LoginModal: React.FC = () => {
                 className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <LogIn className="w-4 h-4" />
-                <span>ยืนยันเข้าสู่ระบบ</span>
+                <span>เข้าสู่ระบบปกติ</span>
               </button>
             </form>
-          )}
+          </div>
         </div>
       </div>
     </div>
