@@ -12,133 +12,89 @@ import {
 import { useCommunity } from '../../context/CommunityContext';
 import { Location } from '../../types';
 
-interface GlobalPlace {
+import { ALL_PROVINCES_LIST, THAI_PROVINCES, THAI_PROVINCE_COORDINATES, findNearestThaiProvince } from '../../data/thaiData';
+
+interface PlaceItem {
   id: string;
   name: string;
   sub: string;
   flag: string;
+  lat: number;
+  lng: number;
   province: string;
   district: string;
   subdistrict: string;
-  lat: number;
-  lng: number;
 }
 
-const POPULAR_GLOBAL_PLACES: GlobalPlace[] = [
-  {
-    id: 'tokyo',
-    name: 'โตเกียว (Tokyo, Japan)',
-    sub: 'มหานครโตเกียว ประเทศญี่ปุ่น',
-    flag: '🇯🇵',
-    province: 'โตเกียว',
-    district: 'ชินจูกุ',
-    subdistrict: 'ชิบูย่า',
-    lat: 35.6762,
-    lng: 139.6503
-  },
-  {
-    id: 'shibuya',
-    name: 'ห้าแยกชิบูย่า (Shibuya Crossing)',
-    sub: 'ย่านการค้าและแลนด์มาร์กชื่อดัง กรุงโตเกียว',
-    flag: '🇯🇵',
-    province: 'โตเกียว',
-    district: 'ชิบูย่า',
-    subdistrict: 'โดเก็นซากะ',
-    lat: 35.6595,
-    lng: 139.7005
-  },
-  {
-    id: 'ladyaw',
-    name: 'ลาดยาว (จตุจักร, กรุงเทพฯ)',
-    sub: 'หมู่บ้านพหลโยธินวิลล่า ต.ลาดยาว, อ.จตุจักร, จ.กรุงเทพมหานคร',
-    flag: '🇹🇭',
-    province: 'กรุงเทพมหานคร',
-    district: 'จตุจักร',
-    subdistrict: 'ลาดยาว',
-    lat: 13.8282,
-    lng: 100.5694
-  },
-  {
-    id: 'chiangmai',
-    name: 'เมืองเชียงใหม่ (Chiang Mai)',
-    sub: 'คูเมืองเชียงใหม่, ต.ศรีภูมิ, อ.เมืองเชียงใหม่',
-    flag: '🇹🇭',
-    province: 'เชียงใหม่',
-    district: 'เมืองเชียงใหม่',
-    subdistrict: 'ศรีภูมิ',
-    lat: 18.7883,
-    lng: 98.9853
-  },
-  {
-    id: 'pattaya',
-    name: 'เมืองพัทยา (บางละมุง, ชลบุรี)',
-    sub: 'หาดพัทยา, ต.หนองปรือ, อ.บางละมุง, จ.ชลบุรี',
-    flag: '🇹🇭',
-    province: 'ชลบุรี',
-    district: 'บางละมุง',
-    subdistrict: 'หนองปรือ',
-    lat: 12.9276,
-    lng: 100.8771
-  },
-  {
-    id: 'hatyai',
-    name: 'หาดใหญ่ (สงขลา)',
-    sub: 'ย่านการค้าสาย 1-3, อ.หาดใหญ่, จ.สงขลา',
-    flag: '🇹🇭',
-    province: 'สงขลา',
-    district: 'หาดใหญ่',
-    subdistrict: 'หาดใหญ่',
-    lat: 7.0084,
-    lng: 100.4767
-  },
-  {
-    id: 'phuket',
-    name: 'เมืองภูเก็ต (Phuket)',
-    sub: 'ย่านเมืองเก่าภูเก็ต, อ.เมืองภูเก็ต, จ.ภูเก็ต',
-    flag: '🇹🇭',
-    province: 'ภูเก็ต',
-    district: 'เมืองภูเก็ต',
-    subdistrict: 'ตลาดใหญ่',
-    lat: 7.8804,
-    lng: 98.3923
-  },
-  {
-    id: 'khonkaen',
-    name: 'เมืองขอนแก่น (Khon Kaen)',
-    sub: 'บึงแก่นนคร, อ.เมืองขอนแก่น, จ.ขอนแก่น',
-    flag: '🇹🇭',
-    province: 'ขอนแก่น',
-    district: 'เมืองขอนแก่น',
-    subdistrict: 'ในเมือง',
-    lat: 16.4419,
-    lng: 102.8359
-  }
+const POPULAR_PLACES: PlaceItem[] = [
+  { id: 'bkk-latyao', name: 'ลาดยาว, จตุจักร', sub: 'กรุงเทพมหานคร, ประเทศไทย', flag: '🇹🇭', lat: 13.8282, lng: 100.5647, province: 'กรุงเทพมหานคร', district: 'จตุจักร', subdistrict: 'ลาดยาว' },
+  { id: 'bkk-siam', name: 'สยาม, ปทุมวัน', sub: 'กรุงเทพมหานคร, ประเทศไทย', flag: '🇹🇭', lat: 13.7462, lng: 100.5347, province: 'กรุงเทพมหานคร', district: 'ปทุมวัน', subdistrict: 'ปทุมวัน' },
+  { id: 'bkk-sukhumvit', name: 'สุขุมวิท, วัฒนา', sub: 'กรุงเทพมหานคร, ประเทศไทย', flag: '🇹🇭', lat: 13.7380, lng: 100.5604, province: 'กรุงเทพมหานคร', district: 'วัฒนา', subdistrict: 'คลองเตยเหนือ' },
+  { id: 'cnx-nimman', name: 'นิมมานฯ, เมืองเชียงใหม่', sub: 'เชียงใหม่, ประเทศไทย', flag: '🇹🇭', lat: 18.7961, lng: 98.9675, province: 'เชียงใหม่', district: 'เมืองเชียงใหม่', subdistrict: 'สุเทพ' },
+  { id: 'hkt-patong', name: 'ป่าตอง, กะทู้', sub: 'ภูเก็ต, ประเทศไทย', flag: '🇹🇭', lat: 7.8967, lng: 98.2974, province: 'ภูเก็ต', district: 'กะทู้', subdistrict: 'ป่าตอง' },
+  { id: 'chon-pattaya', name: 'พัทยา, บางละมุง', sub: 'ชลบุรี, ประเทศไทย', flag: '🇹🇭', lat: 12.9276, lng: 100.8771, province: 'ชลบุรี', district: 'บางละมุง', subdistrict: 'หนองปรือ' },
+  { id: 'kkn-muang', name: 'ในเมือง, เมืองขอนแก่น', sub: 'ขอนแก่น, ประเทศไทย', flag: '🇹🇭', lat: 16.4419, lng: 102.8360, province: 'ขอนแก่น', district: 'เมืองขอนแก่น', subdistrict: 'ในเมือง' },
+  { id: 'tokyo', name: 'Shibuya, Tokyo', sub: 'ประเทศญี่ปุ่น (Japan)', flag: '🇯🇵', lat: 35.6580, lng: 139.7016, province: 'Tokyo', district: 'Shibuya', subdistrict: 'Shibuya' },
+  { id: 'singapore', name: 'Marina Bay', sub: 'ประเทศสิงคโปร์ (Singapore)', flag: '🇸🇬', lat: 1.2863, lng: 103.8540, province: 'Singapore', district: 'Central', subdistrict: 'Downtown Core' },
+  { id: 'london', name: 'Central London', sub: 'สหราชอาณาจักร (United Kingdom)', flag: '🇬🇧', lat: 51.5074, lng: -0.1278, province: 'London', district: 'Westminster', subdistrict: 'Soho' },
+  { id: 'newyork', name: 'Manhattan, New York', sub: 'สหรัฐอเมริกา (USA)', flag: '🇺🇸', lat: 40.7128, lng: -74.0060, province: 'New York', district: 'Manhattan', subdistrict: 'Manhattan' },
+  { id: 'paris', name: 'Paris', sub: 'ประเทศฝรั่งเศส (France)', flag: '🇫🇷', lat: 48.8566, lng: 2.3522, province: 'Paris', district: 'Paris', subdistrict: 'Centre' },
 ];
 
 export const LocationPickerModal: React.FC = () => {
   const { isLocationModalOpen, closeLocationModal, location, setLocation, requestRealLocation, showToast } = useCommunity();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState<string>('all');
 
   if (!isLocationModalOpen) return null;
 
-  const filteredPlaces = POPULAR_GLOBAL_PLACES.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sub.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.province.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPlaces = POPULAR_PLACES.filter((place) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      place.name.toLowerCase().includes(q) ||
+      place.sub.toLowerCase().includes(q) ||
+      place.province.toLowerCase().includes(q)
+    );
+  });
 
-  const handleSelectPlace = (place: GlobalPlace) => {
+  const handleSelectPlace = (place: PlaceItem) => {
     const newLoc: Location = {
       province: place.province,
       district: place.district,
       subdistrict: place.subdistrict,
-      displayName: `${place.district ? `${place.district}, ` : ''}${place.province}`,
+      displayName: place.name,
       lat: place.lat,
       lng: place.lng
     };
+
     setLocation(newLoc);
-    showToast(`เปลี่ยนพื้นที่เป็น ${place.name} เรียบร้อยแล้ว`, 'success');
+    try {
+      localStorage.setItem('localhub_location', JSON.stringify(newLoc));
+    } catch {}
+    showToast(`เปลี่ยนพื้นที่ใช้งานเป็น ${place.name} เรียบร้อยแล้ว`, 'success');
+    closeLocationModal();
+  };
+
+  const handleSelectProvince = (provName: string) => {
+    const coords = THAI_PROVINCE_COORDINATES[provName] || { lat: 13.7563, lng: 100.5018, district: 'เมือง' };
+    const provInfo = THAI_PROVINCES.find(p => p.name === provName);
+    const defaultDistrict = coords.district || (provInfo?.districts && provInfo.districts[0]) || '';
+
+    const newLoc: Location = {
+      province: provName,
+      district: defaultDistrict,
+      subdistrict: '',
+      displayName: defaultDistrict ? `${defaultDistrict}, ${provName}` : provName,
+      lat: coords.lat,
+      lng: coords.lng
+    };
+
+    setLocation(newLoc);
+    try {
+      localStorage.setItem('localhub_location', JSON.stringify(newLoc));
+    } catch {}
+    showToast(`เปลี่ยนพื้นที่ใช้งานเป็น ${provName} (${defaultDistrict}) เรียบร้อยแล้ว`, 'success');
     closeLocationModal();
   };
 

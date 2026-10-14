@@ -23,7 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCreatePostWithMode,
   onOpenInstantCamera
 }) => {
-  const { location, openLocationModal, unreadNotifCount, showToast } = useCommunity();
+  const { location, openLocationModal, unreadNotifCount, showToast, setActiveTab } = useCommunity();
 
   const navCameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,8 +60,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       <div className="max-w-7xl mx-auto px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Logo and Brand */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
+        <div
+          onClick={() => setActiveTab('home')}
+          className="flex items-center gap-2 sm:gap-3 shrink-0 cursor-pointer group"
+          title="ไปที่หน้าหลัก"
+        >
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0 group-hover:scale-105 transition-transform">
             <span className="text-base sm:text-lg">🏠</span>
           </div>
 
