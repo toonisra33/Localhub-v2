@@ -61,21 +61,21 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3">
         {/* Logo and Brand */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-            <Radio className="w-5 h-5" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+            <span className="text-lg">🏠</span>
           </div>
 
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-slate-900 tracking-tight text-base sm:text-xl">
-                Local<span className="text-blue-600">Hub</span>
+                Local<span className="text-emerald-600">Hub</span>
               </span>
               <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">
-                v1.4.0
+                LIVE
               </span>
             </div>
             <p className="text-[10px] text-slate-400 hidden md:block">
-              ข่าวสาร บรอดแคสเตือนภัย และตลาดนัดใกล้ตัวคุณ
+              ศูนย์รวมชุมชน & บรอดแคสต์สด
             </p>
           </div>
         </div>

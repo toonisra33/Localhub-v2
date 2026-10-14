@@ -8,6 +8,7 @@ import { DesktopSidebar } from './components/DesktopSidebar';
 import { MobileNav } from './components/MobileNav';
 
 // Views
+import { HomeView } from './components/views/HomeView';
 import { FeedView } from './components/views/FeedView';
 import { BroadcastListView } from './components/views/BroadcastListView';
 import { MarketView } from './components/views/MarketView';
@@ -105,6 +106,15 @@ function AppContent() {
 
         {/* Center Dynamic Tab View */}
         <section className="flex-1 min-w-0">
+          {activeTab === 'home' && (
+            <HomeView
+              onOpenCreatePost={() => openCreatePostWith('standard')}
+              onOpenInstantCamera={() => setIsInstantCameraOpen(true)}
+              onOpenNotifications={() => setIsNotifModalOpen(true)}
+              onOpenReportAlert={() => setIsReportAlertModalOpen(true)}
+            />
+          )}
+
           {activeTab === 'feed' && (
             <FeedView
               onOpenCreatePost={() => openCreatePostWith('standard')}
@@ -138,7 +148,7 @@ function AppContent() {
           )}
 
           {activeTab === 'profile' && (
-            <ProfileView />
+            <ProfileView onOpenCreatePost={() => openCreatePostWith('standard')} />
           )}
         </section>
       </main>

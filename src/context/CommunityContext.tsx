@@ -122,11 +122,11 @@ export const ORIGINAL_ADMIN_EMAIL = 'toonisra33@gmail.com';
 
 const DEFAULT_LOCATION: Location = {
   province: 'กรุงเทพมหานคร',
-  district: 'วัฒนา',
-  subdistrict: 'คลองเตยเหนือ',
-  displayName: 'กรุงเทพมหานคร / เขตวัฒนา',
-  lat: 13.7438,
-  lng: 100.5603,
+  district: 'จตุจักร',
+  subdistrict: 'ลาดยาว',
+  displayName: 'จตุจักร, กรุงเทพมหานคร',
+  lat: 13.8282,
+  lng: 100.5694,
 };
 
 const INITIAL_POSTS: Post[] = [
@@ -337,7 +337,7 @@ const INITIAL_NOTIFICATIONS: InAppNotification[] = [
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('feed');
+  const [activeTab, setActiveTab] = useState<Tab>('home');
 
   const [location, setLocation] = useState<Location>(() => {
     try {
