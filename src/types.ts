@@ -33,6 +33,23 @@ export interface AdminBroadcast {
   likesCount?: number;
 }
 
+export interface UserAccount {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  role: 'admin' | 'user' | 'moderator';
+  isAdmin?: boolean;
+  province?: string;
+  district?: string;
+  createdAt: number;
+  lastActiveAt: number;
+  isInactiveWarning?: boolean;
+  inactiveWarningAt?: number;
+  warningDaysRemaining?: number;
+  isAutoDeleted?: boolean;
+}
+
 export interface FriendUser {
   id: string;
   name: string;

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Tab,
   Location,
@@ -7,7 +7,8 @@ import {
   InAppNotification,
   MarketItem,
   AlertReport,
-  FriendUser
+  FriendUser,
+  UserAccount
 } from '../types';
 import { sendSystemNotification } from '../utils/notificationService';
 import { findNearestThaiProvince } from '../data/thaiData';
@@ -135,6 +136,18 @@ interface CommunityContextType {
   // Role
   isAdmin: boolean;
   setIsAdmin: (val: boolean) => void;
+
+  // Registered Users & Account Inactivity Management (ไม่มีการเคลื่อนไหวเกิน 3 เดือน + ลบอัตโนมัติ 30 วัน)
+  registeredUsers: UserAccount[];
+  totalUsersCount: number;
+  activeUsersCount: number;
+  inactiveUsersCount: number;
+  pendingDeletionUsersCount: number;
+  isCurrentAccountInactiveWarning: boolean;
+  currentAccountDaysRemaining: number;
+  confirmActiveStatus: (uid?: string) => void;
+  simulateInactivity: (enable: boolean) => void;
+  deleteUserAccount: (uid: string) => void;
 }
 
 export const ORIGINAL_ADMIN_EMAIL = 'toonisra33@gmail.com';
@@ -145,6 +158,112 @@ export const DEFAULT_ADMIN_USER = {
   displayName: 'อิศราวัฒน์ ปวินทกานต์ (Admin)',
   photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
 };
+
+const NOW_BASE = Date.now();
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+export const INITIAL_REGISTERED_USERS: UserAccount[] = [
+  {
+    uid: 'admin_toonisra33',
+    email: ORIGINAL_ADMIN_EMAIL,
+    displayName: 'อิศราวัฒน์ ปวินทกานต์ (Admin)',
+    photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    role: 'admin',
+    isAdmin: true,
+    province: 'กรุงเทพมหานคร',
+    district: 'จตุจักร',
+    createdAt: NOW_BASE - 180 * ONE_DAY_MS,
+    lastActiveAt: NOW_BASE,
+    isInactiveWarning: false
+  },
+  {
+    uid: 'usr_somchai_1',
+    email: 'somchai.bkk@gmail.com',
+    displayName: 'สมชาย ประเสริฐสุข',
+    photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    role: 'user',
+    isAdmin: false,
+    province: 'กรุงเทพมหานคร',
+    district: 'จตุจักร',
+    createdAt: NOW_BASE - 120 * ONE_DAY_MS,
+    lastActiveAt: NOW_BASE - 1 * ONE_DAY_MS,
+    isInactiveWarning: false
+  },
+  {
+    uid: 'usr_ploy_2',
+    email: 'ploy.sukhumvit@gmail.com',
+    displayName: 'พลอย ศรีสุข',
+    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    role: 'user',
+    isAdmin: false,
+    province: 'กรุงเทพมหานคร',
+    district: 'วัฒนา',
+    createdAt: NOW_BASE - 100 * ONE_DAY_MS,
+    lastActiveAt: NOW_BASE - 14 * ONE_DAY_MS,
+    isInactiveWarning: false
+  },
+  {
+    uid: 'usr_thanawat_3',
+    email: 'thanawat.pathum@gmail.com',
+    displayName: 'ธนวัฒน์ สุขใจ',
+    photoURL: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    role: 'user',
+    isAdmin: false,
+    province: 'ปทุมธานี',
+    district: 'คลองหลวง',
+    createdAt: NOW_BASE - 200 * ONE_DAY_MS,
+    lastActiveAt: NOW_BASE - 98 * ONE_DAY_MS,
+    isInactiveWarning: true,
+    inactiveWarningAt: NOW_BASE - 8 * ONE_DAY_MS,
+    warningDaysRemaining: 22
+  },
+  {
+    uid: 'usr_kanya_4',
+    email: 'kanya.m@gmail.com',
+    displayName: 'กัญญา มณีรัตน์',
+    photoURL: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    role: 'user',
+    isAdmin: false,
+    province: 'กรุงเทพมหานคร',
+    district: 'ดินแดง',
+    createdAt: NOW_BASE - 210 * ONE_DAY_MS,
+    lastActiveAt: NOW_BASE - 105 * ONE_DAY_MS,
+    isInactiveWarning: true,
+    inactiveWarningAt: NOW_BASE - 15 * ONE_DAY_MS,
+    warningDaysRemaining: 15
+  },
+  {
+    uid: 'usr_anon_5',
+    email: 'anon.c@gmail.com',
+    displayName: 'อานนท์ ชัยศรี',
+    photoURL: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    role: 'user',
+    isAdmin: false,
+    province: 'เชียงใหม่',
+    district: 'เมืองเชียงใหม่',
+    createdAt: NOW_BASE - 240 * ONE_DAY_MS,
+    lastActiveAt: NOW_BASE - 118 * ONE_DAY_MS,
+    isInactiveWarning: true,
+    inactiveWarningAt: NOW_BASE - 28 * ONE_DAY_MS,
+    warningDaysRemaining: 2
+  },
+  {
+    uid: 'usr_wichai_6',
+    email: 'wichai.deleted@gmail.com',
+    displayName: 'วิชัย ทองดี (ลบอัตโนมัติแล้ว)',
+    photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    role: 'user',
+    isAdmin: false,
+    province: 'นนทบุรี',
+    district: 'เมืองนนทบุรี',
+    createdAt: NOW_BASE - 300 * ONE_DAY_MS,
+    lastActiveAt: NOW_BASE - 125 * ONE_DAY_MS,
+    isInactiveWarning: true,
+    inactiveWarningAt: NOW_BASE - 35 * ONE_DAY_MS,
+    warningDaysRemaining: 0,
+    isAutoDeleted: true
+  }
+];
 
 const DEFAULT_LOCATION: Location = {
   province: 'กรุงเทพมหานคร',
@@ -551,6 +670,228 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.setItem('localhub_is_admin', JSON.stringify(isAdmin));
     } catch {}
   }, [isAdmin]);
+
+  // Registered user accounts state (persisted to localStorage)
+  const [registeredUsers, setRegisteredUsers] = useState<UserAccount[]>(() => {
+    try {
+      const stored = localStorage.getItem('localhub_registered_users');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_REGISTERED_USERS;
+  });
+
+  // Keep registeredUsers in sync with current user login/registration
+  useEffect(() => {
+    if (!currentUser || !currentUser.email) return;
+    setRegisteredUsers(prev => {
+      const existingIndex = prev.findIndex(
+        u => u.uid === currentUser.uid || (currentUser.email && u.email.toLowerCase() === currentUser.email.toLowerCase())
+      );
+      if (existingIndex >= 0) {
+        // Update profile info and keep lastActiveAt fresh on active session unless simulated
+        return prev.map((u, i) =>
+          i === existingIndex
+            ? {
+                ...u,
+                displayName: currentUser.displayName || u.displayName,
+                photoURL: currentUser.photoURL || u.photoURL,
+                email: currentUser.email || u.email,
+                role: isAdmin ? 'admin' : u.role
+              }
+            : u
+        );
+      } else {
+        const newUser: UserAccount = {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName || 'สมาชิกชุมชน',
+          photoURL: currentUser.photoURL || undefined,
+          role: isAdmin ? 'admin' : 'user',
+          isAdmin: isAdmin,
+          createdAt: Date.now(),
+          lastActiveAt: Date.now(),
+          isInactiveWarning: false
+        };
+        return [newUser, ...prev];
+      }
+    });
+  }, [currentUser, isAdmin]);
+
+  // Persist registeredUsers
+  useEffect(() => {
+    try {
+      localStorage.setItem('localhub_registered_users', JSON.stringify(registeredUsers));
+    } catch {}
+  }, [registeredUsers]);
+
+  // 3-Month Inactivity Rules:
+  // 1. Inactive > 3 months (90 days) -> triggers warning on "หน้าฉัน" (Profile)
+  // 2. Countdown 30 days to confirm active usage
+  // 3. If not confirmed within 30 days -> account is automatically deleted
+  const INACTIVITY_THRESHOLD_MS = 90 * 24 * 60 * 60 * 1000; // 90 days (3 months)
+  const GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+  const processedUsers = useMemo<UserAccount[]>(() => {
+    const now = Date.now();
+    return registeredUsers.map(user => {
+      const timeSinceActive = now - user.lastActiveAt;
+      const isPastThreeMonths = timeSinceActive > INACTIVITY_THRESHOLD_MS;
+
+      if (isPastThreeMonths && !user.isAutoDeleted) {
+        const warningStart = user.inactiveWarningAt || (user.lastActiveAt + INACTIVITY_THRESHOLD_MS);
+        const msSinceWarning = now - warningStart;
+        const msRemaining = GRACE_PERIOD_MS - msSinceWarning;
+        const daysRemaining = Math.max(0, Math.ceil(msRemaining / (24 * 60 * 60 * 1000)));
+        const shouldBeDeleted = daysRemaining <= 0;
+
+        return {
+          ...user,
+          isInactiveWarning: true,
+          inactiveWarningAt: warningStart,
+          warningDaysRemaining: daysRemaining,
+          isAutoDeleted: shouldBeDeleted
+        };
+      }
+
+      return {
+        ...user,
+        isInactiveWarning: false,
+        warningDaysRemaining: undefined
+      };
+    });
+  }, [registeredUsers, INACTIVITY_THRESHOLD_MS, GRACE_PERIOD_MS]);
+
+  // Total user counts
+  const totalUsersCount = useMemo(() => {
+    return processedUsers.filter(u => !u.isAutoDeleted).length;
+  }, [processedUsers]);
+
+  const activeUsersCount = useMemo(() => {
+    return processedUsers.filter(u => !u.isAutoDeleted && !u.isInactiveWarning).length;
+  }, [processedUsers]);
+
+  const inactiveUsersCount = useMemo(() => {
+    return processedUsers.filter(u => !u.isAutoDeleted && u.isInactiveWarning).length;
+  }, [processedUsers]);
+
+  const pendingDeletionUsersCount = useMemo(() => {
+    return processedUsers.filter(
+      u => !u.isAutoDeleted && u.isInactiveWarning && (u.warningDaysRemaining ?? 0) <= 7
+    ).length;
+  }, [processedUsers]);
+
+  // Current logged in account inactivity status
+  const currentAccountInactivity = useMemo(() => {
+    if (!currentUser) return { isWarning: false, daysRemaining: 30 };
+    const found = processedUsers.find(
+      u => u.uid === currentUser.uid || (currentUser.email && u.email.toLowerCase() === currentUser.email.toLowerCase())
+    );
+    if (!found) return { isWarning: false, daysRemaining: 30 };
+    return {
+      isWarning: Boolean(found.isInactiveWarning && !found.isAutoDeleted),
+      daysRemaining: found.warningDaysRemaining ?? 30,
+      isAutoDeleted: Boolean(found.isAutoDeleted)
+    };
+  }, [currentUser, processedUsers]);
+
+  const isCurrentAccountInactiveWarning = currentAccountInactivity.isWarning;
+  const currentAccountDaysRemaining = currentAccountInactivity.daysRemaining;
+
+  // Auto-delete enforcement effect: if current user's grace period expires, auto logout
+  useEffect(() => {
+    if (currentAccountInactivity.isAutoDeleted && currentUser) {
+      logoutFirebase();
+      showToast('❌ บัญชีของคุณถูกลบอัตโนมัติเนื่องจากไม่มีการเคลื่อนไหวเกิน 3 เดือนและไม่ได้รับการยืนยันภายใน 30 วัน', 'error');
+    }
+  }, [currentAccountInactivity.isAutoDeleted, currentUser]);
+
+  // Action: Confirm Active Status (กดยืนยันว่ายังมีการใช้งาน)
+  const confirmActiveStatus = useCallback((targetUid?: string) => {
+    const now = Date.now();
+    setRegisteredUsers(prev => {
+      const updated = prev.map(u => {
+        const matches = targetUid
+          ? u.uid === targetUid
+          : u.uid === currentUser?.uid || (currentUser?.email && u.email.toLowerCase() === currentUser.email.toLowerCase());
+
+        if (matches) {
+          return {
+            ...u,
+            lastActiveAt: now,
+            isInactiveWarning: false,
+            inactiveWarningAt: undefined,
+            warningDaysRemaining: undefined,
+            isAutoDeleted: false
+          };
+        }
+        return u;
+      });
+      try {
+        localStorage.setItem('localhub_registered_users', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    showToast('✅ ยืนยันการใช้งานบัญชีสำเร็จ! บัญชีของคุณได้รับการรักษาสถานะใช้งานต่อเนื่องเรียบร้อยแล้ว', 'success');
+  }, [currentUser, showToast]);
+
+  // Action: Simulate Inactivity for testing (จำลองไม่เคลื่อนไหว 3 เดือน)
+  const simulateInactivity = useCallback((enable: boolean) => {
+    const now = Date.now();
+    setRegisteredUsers(prev => {
+      const updated = prev.map(u => {
+        const matches = u.uid === currentUser?.uid || (currentUser?.email && u.email.toLowerCase() === currentUser.email.toLowerCase());
+        if (matches) {
+          if (enable) {
+            // Set last active to 96 days ago (> 3 months) and warning started 5 days ago (25 days remaining to confirm)
+            const ninetySixDaysAgo = now - 96 * ONE_DAY_MS;
+            const warningFiveDaysAgo = now - 5 * ONE_DAY_MS;
+            return {
+              ...u,
+              lastActiveAt: ninetySixDaysAgo,
+              isInactiveWarning: true,
+              inactiveWarningAt: warningFiveDaysAgo,
+              warningDaysRemaining: 25,
+              isAutoDeleted: false
+            };
+          } else {
+            return {
+              ...u,
+              lastActiveAt: now,
+              isInactiveWarning: false,
+              inactiveWarningAt: undefined,
+              warningDaysRemaining: undefined,
+              isAutoDeleted: false
+            };
+          }
+        }
+        return u;
+      });
+      try {
+        localStorage.setItem('localhub_registered_users', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    if (enable) {
+      showToast('🧪 จำลองสถานะ: บัญชีไม่มีการเคลื่อนไหวเกิน 3 เดือน (แสดงแถบแจ้งเตือนเหลือ 25 วัน)', 'info');
+    } else {
+      showToast('🔄 คืนค่าสถานะบัญชีเป็นปกติเรียบร้อยแล้ว', 'success');
+    }
+  }, [currentUser, showToast]);
+
+  // Action: Delete user account
+  const deleteUserAccount = useCallback((uid: string) => {
+    setRegisteredUsers(prev => {
+      const updated = prev.map(u => (u.uid === uid ? { ...u, isAutoDeleted: true, warningDaysRemaining: 0 } : u));
+      try {
+        localStorage.setItem('localhub_registered_users', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    showToast('ลบบัญชีผู้ใช้เรียบร้อยแล้ว', 'info');
+  }, [showToast]);
 
   // Real-time Firestore sync: Posts
   useEffect(() => {
@@ -1477,6 +1818,16 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isLoginModalOpen,
         openLoginModal,
         closeLoginModal,
+        registeredUsers: processedUsers,
+        totalUsersCount,
+        activeUsersCount,
+        inactiveUsersCount,
+        pendingDeletionUsersCount,
+        isCurrentAccountInactiveWarning,
+        currentAccountDaysRemaining,
+        confirmActiveStatus,
+        simulateInactivity,
+        deleteUserAccount,
       }}
     >
       {children}
