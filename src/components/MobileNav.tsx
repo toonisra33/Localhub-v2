@@ -5,7 +5,8 @@ import {
   Users,
   Store,
   User,
-  ShieldAlert
+  ShieldAlert,
+  Newspaper
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { Tab } from '../types';
@@ -21,6 +22,7 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
     { id: 'home', label: 'หน้าหลัก', icon: <Home className="w-5 h-5" /> },
     { id: 'map', label: 'รอบตัว', icon: <MapPin className="w-5 h-5" /> },
     { id: 'feed', label: 'ฟีด', icon: <Users className="w-5 h-5" /> },
+    { id: 'broadcasts', label: 'ศูนย์ข่าว', icon: <Newspaper className="w-5 h-5" /> },
     { id: 'market', label: 'ตลาด', icon: <Store className="w-5 h-5" /> },
     ...(isAdmin
       ? [{ id: 'admin' as Tab, label: 'แอดมิน', icon: <ShieldAlert className="w-5 h-5" /> }]

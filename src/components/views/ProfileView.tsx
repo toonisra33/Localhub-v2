@@ -35,7 +35,9 @@ import {
   Send,
   Database,
   LogIn,
-  Navigation
+  Navigation,
+  Users,
+  UserMinus
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { useBroadcast } from '../../context/BroadcastContext';
@@ -61,7 +63,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     marketItems,
     alerts,
     requestRealLocation,
-    isLocatingGps
+    isLocatingGps,
+    friends,
+    removeFriend
   } = useCommunity();
 
   const {
@@ -378,6 +382,68 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
             <span>ฐานข้อมูลคลาวด์</span>
           </span>
         </div>
+      </div>
+
+      {/* Friends List Section (เพื่อนของฉัน) */}
+      <div className="p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <Users className="w-4 h-4" />
+            </span>
+            <div>
+              <h3 className="font-extrabold text-sm text-slate-900">เพื่อนของฉัน ({friends.length} คน)</h3>
+              <p className="text-[11px] text-slate-400">จัดการรายชื่อเพื่อน และดูโพสต์เฉพาะเพื่อนในฟีดชุมชน</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setActiveTab('feed')}
+            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1 active:scale-95"
+          >
+            <span>ดูฟีดเพื่อน</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {friends.length === 0 ? (
+          <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+            ยังไม่มีรายชื่อเพื่อน คุณสามารถกด "+ เพิ่มเพื่อน" ได้จากโพสต์ของผู้คนในฟีดชุมชน
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            {friends.map((friend) => (
+              <div
+                key={friend.id}
+                className="p-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-2xl flex items-center justify-between gap-2.5 transition"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <img
+                    src={friend.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                    alt={friend.name}
+                    className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-slate-800 truncate">{friend.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate flex items-center gap-0.5">
+                      <MapPin className="w-2.5 h-2.5 shrink-0" />
+                      <span>{friend.province || 'ชุมชนทั่วไป'} {friend.district ? `(${friend.district})` : ''}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => removeFriend(friend.id)}
+                  className="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl text-[11px] font-bold transition shrink-0 active:scale-95 flex items-center gap-1"
+                  title="ลบเพื่อน"
+                >
+                  <UserMinus className="w-3.5 h-3.5 text-rose-500" />
+                  <span>ลบ</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Admin Dashboard Quick Access (Exclusively for Admin) */}

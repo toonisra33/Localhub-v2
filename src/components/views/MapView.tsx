@@ -2,31 +2,32 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   MapPin,
   AlertTriangle,
-  Radio,
   ShoppingBag,
   Layers,
   Navigation,
   Search,
   Plus,
-  Filter,
-  Maximize2,
   ExternalLink,
-  Users,
-  Compass,
-  Phone,
   CheckCircle2,
   X,
   RefreshCw,
-  Eye,
-  MessageSquare
+  MessageSquare,
+  ShieldAlert,
+  ThumbsUp,
+  Flag,
+  Crosshair,
+  MapPinned
 } from 'lucide-react';
 import L from 'leaflet';
 import { useCommunity } from '../../context/CommunityContext';
-import { useBroadcast } from '../../context/BroadcastContext';
 import { THAI_PROVINCE_COORDINATES } from '../../data/thaiData';
-import { AlertReport, Post, MarketItem } from '../../types';
+import { reverseGeocodeCoords } from '../../services/geolocationService';
 
-export const MapView: React.FC = () => {
+interface MapViewProps {
+  onOpenReportAlert?: (coords?: { lat?: number; lng?: number; address?: string }) => void;
+}
+
+export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
   const {
     location,
     alerts,
@@ -37,26 +38,35 @@ export const MapView: React.FC = () => {
     requestRealLocation,
     isLocatingGps,
     setActiveTab,
-    openPostDetail
+    openPostDetail,
+    confirmAlert,
+    reportAlertNotFound
   } = useCommunity();
-  const { broadcasts } = useBroadcast();
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
-  const userCircleRef = useRef<L.Circle | null>(null);
-  const userMarkerRef = useRef<L.Marker | null>(null);
+  const pinnedMarkerRef = useRef<L.Marker | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'alerts' | 'posts' | 'market'>('all');
   const [selectedRadius, setSelectedRadius] = useState<'1' | '5' | '10' | 'district' | 'province'>('5');
-  const [mapTileType, setMapTileType] = useState<'osm' | 'satellite' | 'carto'>('osm');
+  const [mapTileType, setMapTileType] = useState<'carto' | 'osm' | 'satellite'>('carto');
+  const [isPinningMode, setIsPinningMode] = useState<boolean>(false);
 
-  // Currently inspected real point
+  // User-dropped incident pin
+  const [pinnedIncident, setPinnedIncident] = useState<{
+    lat: number;
+    lng: number;
+    address: string;
+    isGeocoding?: boolean;
+  } | null>(null);
+
+  // Currently inspected real point (alert, post, market, user, pin)
   const [activeInspection, setActiveInspection] = useState<{
     id: string;
-    type: 'user' | 'alert' | 'post' | 'market';
+    type: 'user' | 'alert' | 'post' | 'market' | 'pin';
     title: string;
     subtitle: string;
     desc: string;
@@ -94,7 +104,7 @@ export const MapView: React.FC = () => {
     }
   };
 
-  // Initialize Leaflet Map
+  // 1. Initialize Leaflet Map with Google Maps-like crisp Carto Voyager tiles
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
@@ -109,15 +119,69 @@ export const MapView: React.FC = () => {
       attributionControl: false
     });
 
-    // Tile layer setup
-    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Default: CartoDB Voyager with crisp street names and Google Maps-style typography
+    const defaultTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
+      subdomains: 'abcd'
     });
-    tileLayer.addTo(map);
+    defaultTile.addTo(map);
 
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
     mapInstanceRef.current = map;
+
+    // Handle Map Click to Pin Incident
+    map.on('click', async (e: L.LeafletMouseEvent) => {
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+
+      setPinnedIncident({
+        lat,
+        lng,
+        address: 'กำลังดึงข้อมูลชื่อสถานที่จากแผนที่...',
+        isGeocoding: true
+      });
+
+      try {
+        const geo = await reverseGeocodeCoords(lat, lng);
+        const placeName = geo.displayName || `${geo.road ? geo.road + ', ' : ''}${geo.district ? 'อ.' + geo.district + ', ' : ''}จ.${geo.province}`;
+        setPinnedIncident({
+          lat,
+          lng,
+          address: placeName,
+          isGeocoding: false
+        });
+
+        setActiveInspection({
+          id: 'pinned-pin',
+          type: 'pin',
+          title: '📍 จุดปักหมุดแจ้งเหตุฉุกเฉิน',
+          subtitle: placeName,
+          desc: `พิกัด GPS จริง: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+          lat,
+          lng,
+          extra: { address: placeName }
+        });
+      } catch {
+        const fallback = `พิกัด GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        setPinnedIncident({
+          lat,
+          lng,
+          address: fallback,
+          isGeocoding: false
+        });
+        setActiveInspection({
+          id: 'pinned-pin',
+          type: 'pin',
+          title: '📍 จุดปักหมุดแจ้งเหตุฉุกเฉิน',
+          subtitle: fallback,
+          desc: `พิกัด GPS จริง: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+          lat,
+          lng,
+          extra: { address: fallback }
+        });
+      }
+    });
 
     return () => {
       map.remove();
@@ -125,7 +189,7 @@ export const MapView: React.FC = () => {
     };
   }, []);
 
-  // Update Tile Layer when user switches style
+  // 2. Tile layer switcher (Carto Voyager / Satellite / OSM)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -136,17 +200,20 @@ export const MapView: React.FC = () => {
       }
     });
 
-    let url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    let url = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    let subdomains = 'abcd';
     if (mapTileType === 'satellite') {
       url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-    } else if (mapTileType === 'carto') {
-      url = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+      subdomains = '';
+    } else if (mapTileType === 'osm') {
+      url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      subdomains = 'abc';
     }
 
-    L.tileLayer(url, { maxZoom: 19 }).addTo(map);
+    L.tileLayer(url, { maxZoom: 19, subdomains }).addTo(map);
   }, [mapTileType]);
 
-  // Update Markers and User GPS pin
+  // 3. Render Markers: User GPS, Radius Circle, Alerts, Posts, Market, and Pinned Incident
   useEffect(() => {
     const map = mapInstanceRef.current;
     const markersGroup = markersLayerRef.current;
@@ -162,17 +229,22 @@ export const MapView: React.FC = () => {
       className: 'custom-user-marker',
       html: `
         <div class="relative flex items-center justify-center">
-          <div class="absolute w-8 h-8 rounded-full bg-blue-500/30 animate-ping"></div>
+          <div class="absolute w-9 h-9 rounded-full bg-blue-500/30 animate-ping"></div>
           <div class="w-6 h-6 rounded-full bg-blue-600 border-2 border-white shadow-xl flex items-center justify-center text-white">
             <div class="w-2.5 h-2.5 rounded-full bg-white"></div>
           </div>
         </div>
       `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
+      iconSize: [36, 36],
+      iconAnchor: [18, 18]
     });
 
     const userMarker = L.marker([userLat, userLng], { icon: userIcon });
+    userMarker.bindTooltip(`📍 ตำแหน่งของฉัน: ${location.displayName || location.province}`, {
+      direction: 'top',
+      className: 'gmap-label-tooltip',
+      offset: [0, -10]
+    });
     userMarker.on('click', () => {
       setActiveInspection({
         id: 'user-gps',
@@ -185,7 +257,6 @@ export const MapView: React.FC = () => {
       });
     });
     markersGroup.addLayer(userMarker);
-    userMarkerRef.current = userMarker;
 
     // User Radius Circle
     const radiusMeters = getRadiusInMeters();
@@ -198,35 +269,49 @@ export const MapView: React.FC = () => {
       dashArray: '4, 4'
     });
     markersGroup.addLayer(radiusCircle);
-    userCircleRef.current = radiusCircle;
 
-    // 2. Real Emergency Alerts Pins
+    // 2. Real Emergency Alerts Pins with Anti-fake News and Google Maps Typography
     if (activeFilter === 'all' || activeFilter === 'alerts') {
       alerts.forEach((alert) => {
         const [lat, lng] = getItemCoords(alert.id, alert.province, alert.coordinates);
         const isCritical = alert.severity === 'critical' || alert.severity === 'high';
+        const notFound = alert.notFoundCount || 0;
+        const isSuspectedFake = alert.isFakeReport || (notFound >= 3 && notFound > alert.verifiedCount);
 
         const alertIcon = L.divIcon({
           className: 'custom-alert-marker',
           html: `
             <div class="relative group cursor-pointer">
-              <div class="w-8 h-8 rounded-2xl ${isCritical ? 'bg-red-600 animate-pulse' : 'bg-amber-600'} text-white shadow-xl border-2 border-white flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <div class="w-9 h-9 rounded-2xl ${
+                isSuspectedFake
+                  ? 'bg-amber-600 opacity-80'
+                  : isCritical
+                  ? 'bg-red-600 animate-pulse'
+                  : 'bg-rose-600'
+              } text-white shadow-xl border-2 border-white flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
-              <div class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-white text-[9px] font-black text-red-600 flex items-center justify-center shadow">!</div>
+              <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full ${isSuspectedFake ? 'bg-amber-500' : 'bg-red-600'} text-white text-[9px] font-black flex items-center justify-center shadow border border-white">
+                ${isSuspectedFake ? '?' : '!'}
+              </div>
             </div>
           `,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
         });
 
         const marker = L.marker([lat, lng], { icon: alertIcon });
+        marker.bindTooltip(`🚨 ${alert.title.slice(0, 24)}... (ยืนยัน ${alert.verifiedCount})`, {
+          direction: 'top',
+          className: 'gmap-label-tooltip',
+          offset: [0, -12]
+        });
         marker.on('click', () => {
           setActiveInspection({
             id: alert.id,
             type: 'alert',
             title: alert.title,
-            subtitle: `🚨 รายงานเหตุ: ${alert.province} • ผู้รายงาน: ${alert.reporter}`,
+            subtitle: `🚨 เหตุ: ${alert.province} • ผู้รายงาน: ${alert.reporter}`,
             desc: alert.description,
             lat,
             lng,
@@ -245,15 +330,20 @@ export const MapView: React.FC = () => {
         const postIcon = L.divIcon({
           className: 'custom-post-marker',
           html: `
-            <div class="w-7 h-7 rounded-2xl bg-emerald-600 text-white shadow-lg border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <div class="w-8 h-8 rounded-2xl bg-emerald-600 text-white shadow-lg border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
           `,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
         });
 
         const marker = L.marker([lat, lng], { icon: postIcon });
+        marker.bindTooltip(`💬 ${post.title.slice(0, 24)}`, {
+          direction: 'top',
+          className: 'gmap-label-tooltip',
+          offset: [0, -10]
+        });
         marker.on('click', () => {
           setActiveInspection({
             id: post.id,
@@ -278,15 +368,20 @@ export const MapView: React.FC = () => {
         const marketIcon = L.divIcon({
           className: 'custom-market-marker',
           html: `
-            <div class="w-7 h-7 rounded-2xl bg-amber-500 text-white shadow-lg border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <div class="w-8 h-8 rounded-2xl bg-amber-500 text-white shadow-lg border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </div>
           `,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
         });
 
         const marker = L.marker([lat, lng], { icon: marketIcon });
+        marker.bindTooltip(`🛍️ ฿${item.price.toLocaleString()} • ${item.title.slice(0, 20)}`, {
+          direction: 'top',
+          className: 'gmap-label-tooltip',
+          offset: [0, -10]
+        });
         marker.on('click', () => {
           setActiveInspection({
             id: item.id,
@@ -302,7 +397,33 @@ export const MapView: React.FC = () => {
         markersGroup.addLayer(marker);
       });
     }
-  }, [location, alerts, posts, marketItems, activeFilter, selectedRadius]);
+
+    // 5. User-Dropped Incident Pin
+    if (pinnedIncident) {
+      const pinIcon = L.divIcon({
+        className: 'custom-pinned-alert-marker',
+        html: `
+          <div class="relative flex items-center justify-center animate-bounce">
+            <div class="w-10 h-10 rounded-full bg-red-600 text-white border-2 border-white shadow-2xl flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 36]
+      });
+
+      const pinMarker = L.marker([pinnedIncident.lat, pinnedIncident.lng], { icon: pinIcon });
+      pinMarker.bindTooltip(`📍 จุดปักหมุดแจ้งเหตุ: ${pinnedIncident.address.slice(0, 30)}`, {
+        direction: 'top',
+        className: 'gmap-label-tooltip',
+        offset: [0, -28],
+        permanent: true
+      });
+      markersGroup.addLayer(pinMarker);
+      pinnedMarkerRef.current = pinMarker;
+    }
+  }, [location, alerts, posts, marketItems, activeFilter, selectedRadius, pinnedIncident]);
 
   // Pan map when location changes
   useEffect(() => {
@@ -364,28 +485,61 @@ export const MapView: React.FC = () => {
     }
   };
 
+  // Trigger report modal from pinned location
+  const handleReportAtPinnedLocation = () => {
+    if (!pinnedIncident) return;
+    if (onOpenReportAlert) {
+      onOpenReportAlert({
+        lat: pinnedIncident.lat,
+        lng: pinnedIncident.lng,
+        address: pinnedIncident.address
+      });
+    } else {
+      setActiveTab('alerts');
+    }
+  };
+
   return (
     <div className="space-y-3 max-w-4xl mx-auto animate-fadeIn pb-14">
-      {/* 1. Header Bar with Real GPS status */}
+      {/* 1. Header Bar with Real GPS status & Pinning Mode Action */}
       <div className="bg-slate-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-800 shadow-lg flex items-center justify-between gap-2 min-w-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1 truncate">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shrink-0">
-            <MapPin className="w-4 h-4 text-slate-950" />
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 truncate">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shrink-0">
+            <MapPin className="w-5 h-5 text-slate-950" />
           </div>
           <div className="min-w-0">
-            <span className="font-extrabold text-sm sm:text-base text-white tracking-tight flex items-center gap-1.5">
-              <span>แผนที่ดาวเทียม & พิกัดสดจริง</span>
+            <span className="font-black text-sm sm:text-base text-white tracking-tight flex items-center gap-1.5">
+              <span>แผนที่จริง & ระบบบอกตำแหน่ง</span>
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-bold border border-emerald-400/30">
-                LIVE 100%
+                LIVE GPS
               </span>
             </span>
-            <p className="text-[10px] text-slate-400 truncate hidden xs:block">
+            <p className="text-[11px] text-slate-400 truncate hidden xs:block">
               {location.lat && location.lng ? `พิกัดจริง: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)} • ${location.displayName || location.province}` : 'ตรวจจับตำแหน่ง GPS จริง'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Toggle Pinning Mode Button */}
+          <button
+            onClick={() => {
+              setIsPinningMode(!isPinningMode);
+              if (!isPinningMode) {
+                showToast('📍 แตะหรือคลิกที่ใดก็ได้บนแผนที่เพื่อปักหมุดแจ้งเหตุ', 'info');
+              }
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 shadow-sm active:scale-95 ${
+              isPinningMode
+                ? 'bg-rose-600 text-white ring-2 ring-rose-400 animate-pulse'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
+            title="ปักหมุดแจ้งเหตุตามพื้นที่"
+          >
+            <MapPinned className="w-3.5 h-3.5" />
+            <span>{isPinningMode ? 'กำลังปักหมุด...' : 'ปักหมุดแจ้งเหตุ'}</span>
+          </button>
+
           <button
             onClick={handleFlyToGps}
             disabled={isLocatingGps}
@@ -393,7 +547,7 @@ export const MapView: React.FC = () => {
             title="ค้นหาตำแหน่ง GPS ปัจจุบัน"
           >
             <Navigation className={`w-3.5 h-3.5 fill-white ${isLocatingGps ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">ตำแหน่ง GPS ฉัน</span>
+            <span className="hidden sm:inline">GPS ฉัน</span>
           </button>
 
           <button
@@ -405,6 +559,22 @@ export const MapView: React.FC = () => {
         </div>
       </div>
 
+      {/* Pinning Mode Banner */}
+      {isPinningMode && (
+        <div className="p-3 bg-rose-600 text-white rounded-2xl flex items-center justify-between gap-2 shadow-md animate-fadeIn">
+          <div className="flex items-center gap-2 text-xs font-bold">
+            <Crosshair className="w-4 h-4 animate-spin text-white" />
+            <span>คลิกหรือแตะบนแผนที่ตรงจุดเกิดเหตุ เพื่อปักหมุดรายงานภัย</span>
+          </div>
+          <button
+            onClick={() => setIsPinningMode(false)}
+            className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-semibold"
+          >
+            เสร็จสิ้น
+          </button>
+        </div>
+      )}
+
       {/* 2. Real Search & Geocoding Bar */}
       <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -412,7 +582,7 @@ export const MapView: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหาพิกัดจริง เช่น เชียงใหม่, สยาม, ลาดยาว, Tokyo..."
+            placeholder="ค้นหาชื่อสถานที่, ถนน, ตำบล, อำเภอ (ตัวอักษรแบบ Google Maps)..."
             className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-500 shadow-xs"
           />
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -443,7 +613,7 @@ export const MapView: React.FC = () => {
 
         <button
           onClick={() => setActiveFilter('alerts')}
-          className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 flex items-center gap-1 ${
+          className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 flex items-center gap-1.5 ${
             activeFilter === 'alerts'
               ? 'bg-red-600 text-white shadow-xs'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -477,7 +647,7 @@ export const MapView: React.FC = () => {
       </div>
 
       {/* 4. Real Interactive Leaflet Map Container */}
-      <div className="relative w-full h-[460px] sm:h-[520px] rounded-3xl overflow-hidden border border-slate-300 shadow-xl bg-slate-100">
+      <div className={`relative w-full h-[470px] sm:h-[530px] rounded-3xl overflow-hidden border border-slate-300 shadow-xl bg-slate-100 ${isPinningMode ? 'cursor-crosshair' : ''}`}>
         {/* Leaflet DOM Anchor */}
         <div ref={mapContainerRef} className="w-full h-full z-10" />
 
@@ -510,15 +680,15 @@ export const MapView: React.FC = () => {
             <Navigation className={`w-4 h-4 fill-emerald-400 ${isLocatingGps ? 'animate-spin' : ''}`} />
           </button>
 
-          {/* Tile Layer Switcher: Street / Satellite / Carto */}
+          {/* Tile Layer Switcher: Street / Satellite / OSM */}
           <button
             onClick={() => {
-              const next = mapTileType === 'osm' ? 'satellite' : mapTileType === 'satellite' ? 'carto' : 'osm';
+              const next = mapTileType === 'carto' ? 'satellite' : mapTileType === 'satellite' ? 'osm' : 'carto';
               setMapTileType(next);
-              showToast(`สลับโหมดแผนที่: ${next === 'satellite' ? 'ภาพถ่ายดาวเทียม' : next === 'carto' ? 'คอนทราสต์ชัดเจน' : 'มาตรฐาน OpenStreetMap'}`, 'info');
+              showToast(`สลับโหมดแผนที่: ${next === 'satellite' ? 'ภาพถ่ายดาวเทียม' : next === 'osm' ? 'OpenStreetMap' : 'แผนที่มาตรฐาน Google-style'}`, 'info');
             }}
             className="w-10 h-10 bg-slate-900/90 hover:bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg transition active:scale-90 border border-slate-700"
-            title="เปลี่ยนมุมมองแผนที่ (ดาวเทียม/ถนน)"
+            title="เปลี่ยนมุมมองแผนที่ (Google-style / ดาวเทียม / ถนน)"
           >
             <Layers className="w-4 h-4 text-emerald-400" />
           </button>
@@ -526,10 +696,12 @@ export const MapView: React.FC = () => {
 
         {/* Selected Real Pin Detail Card Popup */}
         {activeInspection && (
-          <div className="absolute top-4 left-4 right-16 sm:right-auto sm:max-w-sm z-30 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-slate-200 space-y-2 animate-fadeIn">
+          <div className="absolute top-4 left-4 right-16 sm:right-auto sm:max-w-sm z-30 bg-white/95 backdrop-blur-md p-4 rounded-3xl shadow-2xl border border-slate-200 space-y-2.5 animate-fadeIn">
             <div className="flex items-start justify-between gap-2">
-              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                activeInspection.type === 'alert'
+              <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                activeInspection.type === 'pin'
+                  ? 'bg-rose-100 text-rose-700 border border-rose-300'
+                  : activeInspection.type === 'alert'
                   ? 'bg-red-100 text-red-700'
                   : activeInspection.type === 'market'
                   ? 'bg-amber-100 text-amber-800'
@@ -537,12 +709,14 @@ export const MapView: React.FC = () => {
                   ? 'bg-emerald-100 text-emerald-800'
                   : 'bg-blue-100 text-blue-800'
               }`}>
-                {activeInspection.type === 'alert'
-                  ? 'เหตุฉุกเฉินจริง'
+                {activeInspection.type === 'pin'
+                  ? '📍 ปักหมุดแจ้งเหตุตรงนี้'
+                  : activeInspection.type === 'alert'
+                  ? '🚨 เหตุฉุกเฉินจริง'
                   : activeInspection.type === 'market'
-                  ? 'สินค้าในตลาด'
+                  ? '🛍️ สินค้าในตลาด'
                   : activeInspection.type === 'post'
-                  ? 'โพสต์ในชุมชน'
+                  ? '💬 โพสต์ชุมชน'
                   : 'ตำแหน่ง GPS'}
               </span>
               <button
@@ -555,12 +729,91 @@ export const MapView: React.FC = () => {
 
             <div>
               <h4 className="font-extrabold text-sm text-slate-900 leading-tight">{activeInspection.title}</h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">{activeInspection.subtitle}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{activeInspection.subtitle}</p>
             </div>
 
-            <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed bg-slate-50 p-2 rounded-xl border border-slate-100">
+            <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100 font-medium">
               {activeInspection.desc}
             </p>
+
+            {/* If Alert: Show Anti-fake news indicators and confirmation buttons */}
+            {activeInspection.type === 'alert' && activeInspection.extra && (
+              <div className="space-y-2 pt-1">
+                {activeInspection.extra.isFakeReport || (activeInspection.extra.notFoundCount >= 3 && activeInspection.extra.notFoundCount > activeInspection.extra.verifiedCount) ? (
+                  <div className="p-2 bg-red-100 text-red-800 text-[11px] rounded-xl font-bold flex items-center gap-1.5 border border-red-200">
+                    <Flag className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    <span>⚠️ กำลังถูกตรวจสอบว่าอาจเป็นข่าวปลอม (ไม่พบ {activeInspection.extra.notFoundCount || 0} คน)</span>
+                  </div>
+                ) : (
+                  <div className="p-1.5 bg-emerald-50 text-emerald-800 text-[11px] rounded-xl font-semibold flex items-center gap-1.5 border border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>ยืนยันเหตุจริงแล้ว {activeInspection.extra.verifiedCount || 1} คน</span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      confirmAlert(activeInspection.extra.id);
+                      setActiveInspection(prev => prev ? {
+                        ...prev,
+                        extra: {
+                          ...prev.extra,
+                          verifiedCount: (prev.extra.verifiedCount || 0) + 1,
+                          userVerified: true,
+                          userReportedNotFound: false
+                        }
+                      } : null);
+                    }}
+                    className="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 active:scale-95 shadow-2xs"
+                  >
+                    <ThumbsUp className="w-3 h-3 fill-white" />
+                    <span>ยืนยันเหตุจริง ({activeInspection.extra.verifiedCount})</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      reportAlertNotFound(activeInspection.extra.id);
+                      setActiveInspection(prev => prev ? {
+                        ...prev,
+                        extra: {
+                          ...prev.extra,
+                          notFoundCount: (prev.extra.notFoundCount || 0) + 1,
+                          userReportedNotFound: true,
+                          userVerified: false
+                        }
+                      } : null);
+                    }}
+                    className="flex-1 py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 border border-rose-200 active:scale-95"
+                  >
+                    <Flag className="w-3 h-3" />
+                    <span>ไม่พบเหตุ / ข่าวปลอม ({activeInspection.extra.notFoundCount || 0})</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* If Pinned Incident: Action button to immediately open report modal */}
+            {activeInspection.type === 'pin' && (
+              <div className="pt-1 space-y-1.5">
+                <button
+                  onClick={handleReportAtPinnedLocation}
+                  className="w-full py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md active:scale-95"
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                  <span>แจ้งเหตุด่วนตรงจุดนี้ทันที</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setPinnedIncident(null);
+                    setActiveInspection(null);
+                  }}
+                  className="w-full py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[11px] font-semibold transition"
+                >
+                  ยกเลิกหมุด
+                </button>
+              </div>
+            )}
 
             {/* Real Actions & Links */}
             <div className="flex items-center gap-2 pt-1 flex-wrap">
@@ -572,7 +825,7 @@ export const MapView: React.FC = () => {
                 className="flex-1 py-1.5 px-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-2xs text-center"
               >
                 <Navigation className="w-3 h-3 fill-white" />
-                <span>นำทาง GPS</span>
+                <span>นำทาง Google Maps</span>
                 <ExternalLink className="w-3 h-3 ml-0.5" />
               </a>
 
@@ -585,7 +838,7 @@ export const MapView: React.FC = () => {
                   className="py-1.5 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
                 >
                   <AlertTriangle className="w-3 h-3" />
-                  <span>ดูเหตุการณ์</span>
+                  <span>ศูนย์เตือนภัย</span>
                 </button>
               )}
 

@@ -8,7 +8,9 @@ import {
   CheckCircle,
   Send,
   Calendar,
-  Tag
+  Tag,
+  UserPlus,
+  UserCheck
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { Post } from '../../types';
@@ -19,7 +21,7 @@ interface PostDetailCommentsModalProps {
 }
 
 export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = ({ post, onClose }) => {
-  const { likePost, addComment, showToast } = useCommunity();
+  const { likePost, addComment, showToast, isFriend, addFriend, removeFriend, currentUser } = useCommunity();
   const [commentText, setCommentText] = useState('');
 
   if (!post) return null;
@@ -65,6 +67,40 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
                   {typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'สมาชิกชุมชน'}
                 </span>
                 {post.isVerified && <CheckCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white" />}
+                {currentUser?.displayName !== post.author && (
+                  <button
+                    onClick={() => {
+                      if (isFriend(post.author)) {
+                        removeFriend(post.author);
+                      } else {
+                        addFriend({
+                          id: `f_${post.author}`,
+                          name: post.author,
+                          avatar: post.authorAvatar,
+                          province: post.location?.province,
+                          district: post.location?.district
+                        });
+                      }
+                    }}
+                    className={`ml-2 px-2 py-0.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition active:scale-95 ${
+                      isFriend(post.author)
+                        ? 'bg-blue-50 text-blue-700 hover:bg-rose-50 hover:text-rose-700 border border-blue-200'
+                        : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300'
+                    }`}
+                  >
+                    {isFriend(post.author) ? (
+                      <>
+                        <UserCheck className="w-3 h-3 text-blue-600" />
+                        <span>เป็นเพื่อนแล้ว</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3 h-3 text-emerald-600" />
+                        <span>+ เพิ่มเพื่อน</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
               <p className="text-xs text-slate-500 flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-slate-400" />

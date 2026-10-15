@@ -56,6 +56,12 @@ function AppContent() {
   const [createPostInitialImages, setCreatePostInitialImages] = useState<string[]>([]);
   const [isCreateMarketModalOpen, setIsCreateMarketModalOpen] = useState(false);
   const [isReportAlertModalOpen, setIsReportAlertModalOpen] = useState(false);
+  const [reportAlertCoords, setReportAlertCoords] = useState<{ lat?: number; lng?: number; address?: string } | undefined>();
+
+  const openReportAlert = (coords?: { lat?: number; lng?: number; address?: string }) => {
+    setReportAlertCoords(coords);
+    setIsReportAlertModalOpen(true);
+  };
 
   const openCreatePostWith = (mode: 'camera' | 'gallery' | 'video' | 'standard' = 'standard', images: string[] = []) => {
     setCreatePostInitialMode(mode);
@@ -153,7 +159,7 @@ function AppContent() {
 
           {activeTab === 'alerts' && (
             <AlertsView
-              onOpenReportAlert={() => setIsReportAlertModalOpen(true)}
+              onOpenReportAlert={() => openReportAlert()}
               onOpenWeather={() => setActiveTab('weather')}
             />
           )}
@@ -163,7 +169,7 @@ function AppContent() {
           )}
 
           {activeTab === 'map' && (
-            <MapView />
+            <MapView onOpenReportAlert={openReportAlert} />
           )}
 
           {activeTab === 'profile' && (
@@ -227,7 +233,12 @@ function AppContent() {
 
       <ReportAlertModal
         isOpen={isReportAlertModalOpen}
-        onClose={() => setIsReportAlertModalOpen(false)}
+        onClose={() => {
+          setIsReportAlertModalOpen(false);
+          setReportAlertCoords(undefined);
+        }}
+        initialCoords={reportAlertCoords?.lat && reportAlertCoords?.lng ? { lat: reportAlertCoords.lat, lng: reportAlertCoords.lng } : undefined}
+        initialAddress={reportAlertCoords?.address}
       />
 
       <ContactAdminModal

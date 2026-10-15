@@ -6,7 +6,8 @@ import {
   PostComment,
   InAppNotification,
   MarketItem,
-  AlertReport
+  AlertReport,
+  FriendUser
 } from '../types';
 import { sendSystemNotification } from '../utils/notificationService';
 import { findNearestThaiProvince } from '../data/thaiData';
@@ -115,6 +116,14 @@ interface CommunityContextType {
   // Alerts
   alerts: AlertReport[];
   addAlert: (alert: Omit<AlertReport, 'id' | 'createdAt' | 'verifiedCount' | 'status'>) => void;
+  confirmAlert: (alertId: string) => void;
+  reportAlertNotFound: (alertId: string) => void;
+
+  // Friends (เพิ่มเพื่อน / ลบเพื่อน)
+  friends: FriendUser[];
+  addFriend: (friend: Omit<FriendUser, 'addedAt'>) => void;
+  removeFriend: (friendIdOrName: string) => void;
+  isFriend: (idOrName: string) => boolean;
 
   // Contact Admin
   isContactAdminModalOpen: boolean;
@@ -349,10 +358,46 @@ const INITIAL_NOTIFICATIONS: InAppNotification[] = [
   }
 ];
 
+const INITIAL_FRIENDS: FriendUser[] = [
+  {
+    id: 'f_somchai',
+    name: 'สมชาย นามดี',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    province: 'กรุงเทพมหานคร',
+    district: 'จตุจักร',
+    addedAt: Date.now() - 86400000 * 3
+  },
+  {
+    id: 'f_orawan',
+    name: 'อรวรรณ ธรรมดี',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    province: 'กรุงเทพมหานคร',
+    district: 'วัฒนา',
+    addedAt: Date.now() - 86400000 * 5
+  }
+];
+
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<Tab>('home');
+
+  // Friends state with persistence
+  const [friends, setFriends] = useState<FriendUser[]>(() => {
+    try {
+      const stored = localStorage.getItem('localhub_friends');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return INITIAL_FRIENDS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('localhub_friends', JSON.stringify(friends));
+    } catch (e) {
+      console.warn('Failed to save friends to localStorage:', e);
+    }
+  }, [friends]);
 
   const [location, setLocation] = useState<Location>(() => {
     try {
@@ -683,7 +728,11 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               reporter: (typeof raw.reporter === 'string' ? raw.reporter : '') || (typeof raw.reportedBy === 'string' ? raw.reportedBy : '') || 'ประชาชนในพื้นที่',
               createdAt: createdAtMs,
               verifiedCount: typeof raw.verifiedCount === 'number' ? raw.verifiedCount : (typeof raw.confirmations === 'number' ? raw.confirmations : 1),
-              status: raw.status || 'active'
+              notFoundCount: typeof raw.notFoundCount === 'number' ? raw.notFoundCount : 0,
+              isFakeReport: Boolean(raw.isFakeReport),
+              status: raw.status || 'active',
+              coordinates: raw.coordinates || (raw.location?.lat && raw.location?.lng ? { lat: raw.location.lat, lng: raw.location.lng } : undefined),
+              locationName: raw.locationName || raw.addressDetails || ''
             });
           });
           cloudAlerts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -1135,6 +1184,94 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }).catch(e => console.warn('Alert notification error:', e));
   };
 
+  const confirmAlert = (alertId: string) => {
+    setAlerts(prev =>
+      prev.map(a => {
+        if (a.id === alertId) {
+          const wasVerified = Boolean(a.userVerified);
+          const wasNotFound = Boolean(a.userReportedNotFound);
+          const newVerifiedCount = wasVerified ? a.verifiedCount : a.verifiedCount + 1;
+          const newNotFoundCount = wasNotFound ? Math.max(0, (a.notFoundCount || 1) - 1) : (a.notFoundCount || 0);
+          const isFake = newNotFoundCount >= 3 && newNotFoundCount > newVerifiedCount;
+          const updated: AlertReport = {
+            ...a,
+            verifiedCount: newVerifiedCount,
+            notFoundCount: newNotFoundCount,
+            userVerified: true,
+            userReportedNotFound: false,
+            isFakeReport: isFake
+          };
+          updateDoc(doc(db, 'alerts', a.id), {
+            verifiedCount: updated.verifiedCount,
+            notFoundCount: updated.notFoundCount,
+            isFakeReport: updated.isFakeReport
+          }).catch(() => {});
+          return updated;
+        }
+        return a;
+      })
+    );
+    showToast('✅ ยืนยันเหตุการณ์จริงเรียบร้อยแล้ว ขอบคุณที่ช่วยตรวจสอบข้อมูล', 'success');
+  };
+
+  const reportAlertNotFound = (alertId: string) => {
+    setAlerts(prev =>
+      prev.map(a => {
+        if (a.id === alertId) {
+          const wasNotFound = Boolean(a.userReportedNotFound);
+          const wasVerified = Boolean(a.userVerified);
+          const newNotFoundCount = wasNotFound ? (a.notFoundCount || 1) : ((a.notFoundCount || 0) + 1);
+          const newVerifiedCount = wasVerified ? Math.max(1, a.verifiedCount - 1) : a.verifiedCount;
+          const isFake = newNotFoundCount >= 3 && newNotFoundCount > newVerifiedCount;
+          const updated: AlertReport = {
+            ...a,
+            notFoundCount: newNotFoundCount,
+            verifiedCount: newVerifiedCount,
+            userReportedNotFound: true,
+            userVerified: false,
+            isFakeReport: isFake
+          };
+          updateDoc(doc(db, 'alerts', a.id), {
+            verifiedCount: updated.verifiedCount,
+            notFoundCount: updated.notFoundCount,
+            isFakeReport: updated.isFakeReport
+          }).catch(() => {});
+          return updated;
+        }
+        return a;
+      })
+    );
+    showToast('⚠️ บันทึกรายงานไม่พบเหตุจริง เพื่อช่วยคัดกรองข่าวปลอมในชุมชน', 'info');
+  };
+
+  const addFriend = (friend: Omit<FriendUser, 'addedAt'>) => {
+    const existing = friends.some(
+      f => f.id === friend.id || f.name.trim().toLowerCase() === friend.name.trim().toLowerCase()
+    );
+    if (existing) {
+      showToast(`คุณกับ ${friend.name} เป็นเพื่อนกันอยู่แล้ว`, 'info');
+      return;
+    }
+    const newFriend: FriendUser = {
+      ...friend,
+      addedAt: Date.now()
+    };
+    setFriends(prev => [newFriend, ...prev]);
+    showToast(`👥 เพิ่ม "${friend.name}" เป็นเพื่อนเรียบร้อยแล้ว`, 'success');
+  };
+
+  const removeFriend = (friendIdOrName: string) => {
+    const target = friends.find(f => f.id === friendIdOrName || f.name === friendIdOrName);
+    setFriends(prev => prev.filter(f => f.id !== friendIdOrName && f.name !== friendIdOrName));
+    showToast(`ลบ "${target?.name || friendIdOrName}" ออกจากรายชื่อเพื่อนแล้ว`, 'info');
+  };
+
+  const isFriend = (idOrName: string) => {
+    if (!idOrName) return false;
+    const q = idOrName.trim().toLowerCase();
+    return friends.some(f => f.id.toLowerCase() === q || f.name.toLowerCase() === q);
+  };
+
   const unreadNotifCount = notifications.filter(n => !n.isRead).length;
 
   return (
@@ -1173,6 +1310,12 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         likeMarketItem,
         alerts,
         addAlert,
+        confirmAlert,
+        reportAlertNotFound,
+        friends,
+        addFriend,
+        removeFriend,
+        isFriend,
         isContactAdminModalOpen,
         openContactAdminModal: () => setIsContactAdminModalOpen(true),
         closeContactAdminModal: () => setIsContactAdminModalOpen(false),

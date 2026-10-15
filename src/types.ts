@@ -33,6 +33,15 @@ export interface AdminBroadcast {
   likesCount?: number;
 }
 
+export interface FriendUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  province?: string;
+  district?: string;
+  addedAt: number;
+}
+
 export interface PostComment {
   id: string;
   author: string;
@@ -179,8 +188,13 @@ export interface AlertReport {
   reporterAvatar?: string;
   createdAt: number;
   verifiedCount: number;
+  notFoundCount?: number;
+  userVerified?: boolean;
+  userReportedNotFound?: boolean;
+  isFakeReport?: boolean;
   status: 'active' | 'resolved' | 'investigating';
   coordinates?: { lat: number; lng: number };
+  locationName?: string;
 }
 
 export type TestSoundType = 'siren' | 'urgent' | 'high' | 'announcement';

@@ -23,7 +23,7 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'feed', label: 'ฟีดชุมชน', icon: <Users className="w-5 h-5" /> },
     { id: 'market', label: 'ตลาดนัดชุมชน', icon: <Store className="w-5 h-5" /> },
     { id: 'profile', label: 'บัญชีของฉัน', icon: <User className="w-5 h-5" /> },
-    { id: 'broadcasts', label: 'บรอดแคสต์ทางการ', icon: <Radio className="w-5 h-5" /> },
+    { id: 'broadcasts', label: 'ศูนย์ข่าว & บรอดแคสต์', icon: <Radio className="w-5 h-5" />, badge: 'HOT' },
     { id: 'weather', label: 'พยากรณ์อากาศสด', icon: <CloudSun className="w-5 h-5" /> },
     { id: 'alerts', label: 'รายงานเหตุฉุกเฉิน', icon: <AlertTriangle className="w-5 h-5" /> },
     ...(isAdmin
