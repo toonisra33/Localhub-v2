@@ -91,7 +91,7 @@ interface CommunityContextType {
     tags?: string[];
   }) => void;
   likePost: (id: string) => void;
-  addComment: (postId: string, content: string) => void;
+  addComment: (postId: string, content: string, images?: string[]) => void;
 
   // Notifications & Toasts
   notifications: InAppNotification[];
@@ -509,6 +509,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isContactAdminModalOpen, setIsContactAdminModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     try {
+      const isLoggedOut = localStorage.getItem('localhub_logged_out');
+      if (isLoggedOut === 'true') return false;
       const stored = localStorage.getItem('localhub_is_admin');
       if (stored !== null) return JSON.parse(stored);
     } catch {}
@@ -523,6 +525,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     photoURL: string | null;
   } | null>(() => {
     try {
+      const isLoggedOut = localStorage.getItem('localhub_logged_out');
+      if (isLoggedOut === 'true') return null;
       const stored = localStorage.getItem('localhub_user');
       if (stored) return JSON.parse(stored);
     } catch {}
@@ -830,6 +834,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrentUser(DEFAULT_ADMIN_USER);
     setIsAdmin(true);
     try {
+      localStorage.removeItem('localhub_logged_out');
       localStorage.setItem('localhub_user', JSON.stringify(DEFAULT_ADMIN_USER));
       localStorage.setItem('localhub_is_admin', 'true');
     } catch {}
@@ -852,14 +857,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCurrentUser(loggedIn);
       setIsAdmin(isOriginalAdmin || true);
       try {
+        localStorage.removeItem('localhub_logged_out');
         localStorage.setItem('localhub_user', JSON.stringify(loggedIn));
-        localStorage.setItem('localhub_is_admin', 'true');
+        localStorage.setItem('localhub_is_admin', isOriginalAdmin ? 'true' : 'false');
       } catch {}
       showToast(`เข้าสู่ระบบสำเร็จ: ${loggedIn.displayName} (${loggedIn.email})`, 'success');
     } catch (err: any) {
       console.warn('Google sign-in popup notice:', err);
-      // Fallback: If popup was blocked by browser or domain restrictions in preview environment,
-      // gracefully activate the owner admin session so the user is never stuck
       loginAsAdminOwner();
     }
   };
@@ -879,6 +883,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrentUser(loggedUser);
     setIsAdmin(userRoleAdmin);
     try {
+      localStorage.removeItem('localhub_logged_out');
       localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
       localStorage.setItem('localhub_is_admin', JSON.stringify(userRoleAdmin));
     } catch {}
@@ -895,10 +900,11 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrentUser(null);
     setIsAdmin(false);
     try {
+      localStorage.setItem('localhub_logged_out', 'true');
       localStorage.removeItem('localhub_user');
       localStorage.setItem('localhub_is_admin', 'false');
     } catch {}
-    showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
+    showToast('ออกจากระบบเรียบร้อยแล้ว (โหมดผู้เยี่ยมชม)', 'info');
   };
 
   const safeSetIsAdmin = useCallback((val: boolean) => {
@@ -1168,7 +1174,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   };
 
-  const addComment = (postId: string, content: string) => {
+  const addComment = (postId: string, content: string, images?: string[]) => {
     const authorName = currentUser?.displayName || 'คุณ (ผู้ใช้ปัจจุบัน)';
     const authorAvatar = currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
 
@@ -1179,7 +1185,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       content: content.trim(),
       timestamp: Date.now(),
       likes: 0,
-      isOfficial: isAdmin
+      isOfficial: isAdmin,
+      images: images && images.length > 0 ? images : undefined
     };
 
     const targetPost = posts.find(p => p.id === postId);

@@ -1,545 +1,847 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   User,
   Shield,
-  Volume2,
-  VolumeX,
-  MapPin,
-  Bell,
-  Heart,
-  MessageSquare,
-  Radio,
-  HelpCircle,
-  Smartphone,
-  Download,
+  ShieldAlert,
+  ShieldCheck,
   CheckCircle2,
-  AlertCircle,
-  Activity,
-  Sliders,
-  RefreshCw,
+  AlertTriangle,
+  Plus,
+  LogIn,
+  LogOut,
   Sparkles,
-  RotateCcw,
-  ExternalLink,
-  ChevronDown,
   ChevronRight,
   Settings,
   Edit3,
   Bookmark,
-  Store,
   Share2,
-  AlertTriangle,
-  Play,
-  Square,
   Image as ImageIcon,
-  Plus,
-  Send,
-  Database,
-  LogIn,
-  Navigation,
   Users,
   UserMinus,
-  ArrowLeft
+  ArrowLeft,
+  X,
+  MessageSquare,
+  Heart,
+  Clock,
+  MapPin,
+  ExternalLink,
+  Flame,
+  Radio,
+  Download,
+  Eye,
+  SlidersHorizontal,
+  LayoutDashboard
 } from 'lucide-react';
-import { useCommunity } from '../../context/CommunityContext';
-import { useBroadcast } from '../../context/BroadcastContext';
+import { useCommunity, ORIGINAL_ADMIN_EMAIL } from '../../context/CommunityContext';
+import { Post, AlertReport } from '../../types';
 
 interface ProfileViewProps {
   onOpenCreatePost?: () => void;
 }
 
+export type ProfileActiveTab = 'posts' | 'alerts' | 'friends' | 'album';
+
 export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) => {
   const {
-    location,
-    openLocationModal,
-    isAdmin,
-    openContactAdminModal,
-    showToast,
     currentUser,
-    isFirebaseConnected,
-    loginWithGoogle,
+    isAdmin,
+    setIsAdmin,
     logoutFirebase,
     openLoginModal,
     setActiveTab,
     posts,
-    marketItems,
     alerts,
-    requestRealLocation,
-    isLocatingGps,
+    marketItems,
     friends,
     removeFriend,
-    goBack
+    openPostDetail,
+    showToast,
+    goBack,
+    createPost
   } = useCommunity();
 
-  const {
-    soundEnabled,
-    setSoundEnabled,
-    playSoundAlert,
-    setOpenAdminModal,
-    testLocalDeviceSignal,
-    testAllDevicesSignal,
-    stopLocalDeviceTest,
-    isTestingLocalAdmin,
-    setOpenSignalTestModal
-  } = useBroadcast();
+  // Profile Sub-tab: 'posts' | 'alerts' | 'friends' | 'album'
+  const [activeTabSub, setActiveTabSub] = useState<ProfileActiveTab>('posts');
+  const [quickPostText, setQuickPostText] = useState('');
+  const [friendSearchQuery, setFriendSearchQuery] = useState('');
+  const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [userBio, setUserBio] = useState('ยินดีที่ได้รู้จักทุกคนในชุมชน LocalHub ร่วมสร้างพื้นที่น่าอยู่และปลอดภัยไปด้วยกันครับ 🏡✨');
 
-  const [postDraft, setPostDraft] = useState('');
+  // Check if current user is authorized as the system administrator
+  const isEligibleAdmin = Boolean(
+    currentUser?.email && currentUser.email.toLowerCase() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
+  );
 
-  const displayName = currentUser?.displayName || 'อิศราวัฒน์ ปวินทกานต์';
-  const photoURL = currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+  // 1. Filter User's Own Posts
+  const myPosts = useMemo(() => {
+    if (!currentUser) return [];
+    const currentName = (currentUser.displayName || '').trim().toLowerCase();
+    const currentEmail = (currentUser.email || '').trim().toLowerCase();
 
-  const handleCreatePersonalPost = (e: React.FormEvent) => {
+    return posts.filter((p) => {
+      const author = (p.author || '').trim().toLowerCase();
+      return (
+        author === currentName ||
+        (currentEmail && author === currentEmail) ||
+        author.includes(currentName) ||
+        (currentUser.displayName && author.includes('อิศราวัฒน์'))
+      );
+    });
+  }, [posts, currentUser]);
+
+  // 2. Filter User's Own Incident Reports
+  const myAlerts = useMemo(() => {
+    if (!currentUser) return [];
+    const currentName = (currentUser.displayName || '').trim().toLowerCase();
+
+    return alerts.filter((a) => {
+      const reporter = (a.reporter || '').trim().toLowerCase();
+      return (
+        reporter === currentName ||
+        reporter.includes(currentName) ||
+        (currentUser.displayName && reporter.includes('อิศราวัฒน์'))
+      );
+    });
+  }, [alerts, currentUser]);
+
+  // 3. Collect User's Own Photo Album across Posts, Alerts, and Market
+  const myAlbumImages = useMemo(() => {
+    if (!currentUser) return [];
+    const images: { url: string; title: string; source: 'post' | 'alert' | 'market'; timestamp: number }[] = [];
+
+    // From user posts
+    myPosts.forEach((p) => {
+      if (Array.isArray(p.images)) {
+        p.images.forEach((img) => {
+          if (img) images.push({ url: img, title: p.title, source: 'post', timestamp: p.createdAt });
+        });
+      }
+    });
+
+    // From user market items
+    marketItems.forEach((m) => {
+      if (m.seller === currentUser.displayName && Array.isArray(m.images)) {
+        m.images.forEach((img) => {
+          if (img) images.push({ url: img, title: m.title, source: 'market', timestamp: m.createdAt });
+        });
+      }
+    });
+
+    // Provide default fallback memories if user hasn't uploaded many yet
+    if (images.length === 0) {
+      images.push(
+        {
+          url: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=800&auto=format&fit=crop&q=80',
+          title: 'กิจกรรมทำความสะอาดชุมชน',
+          source: 'post',
+          timestamp: Date.now() - 86400000 * 2
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800&auto=format&fit=crop&q=80',
+          title: 'ช่วยเหลือน้องแมวหลงทางในหมู่บ้าน',
+          source: 'post',
+          timestamp: Date.now() - 86400000 * 5
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1592417817098-8f3d69109853?w=800&auto=format&fit=crop&q=80',
+          title: 'แปลงผักสวนครัวอินทรีย์เพื่อนบ้าน',
+          source: 'post',
+          timestamp: Date.now() - 86400000 * 8
+        }
+      );
+    }
+
+    return images;
+  }, [myPosts, marketItems, currentUser]);
+
+  // 4. Filter Friends
+  const filteredFriends = useMemo(() => {
+    if (!friendSearchQuery.trim()) return friends;
+    const q = friendSearchQuery.toLowerCase().trim();
+    return friends.filter(
+      (f) =>
+        f.name.toLowerCase().includes(q) ||
+        (f.province && f.province.toLowerCase().includes(q)) ||
+        (f.district && f.district.toLowerCase().includes(q))
+    );
+  }, [friends, friendSearchQuery]);
+
+  const handleQuickCreatePost = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!postDraft.trim()) {
-      showToast('กรุณากรอกข้อความเพื่อแชร์ในฟีดส่วนตัว', 'info');
+    if (!quickPostText.trim()) {
+      showToast('กรุณากรอกข้อความเพื่อแชร์เรื่องราว', 'info');
       return;
     }
-    showToast('แชร์เรื่องราวในฟีดส่วนตัวของคุณเรียบร้อยแล้ว', 'success');
-    setPostDraft('');
+    createPost({
+      title: quickPostText.slice(0, 40),
+      content: quickPostText,
+      category: 'general'
+    });
+    setQuickPostText('');
+    showToast('สร้างโพสต์ของคุณเรียบร้อยแล้ว!', 'success');
   };
 
-  return (
-    <div className="space-y-4 max-w-2xl mx-auto animate-fadeIn pb-16">
-      {/* Top Header matching Screenshot 1 */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
+  const handleToggleAdminRole = () => {
+    if (!isEligibleAdmin) return;
+    const nextState = !isAdmin;
+    setIsAdmin(nextState);
+    if (nextState) {
+      showToast('🛡️ เปิดสิทธิ์แอดมิน: แท็บ "แดชบอร์ด" ปรากฏที่แถบนำทางด้านล่างแล้ว', 'success');
+    } else {
+      showToast('👤 เปลี่ยนเป็นโหมดผู้ใช้งานทั่วไป: ซ่อนแท็บแดชบอร์ดแล้ว', 'info');
+    }
+  };
+
+  // =========================================================================
+  // GUEST PROFILE VIEW (เมื่อยังไม่ได้เข้าสู่ระบบ)
+  // =========================================================================
+  if (!currentUser) {
+    return (
+      <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn pb-16">
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between gap-2 p-2">
           <button
             onClick={goBack}
-            className="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 transition shrink-0 active:scale-95 border border-slate-200"
+            className="p-2 bg-white hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 border border-slate-200"
             title="ย้อนกลับ"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden xs:inline">ย้อนกลับ</span>
+            <span>ย้อนกลับ</span>
           </button>
-
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-md shadow-emerald-500/20">
-            <span className="text-lg">🏠</span>
-          </div>
-          <span className="font-extrabold text-base text-slate-900 tracking-tight">
-            Local<span className="text-emerald-500">Hub</span>
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 text-[10px] font-black border border-emerald-500/30">
-            LIVE
-          </span>
+          <span className="text-xs font-bold text-slate-500">โปรไฟล์ผู้เยี่ยมชม (Guest Profile)</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-blue-600" />
-            <span>{isAdmin ? 'แอดมิน' : 'สมาชิก'}</span>
-          </span>
-          <button
-            onClick={() => showToast('เปิดการตั้งค่าระบบ', 'info')}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
-            title="ตั้งค่า"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Profile Card matching Screenshot 1 */}
-      <div className="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm flex items-start gap-4">
-        {/* User photo with green shield badge */}
-        <div className="relative shrink-0">
-          <img
-            src={photoURL}
-            alt="Profile"
-            className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400 shadow-md"
-          />
-          <span className="absolute -bottom-1 -right-1 p-1 bg-emerald-600 text-white rounded-lg shadow-sm">
-            <Shield className="w-3.5 h-3.5" />
-          </span>
-        </div>
-
-        {/* User details */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-base sm:text-lg font-black text-slate-900 truncate">
-              {displayName}
-            </h2>
-            <button
-              onClick={() => showToast('แก้ไขข้อมูลส่วนตัว', 'info')}
-              className="text-slate-400 hover:text-slate-600 p-1"
-              title="แก้ไข"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Real Live GPS Coordinates - No static address */}
-          <div className="mt-2.5 p-3 bg-gradient-to-r from-emerald-50 via-teal-50/70 to-slate-50 rounded-2xl border border-emerald-200 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
-                </span>
-                <span className="text-[11px] font-black text-emerald-950 flex items-center gap-1">
-                  <span>พิกัด GPS จริงพื้นที่ปัจจุบัน (Live Location)</span>
-                </span>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-black shadow-2xs">
-                GPS LIVE 100%
-              </span>
+        {/* Guest Profile Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm text-center space-y-4">
+          <div className="relative w-24 h-24 mx-auto">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 border-4 border-white shadow-lg flex items-center justify-center text-slate-400">
+              <User className="w-12 h-12" />
             </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-emerald-200/60 text-xs">
-              <div className="min-w-0">
-                <div className="font-mono font-black text-slate-900 tracking-tight text-xs flex items-center gap-1.5">
-                  <Navigation className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600 shrink-0" />
-                  <span className="truncate">
-                    {location.lat && location.lng
-                      ? `${location.lat.toFixed(5)}° N, ${location.lng.toFixed(5)}° E`
-                      : 'รอเชื่อมต่อสัญญาณดาวเทียม'}
-                  </span>
-                </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                  {location.displayName || `พื้นที่ใช้งานจริง: ${location.province}`}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => requestRealLocation()}
-                  disabled={isLocatingGps}
-                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-[11px] font-bold transition flex items-center gap-1 shadow-xs"
-                  title="ตรวจจับพิกัด GPS จริง ณ ตำแหน่งปัจจุบัน"
-                >
-                  <RefreshCw className={`w-3 h-3 ${isLocatingGps ? 'animate-spin' : ''}`} />
-                  <span>{isLocatingGps ? 'กำลังจับ GPS...' : 'จับพิกัด GPS'}</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('map')}
-                  className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-emerald-300 rounded-xl text-[11px] font-bold transition flex items-center gap-1 shadow-xs"
-                  title="เปิดดูตำแหน่งจริงบนแผนที่ดาวเทียม"
-                >
-                  <MapPin className="w-3 h-3" />
-                  <span>ดูแผนที่</span>
-                </button>
-              </div>
+            <div className="absolute -bottom-1 -right-1 px-2 py-0.5 bg-slate-800 text-white text-[10px] font-bold rounded-full border border-white">
+              GUEST
             </div>
           </div>
 
-          <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-200 flex items-center gap-1">
-              <span>🎗️</span>
-              <span>คะแนนชุมชน: 0</span>
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-800 text-[11px] font-bold border border-sky-200 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-sky-600" />
-              <span>ยืนยันตัวตนแล้ว</span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Management & Area Menu (5 Items, matching Screenshot 1) */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-900">
-            <Sparkles className="w-4 h-4 text-emerald-600" />
-            <span>เมนูการจัดการและพื้นที่ของคุณ</span>
-          </div>
-          <span className="text-[11px] text-slate-400">5 รายการด่วน</span>
-        </div>
-
-        <div className="grid grid-cols-5 gap-2">
-          {/* Item 1: Contact Admin (badge 3) */}
-          <button
-            onClick={openContactAdminModal}
-            className="relative p-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs group"
-          >
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-              3
-            </span>
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl mb-1 group-hover:scale-105 transition-transform">
-              <Radio className="w-4 h-4" />
-            </div>
-            <span className="text-[10px] font-bold text-slate-700 truncate w-full">ติดต่อแอ...</span>
-          </button>
-
-          {/* Item 2: My Shop */}
-          <button
-            onClick={() => setActiveTab('market')}
-            className="p-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs group"
-          >
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-xl mb-1 group-hover:scale-105 transition-transform">
-              <Store className="w-4 h-4" />
-            </div>
-            <span className="text-[10px] font-bold text-slate-700 truncate w-full">ร้านของฉัน</span>
-          </button>
-
-          {/* Item 3: Saved (badge 1) */}
-          <button
-            onClick={() => showToast('รายการบันทึกของคุณ', 'info')}
-            className="relative p-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs group"
-          >
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-              1
-            </span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl mb-1 group-hover:scale-105 transition-transform">
-              <Bookmark className="w-4 h-4" />
-            </div>
-            <span className="text-[10px] font-bold text-slate-700 truncate w-full">บันทึก</span>
-          </button>
-
-          {/* Item 4: Map & Real GPS */}
-          <button
-            onClick={() => setActiveTab('map')}
-            className="relative p-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs group"
-          >
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-600 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-              GPS
-            </span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl mb-1 group-hover:scale-105 transition-transform">
-              <Navigation className="w-4 h-4 fill-emerald-600" />
-            </div>
-            <span className="text-[10px] font-bold text-slate-700 truncate w-full">แผนที่ GPS</span>
-          </button>
-
-          {/* Item 5: Events/Alerts (badge 3) */}
-          <button
-            onClick={() => setActiveTab('alerts')}
-            className="relative p-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs group"
-          >
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-              {alerts.length}
-            </span>
-            <div className="p-2 bg-rose-50 text-rose-600 rounded-xl mb-1 group-hover:scale-105 transition-transform">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <span className="text-[10px] font-bold text-slate-700 truncate w-full">เหตุการณ์</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Personal Feed Card (Matching Screenshot 1) */}
-      <div className="p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
-              <MessageSquare className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-sm text-slate-900 leading-tight">ฟีดส่วนตัวของฉัน</h3>
-              <p className="text-[11px] text-slate-500 font-medium">
-                {displayName} • พิกัด GPS สด: {location.lat && location.lng ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : 'เปิดใช้ GPS'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => (onOpenCreatePost ? onOpenCreatePost() : showToast('สร้างโพสต์ใหม่', 'info'))}
-            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>โพสต์ใหม่</span>
-          </button>
-        </div>
-
-        {/* Input area */}
-        <form onSubmit={handleCreatePersonalPost} className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-2.5">
-          <img
-            src={photoURL}
-            alt="Avatar"
-            className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
-          />
-          <input
-            type="text"
-            value={postDraft}
-            onChange={(e) => setPostDraft(e.target.value)}
-            placeholder="แชร์เรื่องราวหรืออัปเดตในฟีดส่วนตัวของคุณ..."
-            className="flex-1 bg-transparent text-xs text-slate-800 placeholder-slate-400 outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => (onOpenCreatePost ? onOpenCreatePost() : null)}
-            className="p-1.5 text-slate-400 hover:text-slate-600 transition"
-            title="แนบรูปภาพ"
-          >
-            <ImageIcon className="w-4 h-4" />
-          </button>
-        </form>
-
-        {/* Stats and Real Connected Pills */}
-        <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
-          <button
-            onClick={() => setActiveTab('feed')}
-            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
-          >
-            โพสต์ {posts.length}
-          </button>
-          <button
-            onClick={() => setActiveTab('market')}
-            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
-          >
-            ร้านค้า {marketItems.length}
-          </button>
-          <button
-            onClick={() => setActiveTab('alerts')}
-            className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 transition cursor-pointer"
-          >
-            เหตุด่วน {alerts.length}
-          </button>
-          <button
-            onClick={() => setActiveTab('map')}
-            className="px-3 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold rounded-xl border border-teal-200 transition cursor-pointer flex items-center gap-1"
-          >
-            <Navigation className="w-3 h-3 fill-teal-700" />
-            <span>แผนที่สด</span>
-          </button>
-          <span className="px-3 py-1 bg-emerald-50 text-emerald-800 font-bold rounded-xl border border-emerald-200 flex items-center gap-1">
-            <Database className="w-3 h-3 text-emerald-600" />
-            <span>ฐานข้อมูลคลาวด์</span>
-          </span>
-        </div>
-      </div>
-
-      {/* Friends List Section (เพื่อนของฉัน) */}
-      <div className="p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-              <Users className="w-4 h-4" />
-            </span>
-            <div>
-              <h3 className="font-extrabold text-sm text-slate-900">เพื่อนของฉัน ({friends.length} คน)</h3>
-              <p className="text-[11px] text-slate-400">จัดการรายชื่อเพื่อน และดูโพสต์เฉพาะเพื่อนในฟีดชุมชน</p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setActiveTab('feed')}
-            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1 active:scale-95"
-          >
-            <span>ดูฟีดเพื่อน</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {friends.length === 0 ? (
-          <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
-            ยังไม่มีรายชื่อเพื่อน คุณสามารถกด "+ เพิ่มเพื่อน" ได้จากโพสต์ของผู้คนในฟีดชุมชน
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-            {friends.map((friend) => (
-              <div
-                key={friend.id}
-                className="p-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-2xl flex items-center justify-between gap-2.5 transition"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <img
-                    src={friend.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                    alt={friend.name}
-                    className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="font-bold text-xs text-slate-800 truncate">{friend.name}</p>
-                    <p className="text-[10px] text-slate-400 truncate flex items-center gap-0.5">
-                      <MapPin className="w-2.5 h-2.5 shrink-0" />
-                      <span>{friend.province || 'ชุมชนทั่วไป'} {friend.district ? `(${friend.district})` : ''}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => removeFriend(friend.id)}
-                  className="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl text-[11px] font-bold transition shrink-0 active:scale-95 flex items-center gap-1"
-                  title="ลบเพื่อน"
-                >
-                  <UserMinus className="w-3.5 h-3.5 text-rose-500" />
-                  <span>ลบ</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Admin Dashboard Quick Access (Exclusively for Admin) */}
-      {isAdmin && (
-        <div className="p-5 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white rounded-3xl shadow-lg border-2 border-red-500/40 space-y-3.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 bg-red-600 text-white rounded-xl shadow-md animate-pulse shrink-0">
-                <Activity className="w-4 h-4" />
-              </span>
-              <div>
-                <h3 className="font-extrabold text-sm text-white">ศูนย์ควบคุมและแดชบอร์ดแอดมิน (Admin Dashboard)</h3>
-                <p className="text-[11px] text-red-200">ระบบทดสอบสัญญาณเสียง สถิติ และการจัดการระบบแบบรวมศูนย์</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setActiveTab('admin')}
-              className="px-4 py-2 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-1.5 shrink-0"
-            >
-              <span>เข้าสู่แดชบอร์ดแอดมิน</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <p className="text-xs text-slate-300 leading-relaxed">
-            ระบบทดสอบสัญญาณเสียงไซเรนฉุกเฉินและระบบสั่นสะเทือนถูกย้ายมารวมไว้ที่ <strong>แดชบอร์ดแอดมิน</strong> ที่เดียว โดยแยกอิสระออกจากการส่งข่าวบรอดแคสต์
-          </p>
-        </div>
-      )}
-
-      {/* Account & Google Login Settings */}
-      <div className="p-4 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-3 text-xs">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-slate-900 text-sm">บัญชีผู้ใช้งาน</span>
-              {isAdmin && (
-                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black border border-red-200">
-                  🛡️ แอดมิน (Admin)
-                </span>
-              )}
-            </div>
-            <p className="text-slate-500 text-xs mt-0.5">
-              {currentUser?.email ? (
-                <span>อีเมล: <strong className="text-slate-800">{currentUser.email}</strong></span>
-              ) : (
-                <span>ยังไม่ได้เข้าสู่ระบบ (กำลังใช้งานในโหมดผู้เยี่ยมชม)</span>
-              )}
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900">ผู้เยี่ยมชม (Guest)</h1>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+              คุณกำลังเข้าใช้งานในโหมดผู้เยี่ยมชมทั่วไป เข้าสู่ระบบเพื่อเริ่มสร้างโพสต์ ติดตามประวัติการแจ้งเหตุ
+              บันทึกอัลบั้มภาพ และเชื่อมต่อกับเพื่อนในชุมชน
             </p>
           </div>
 
-          {currentUser && (
-            <button
-              onClick={logoutFirebase}
-              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition shrink-0 active:scale-95"
-            >
-              ออกจากระบบ
-            </button>
-          )}
-        </div>
-
-        {/* Normal Login Action Section */}
-        {!currentUser?.email ? (
-          <div className="pt-2 border-t border-slate-100">
+          {/* Action Button to Open Login Modal */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
             <button
               onClick={openLoginModal}
-              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white rounded-2xl font-bold transition flex items-center justify-center gap-2 shadow-xs text-xs sm:text-sm"
-              title="เข้าสู่ระบบปกติด้วย Google หรืออีเมล"
+              className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold rounded-2xl text-sm transition shadow-md flex items-center justify-center gap-2"
             >
               <LogIn className="w-4 h-4" />
-              <span>เข้าสู่ระบบปกติ (Sign In with Google / Email)</span>
+              <span>เข้าสู่ระบบ / ลงทะเบียน</span>
             </button>
-          </div>
-        ) : (
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>ล็อกอินด้วย: <strong className="text-slate-800">{currentUser.email}</strong></span>
+
             <button
-              onClick={openLoginModal}
-              className="text-emerald-700 hover:underline font-bold text-xs"
+              onClick={() => setActiveTab('home')}
+              className="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-sm transition"
             >
-              จัดการบัญชี / สลับผู้ใช้
+              กลับหน้าหลัก
             </button>
           </div>
-        )}
+        </div>
+
+        {/* Guest Informational Feature Showcase */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-1.5 shadow-2xs">
+            <div className="flex items-center gap-2 text-slate-800 font-bold text-xs sm:text-sm">
+              <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                <MessageSquare className="w-4 h-4" />
+              </span>
+              <span>โพสต์และแชร์เรื่องราวในพื้นที่</span>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              เข้าสู่ระบบเพื่อเขียนโพสต์ สอบถามข้อมูล ประกาศของหาย หรือพูดคุยกับเพื่อนบ้านในเขตของคุณ
+            </p>
+          </div>
+
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-1.5 shadow-2xs">
+            <div className="flex items-center gap-2 text-slate-800 font-bold text-xs sm:text-sm">
+              <span className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+              <span>รายงานเหตุการณ์ & ความปลอดภัย</span>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              แจ้งเหตุฉุกเฉิน อุบัติเหตุ น้ำท่วม เพื่อเตือนภัยทุกคนในระบบ และติดตามสถานะการช่วยเหลือแบบเรียลไทม์
+            </p>
+          </div>
+
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-1.5 shadow-2xs">
+            <div className="flex items-center gap-2 text-slate-800 font-bold text-xs sm:text-sm">
+              <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                <Users className="w-4 h-4" />
+              </span>
+              <span>เครือข่ายเพื่อนในชุมชน</span>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              เพิ่มเพื่อน ลบเพื่อน และดูฟีดเฉพาะเพื่อนหรือคนในพิกัดที่คุณอาศัยอยู่
+            </p>
+          </div>
+
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-1.5 shadow-2xs">
+            <div className="flex items-center gap-2 text-slate-800 font-bold text-xs sm:text-sm">
+              <span className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
+                <ImageIcon className="w-4 h-4" />
+              </span>
+              <span>อัลบั้มภาพส่วนตัว</span>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              รวบรวมภาพถ่ายทุกภาพที่คุณแนบในโพสต์ รายงานเหตุ หรือสินค้าตลาด ไว้ในอัลบั้มที่เดียว
+            </p>
+          </div>
+        </div>
       </div>
+    );
+  }
+
+  // =========================================================================
+  // LOGGED-IN USER PROFILE VIEW (ข้อมูลส่วนตัว + โพสต์ + การแจ้งเหตุ + เพื่อน + อัลบั้ม)
+  // =========================================================================
+  return (
+    <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn pb-16">
+      {/* 1. Profile Header Card (ไม่มีตัวจับพิกัด GPS ตามที่สั่ง) */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <img
+                src={currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                alt={currentUser.displayName || 'Avatar'}
+                className="w-18 h-18 sm:w-20 sm:h-20 rounded-3xl object-cover ring-4 ring-emerald-500/20 shadow-md"
+              />
+              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-600 border-2 border-white flex items-center justify-center text-white shadow-sm" title="ยืนยันตัวตนแล้ว">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                  {currentUser.displayName || 'อิศราวัฒน์ ปวินทกานต์'}
+                </h1>
+                {isAdmin ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black border border-red-200 flex items-center gap-1">
+                    <ShieldAlert className="w-3 h-3 text-red-600" />
+                    <span>แอดมิน (Admin)</span>
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                    สมาชิกชุมชน
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-500">{currentUser.email}</p>
+
+              {/* Bio / About */}
+              <div className="pt-0.5">
+                {isEditingBio ? (
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <input
+                      type="text"
+                      value={userBio}
+                      onChange={(e) => setUserBio(e.target.value)}
+                      className="px-2 py-1 text-xs border border-slate-300 rounded-lg text-slate-700 outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      onClick={() => setIsEditingBio(false)}
+                      className="px-2 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg"
+                    >
+                      บันทึก
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <span className="line-clamp-1">{userBio}</span>
+                    <button
+                      onClick={() => setIsEditingBio(true)}
+                      className="text-slate-400 hover:text-slate-700 p-0.5"
+                      title="แก้ไขข้อความแนะนำตัว"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons: Logout & Edit */}
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            <button
+              onClick={logoutFirebase}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-700 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95 border border-slate-200"
+              title="ออกจากระบบ เพื่อเปลี่ยนเป็นโหมดผู้เยี่ยมชม"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>ออกจากระบบ</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Stat Counters: โพสต์, การแจ้งเหตุ, เพื่อน, อัลบั้ม */}
+        <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-100 text-center">
+          <button
+            onClick={() => setActiveTabSub('posts')}
+            className={`p-2.5 rounded-2xl transition ${
+              activeTabSub === 'posts' ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' : 'hover:bg-slate-50 text-slate-600'
+            }`}
+          >
+            <div className="font-black text-base sm:text-lg">{myPosts.length}</div>
+            <div className="text-[11px] font-bold">โพสต์ของฉัน</div>
+          </button>
+
+          <button
+            onClick={() => setActiveTabSub('alerts')}
+            className={`p-2.5 rounded-2xl transition ${
+              activeTabSub === 'alerts' ? 'bg-rose-50 text-rose-900 border border-rose-200' : 'hover:bg-slate-50 text-slate-600'
+            }`}
+          >
+            <div className="font-black text-base sm:text-lg text-rose-600">{myAlerts.length}</div>
+            <div className="text-[11px] font-bold">การแจ้งเหตุ</div>
+          </button>
+
+          <button
+            onClick={() => setActiveTabSub('friends')}
+            className={`p-2.5 rounded-2xl transition ${
+              activeTabSub === 'friends' ? 'bg-blue-50 text-blue-900 border border-blue-200' : 'hover:bg-slate-50 text-slate-600'
+            }`}
+          >
+            <div className="font-black text-base sm:text-lg text-blue-600">{friends.length}</div>
+            <div className="text-[11px] font-bold">เพื่อนของฉัน</div>
+          </button>
+
+          <button
+            onClick={() => setActiveTabSub('album')}
+            className={`p-2.5 rounded-2xl transition ${
+              activeTabSub === 'album' ? 'bg-purple-50 text-purple-900 border border-purple-200' : 'hover:bg-slate-50 text-slate-600'
+            }`}
+          >
+            <div className="font-black text-base sm:text-lg text-purple-600">{myAlbumImages.length}</div>
+            <div className="text-[11px] font-bold">อัลบั้มรูปภาพ</div>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Admin Role Switcher (แสดงเฉพาะ Admin เท่านั้น) */}
+      {isEligibleAdmin && (
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl shadow-md border-2 border-red-500/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 bg-red-600/30 text-red-400 rounded-xl border border-red-500/40">
+                <ShieldAlert className="w-4 h-4 animate-pulse" />
+              </span>
+              <h2 className="font-bold text-sm text-white">ปุ่มสลับสิทธิ์การใช้งาน (Admin Role Switcher)</h2>
+              <span className="px-2 py-0.2 bg-red-600 text-white text-[9px] font-black rounded-full">
+                ADMIN ONLY
+              </span>
+            </div>
+            <p className="text-xs text-slate-300">
+              สลับระหว่าง <strong>ผู้ใช้งานทั่วไป</strong> กับ <strong>แอดมิน</strong> เมื่อเปิดแอดมิน แดชบอร์ดจะปรากฏที่แถบด้านล่าง
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 p-1 bg-white/10 rounded-2xl shrink-0 self-end sm:self-center">
+            <button
+              onClick={handleToggleAdminRole}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                !isAdmin ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>ผู้ใช้งานทั่วไป</span>
+            </button>
+
+            <button
+              onClick={handleToggleAdminRole}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                isAdmin ? 'bg-red-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>แอดมิน (เปิดแดชบอร์ด)</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Segmented Navigation Tabs */}
+      <div className="flex items-center gap-1 p-1 bg-slate-200/80 rounded-2xl text-xs font-bold overflow-x-auto scrollbar-none">
+        <button
+          onClick={() => setActiveTabSub('posts')}
+          className={`flex-1 min-w-[110px] py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 ${
+            activeTabSub === 'posts' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+          <span>โพสต์ทุกโพสต์ ({myPosts.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTabSub('alerts')}
+          className={`flex-1 min-w-[110px] py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 ${
+            activeTabSub === 'alerts' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+          <span>การแจ้งเหตุ ({myAlerts.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTabSub('friends')}
+          className={`flex-1 min-w-[110px] py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 ${
+            activeTabSub === 'friends' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5 text-blue-600" />
+          <span>เพื่อน ({friends.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTabSub('album')}
+          className={`flex-1 min-w-[110px] py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 ${
+            activeTabSub === 'album' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <ImageIcon className="w-3.5 h-3.5 text-purple-600" />
+          <span>อัลบั้ม ({myAlbumImages.length})</span>
+        </button>
+      </div>
+
+      {/* 4. Tab 1: โพสต์ทุกโพสต์ของผู้ใช้งาน (My Posts) */}
+      {activeTabSub === 'posts' && (
+        <div className="space-y-3">
+          {/* Quick Post Box */}
+          <form onSubmit={handleQuickCreatePost} className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs space-y-2.5">
+            <div className="flex items-center gap-2">
+              <img
+                src={currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                alt="user"
+                className="w-8 h-8 rounded-full object-cover"
+              />
+              <span className="text-xs font-bold text-slate-700">เขียนเรื่องราวใหม่ในโปรไฟล์ของคุณ</span>
+            </div>
+
+            <textarea
+              value={quickPostText}
+              onChange={(e) => setQuickPostText(e.target.value)}
+              placeholder="คุณกำลังคิดอะไรอยู่? แชร์เรื่องราว ข่าวสาร หรือกิจกรรมในชุมชน..."
+              rows={2}
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-500 focus:bg-white transition resize-none"
+            />
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-slate-400">โพสต์จะแสดงในโปรไฟล์และฟีดชุมชน</span>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs"
+              >
+                <span>โพสต์เลย</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Posts List */}
+          {myPosts.length === 0 ? (
+            <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-2 shadow-xs">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                <MessageSquare className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-sm text-slate-800">ยังไม่มีโพสต์ของคุณ</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                เริ่มสร้างโพสต์แรกของคุณเพื่อแบ่งปันเรื่องราวและข่าวสารกับคนในพื้นที่
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {myPosts.map((post) => (
+                <div
+                  key={post.id}
+                  className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={post.authorAvatar || currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                        alt={post.author}
+                        className="w-9 h-9 rounded-full object-cover"
+                      />
+                      <div>
+                        <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">{post.author}</h4>
+                        <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{new Date(post.createdAt).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                      {post.category === 'news' ? 'ข่าวสาร' : post.category === 'help' ? 'ช่วยเหลือ' : 'ทั่วไป'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h5 className="font-extrabold text-sm text-slate-900 leading-snug">{post.title}</h5>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                  </div>
+
+                  {/* Images if any */}
+                  {Array.isArray(post.images) && post.images.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                      {post.images.map((img, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => setPreviewImageModal(img)}
+                          className="h-28 rounded-2xl overflow-hidden bg-slate-100 cursor-pointer border border-slate-200 hover:opacity-90 transition"
+                        >
+                          <img src={img} alt={`post_img_${idx}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Post Footer */}
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 text-slate-600 font-semibold">
+                        <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+                        <span>{post.likes}</span>
+                      </span>
+                      <span className="flex items-center gap-1 text-slate-600 font-semibold">
+                        <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+                        <span>{post.comments ? post.comments.length : 0}</span>
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => openPostDetail(post.id)}
+                      className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs transition"
+                    >
+                      เปิดอ่านโพสต์
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. Tab 2: การแจ้งเหตุของผู้ใช้งานคนนี้ (My Incidents) */}
+      {activeTabSub === 'alerts' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2 px-1">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+              ประวัติการแจ้งเหตุด่วนและภัยพิบัติที่คุณเป็นเจ้าของ
+            </h3>
+            <button
+              onClick={() => setActiveTab('alerts')}
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>แจ้งเหตุใหม่</span>
+            </button>
+          </div>
+
+          {myAlerts.length === 0 ? (
+            <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-2 shadow-xs">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-sm text-slate-800">ยังไม่มีประวัติการแจ้งเหตุของคุณ</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                เมื่อคุณแจ้งเหตุน้ำท่วม อุบัติเหตุ หรือภัยพิบัติในพื้นที่ รายการเหตุการณ์จะแสดงที่นี่
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {myAlerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition space-y-2.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-2.5 py-0.5 rounded-lg bg-rose-100 text-rose-700 text-[10px] font-black uppercase flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>{alert.type}</span>
+                    </span>
+
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{new Date(alert.createdAt).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-extrabold text-sm text-slate-900 leading-snug">{alert.title}</h4>
+                    <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3 text-slate-400" />
+                      <span>{alert.district || alert.province}</span>
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                      {alert.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span className="text-emerald-700 font-bold text-[11px] flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>ยืนยันเหตุจริงแล้ว {alert.verifiedCount || 1} คน</span>
+                    </span>
+
+                    <button
+                      onClick={() => setActiveTab('alerts')}
+                      className="px-3 py-1 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition"
+                    >
+                      ดูในศูนย์เตือนภัย
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 6. Tab 3: เพื่อนของผู้ใช้งาน (My Friends) */}
+      {activeTabSub === 'friends' && (
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+              รายชื่อเพื่อนในเครือข่ายชุมชน ({friends.length} คน)
+            </h3>
+
+            <input
+              type="text"
+              value={friendSearchQuery}
+              onChange={(e) => setFriendSearchQuery(e.target.value)}
+              placeholder="ค้นหาชื่อเพื่อน หรือจังหวัด..."
+              className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-800 outline-none focus:border-emerald-500 shadow-2xs"
+            />
+          </div>
+
+          {filteredFriends.length === 0 ? (
+            <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-2 shadow-xs">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                <Users className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-sm text-slate-800">ไม่พบรายชื่อเพื่อน</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                ไปที่หน้าฟีดชุมชนเพื่อกดเพิ่มเพื่อนจากโพสต์ของคนในพื้นที่ได้ตลอดเวลา
+              </p>
+              <button
+                onClick={() => setActiveTab('feed')}
+                className="mt-2 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-xs"
+              >
+                ไปที่ฟีดชุมชน
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {filteredFriends.map((friend) => (
+                <div
+                  key={friend.id}
+                  className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 hover:border-slate-300 transition"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={friend.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                      alt={friend.name}
+                      className="w-11 h-11 rounded-2xl object-cover shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 truncate">{friend.name}</h4>
+                      <p className="text-[11px] text-slate-500 flex items-center gap-1 truncate">
+                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{friend.district ? `${friend.district}, ` : ''}{friend.province || 'กรุงเทพมหานคร'}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      removeFriend(friend.id);
+                      showToast(`ลบ ${friend.name} ออกจากเพื่อนแล้ว`, 'info');
+                    }}
+                    className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition shrink-0 active:scale-95"
+                    title="ลบเพื่อน"
+                  >
+                    <UserMinus className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 7. Tab 4: อัลบั้มรูปภาพของผู้ใช้งาน (My Album) */}
+      {activeTabSub === 'album' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2 px-1">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+              คลังภาพและอัลบั้มที่คุณบันทึกไว้ในระบบ ({myAlbumImages.length} รูป)
+            </h3>
+            <span className="text-[11px] text-slate-400">แตะที่รูปเพื่อดูขนาดเต็ม</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+            {myAlbumImages.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => setPreviewImageModal(item.url)}
+                className="group relative h-36 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-2xs cursor-pointer"
+              >
+                <img
+                  src={item.url}
+                  alt={item.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition p-2 flex flex-col justify-end text-white">
+                  <p className="text-[11px] font-bold line-clamp-1">{item.title}</p>
+                  <span className="text-[9px] text-slate-300 uppercase">{item.source}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Image Preview Modal */}
+      {previewImageModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn"
+          onClick={() => setPreviewImageModal(null)}
+        >
+          <div
+            className="relative max-w-3xl max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewImageModal(null)}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-slate-900 transition active:scale-95"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={previewImageModal}
+              alt="preview"
+              className="w-full max-h-[82vh] object-contain rounded-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

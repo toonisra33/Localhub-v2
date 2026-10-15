@@ -25,7 +25,7 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
     { id: 'broadcasts', label: 'ศูนย์ข่าว', icon: <Newspaper className="w-5 h-5" /> },
     { id: 'market', label: 'ตลาด', icon: <Store className="w-5 h-5" /> },
     ...(isAdmin
-      ? [{ id: 'admin' as Tab, label: 'แอดมิน', icon: <ShieldAlert className="w-5 h-5" /> }]
+      ? [{ id: 'admin' as Tab, label: 'แดชบอร์ด', icon: <ShieldAlert className="w-5 h-5" /> }]
       : []),
     { id: 'profile', label: 'ฉัน', icon: <User className="w-5 h-5" /> },
   ];

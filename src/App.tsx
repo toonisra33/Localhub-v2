@@ -356,6 +356,7 @@ function AppContent() {
               onOpenCreatePostWithMode={(mode, images) => openCreatePostWith(mode, images || [])}
               onOpenWeather={() => setActiveTab('weather')}
               onOpenInstantCamera={openInstantCamera}
+              onOpenReportAlert={() => openReportAlert()}
             />
           )}
 

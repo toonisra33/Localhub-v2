@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   Heart,
@@ -10,10 +10,14 @@ import {
   Calendar,
   Tag,
   UserPlus,
-  UserCheck
+  UserCheck,
+  Camera,
+  Image as ImageIcon,
+  Trash2
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { Post } from '../../types';
+import { saveMediaFile } from '../../utils/mediaStorage';
 
 interface PostDetailCommentsModalProps {
   post: Post | null;
@@ -23,14 +27,62 @@ interface PostDetailCommentsModalProps {
 export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = ({ post, onClose }) => {
   const { likePost, addComment, showToast, isFriend, addFriend, removeFriend, currentUser } = useCommunity();
   const [commentText, setCommentText] = useState('');
+  const [commentImages, setCommentImages] = useState<string[]>([]);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   if (!post) return null;
 
+  const handleCaptureCamera = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsProcessingImage(true);
+    try {
+      const file = files[0];
+      const saved = await saveMediaFile(file, `comment_${Date.now()}_${file.name}`);
+      setCommentImages((prev) => [...prev, saved.objectUrl]);
+      showToast('📸 ถ่ายภาพแนบความคิดเห็นเรียบร้อย!', 'success');
+    } catch {
+      showToast('ไม่สามารถบันทึกภาพถ่ายได้', 'error');
+    } finally {
+      setIsProcessingImage(false);
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+    }
+  };
+
+  const handleSelectGallery = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsProcessingImage(true);
+    try {
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const saved = await saveMediaFile(file, `comment_${Date.now()}_${file.name}`);
+        newUrls.push(saved.objectUrl);
+      }
+      setCommentImages((prev) => [...prev, ...newUrls]);
+      showToast(`🖼️ แนบรูปภาพ ${newUrls.length} รูปเรียบร้อย!`, 'success');
+    } catch {
+      showToast('เกิดข้อผิดพลาดในการโหลดรูปภาพ', 'error');
+    } finally {
+      setIsProcessingImage(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveCommentImage = (index: number) => {
+    setCommentImages((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   const handleSendComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
-    addComment(post.id, commentText);
+    if (!commentText.trim() && commentImages.length === 0) return;
+    addComment(post.id, commentText, commentImages.length > 0 ? commentImages : undefined);
     setCommentText('');
+    setCommentImages([]);
   };
 
   const handleShare = () => {
@@ -52,6 +104,24 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      {/* Hidden file inputs for camera and gallery */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleCaptureCamera}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleSelectGallery}
+      />
+
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
         <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
@@ -159,7 +229,7 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
                 <div key={idx} className="rounded-xl overflow-hidden border border-slate-200 max-h-80 shadow-2xs">
                   <img
                     src={img}
-                    alt={`Post attachment ${idx + 1}`}
+                    alt={`post_img_${idx}`}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -167,36 +237,17 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
             </div>
           )}
 
-          {/* Tags */}
-          {post.tags && post.tags.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap pt-1">
-              {post.tags.map(tag => (
-                <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
-                  <Tag className="w-3 h-3" />
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Action Row */}
-          <div className="py-2.5 border-y border-slate-100 flex items-center justify-between text-xs text-slate-600">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => likePost(post.id)}
-                className={`flex items-center gap-1.5 font-semibold transition ${
-                  post.isLiked ? 'text-rose-600' : 'hover:text-rose-600'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-rose-600' : ''}`} />
-                {post.likes ?? 0} ถูกใจ
-              </button>
-
-              <span className="flex items-center gap-1.5 font-semibold">
-                <MessageSquare className="w-4 h-4 text-blue-500" />
-                {post.commentsCount ?? (post.comments?.length || 0)} ความคิดเห็น
-              </span>
-            </div>
+          {/* Stats Bar */}
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <button
+              onClick={() => likePost(post.id)}
+              className={`flex items-center gap-1.5 transition active:scale-95 font-bold ${
+                post.isLiked ? 'text-rose-600' : 'text-slate-500 hover:text-rose-600'
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-rose-600' : ''}`} />
+              <span>{post.likes} ถูกใจ</span>
+            </button>
 
             <button
               onClick={handleShare}
@@ -220,7 +271,7 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
             ) : (
               <div className="space-y-2.5">
                 {(post.comments || []).map((comment) => (
-                  <div key={comment.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div key={comment.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <img
@@ -239,9 +290,23 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
                         {timeAgo(comment.timestamp)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-700 pl-8 leading-relaxed">
-                      {comment.content}
-                    </p>
+                    {comment.content && (
+                      <p className="text-xs text-slate-700 pl-8 leading-relaxed whitespace-pre-wrap">
+                        {comment.content}
+                      </p>
+                    )}
+                    {comment.images && comment.images.length > 0 && (
+                      <div className="pl-8 flex flex-wrap gap-2 pt-1">
+                        {comment.images.map((cImg, cIdx) => (
+                          <img
+                            key={cIdx}
+                            src={cImg}
+                            alt="Comment attachment"
+                            className="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-2xs"
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -249,22 +314,62 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
           </div>
         </div>
 
-        {/* Comment Input */}
-        <form onSubmit={handleSendComment} className="p-3 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
-          <input
-            type="text"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="เขียนความคิดเห็นของคุณ..."
-            className="flex-1 text-xs sm:text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-blue-500 outline-hidden"
-          />
-          <button
-            type="submit"
-            disabled={!commentText.trim()}
-            className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl transition shadow-xs"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+        {/* Comment Input with Camera & Upload Buttons */}
+        <form onSubmit={handleSendComment} className="p-3 bg-slate-50 border-t border-slate-200 space-y-2">
+          {/* Attached image preview */}
+          {commentImages.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {commentImages.map((img, idx) => (
+                <div key={idx} className="relative w-14 h-14 rounded-xl overflow-hidden border border-slate-300 shrink-0">
+                  <img src={img} alt="Comment attach" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCommentImage(idx)}
+                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-red-600 transition"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            {/* Camera Button */}
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="p-2.5 rounded-xl bg-white border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition active:scale-95 shadow-2xs"
+              title="ถ่ายรูปสดประกอบความคิดเห็น"
+            >
+              <Camera className="w-4 h-4 text-emerald-600" />
+            </button>
+
+            {/* Gallery Upload Button */}
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className="p-2.5 rounded-xl bg-white border border-slate-200 hover:bg-blue-50 hover:text-blue-700 text-slate-600 transition active:scale-95 shadow-2xs"
+              title="อัปโหลดรูปภาพประกอบความคิดเห็น"
+            >
+              <ImageIcon className="w-4 h-4 text-blue-600" />
+            </button>
+
+            <input
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="เขียนความคิดเห็นของคุณ (แนบรูปได้)..."
+              className="flex-1 text-xs sm:text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-blue-500 outline-hidden"
+            />
+            <button
+              type="submit"
+              disabled={(!commentText.trim() && commentImages.length === 0) || isProcessingImage}
+              className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl transition shadow-xs active:scale-95"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
         </form>
       </div>
     </div>

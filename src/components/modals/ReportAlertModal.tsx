@@ -1,7 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { X, AlertTriangle, Send, MapPin, Flame, CloudRain, Car, Zap, ShieldAlert, Navigation } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  X,
+  AlertTriangle,
+  Send,
+  MapPin,
+  Flame,
+  CloudRain,
+  Car,
+  Zap,
+  ShieldAlert,
+  Navigation,
+  Camera,
+  Image as ImageIcon,
+  Trash2
+} from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { AlertReport } from '../../types';
+import { saveMediaFile } from '../../utils/mediaStorage';
 
 interface ReportAlertModalProps {
   isOpen: boolean;
@@ -22,6 +37,11 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
   const [type, setType] = useState<AlertReport['type']>('flood');
   const [severity, setSeverity] = useState<AlertReport['severity']>('medium');
   const [subdistrict, setSubdistrict] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Prefill when opened with pinned coordinates
   useEffect(() => {
@@ -34,6 +54,48 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleCaptureCamera = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsProcessingImage(true);
+    try {
+      const file = files[0];
+      const saved = await saveMediaFile(file, `alert_${Date.now()}_${file.name}`);
+      setImages((prev) => [...prev, saved.objectUrl]);
+      showToast('📸 ถ่ายภาพเหตุการณ์เรียบร้อย!', 'success');
+    } catch {
+      showToast('ไม่สามารถบันทึกภาพถ่ายได้', 'error');
+    } finally {
+      setIsProcessingImage(false);
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+    }
+  };
+
+  const handleSelectGallery = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsProcessingImage(true);
+    try {
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const saved = await saveMediaFile(file, `alert_${Date.now()}_${file.name}`);
+        newUrls.push(saved.objectUrl);
+      }
+      setImages((prev) => [...prev, ...newUrls]);
+      showToast(`🖼️ แนบรูปภาพ ${newUrls.length} รูปเรียบร้อย!`, 'success');
+    } catch {
+      showToast('เกิดข้อผิดพลาดในการโหลดรูปภาพ', 'error');
+    } finally {
+      setIsProcessingImage(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
@@ -41,7 +103,8 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
       return;
     }
 
-    const coordsToUse = initialCoords || (location.lat && location.lng ? { lat: location.lat, lng: location.lng } : undefined);
+    const coordsToUse =
+      initialCoords || (location.lat && location.lng ? { lat: location.lat, lng: location.lng } : undefined);
 
     addAlert({
       title: title.trim(),
@@ -54,19 +117,39 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
       reporter: 'พลเมืองดี (รายงานสด)',
       reporterAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       coordinates: coordsToUse,
-      locationName: initialAddress || subdistrict.trim() || undefined
+      locationName: initialAddress || subdistrict.trim() || undefined,
+      images: images.length > 0 ? images : undefined
     });
 
     setTitle('');
     setDescription('');
     setSubdistrict('');
+    setImages([]);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-rose-50/70">
+      {/* Hidden native camera and gallery inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleCaptureCamera}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleSelectGallery}
+      />
+
+      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-rose-50/70 shrink-0">
           <div className="flex items-center gap-2">
             <span className="p-2 bg-rose-100 text-rose-600 rounded-xl">
               <ShieldAlert className="w-5 h-5" />
@@ -81,8 +164,8 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
-          {/* Pinned Coordinates Google-Map Style Info Badge */}
+        <form onSubmit={handleSubmit} className="p-4 space-y-3.5 overflow-y-auto flex-1">
+          {/* Pinned Coordinates Info Badge */}
           {initialCoords ? (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 flex items-start gap-2.5">
               <span className="p-1.5 bg-red-600 text-white rounded-lg shrink-0 mt-0.5">
@@ -96,11 +179,7 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
                 <div className="font-mono text-[11px] text-red-700 font-semibold mt-0.5">
                   Lat: {initialCoords.lat.toFixed(5)}, Lng: {initialCoords.lng.toFixed(5)}
                 </div>
-                {initialAddress && (
-                  <p className="text-slate-600 text-[11px] mt-1 line-clamp-2">
-                    {initialAddress}
-                  </p>
-                )}
+                {initialAddress && <p className="text-slate-600 text-[11px] mt-1 line-clamp-2">{initialAddress}</p>}
               </div>
             </div>
           ) : (
@@ -179,10 +258,56 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
             />
           </div>
 
+          {/* Camera Capture and Photo Upload Section (ตรงตามที่สั่ง: มีปุ่มกล้องและอัปโหลดรูปภาพ) */}
+          <div className="space-y-2 pt-1 border-t border-slate-100">
+            <label className="block text-xs font-bold text-slate-700">แนบรูปภาพจุดเกิดเหตุ / หลักฐาน</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="p-2.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-800 border-2 border-rose-300 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-2xs"
+                title="เปิดกล้องถ่ายภาพจุดเกิดเหตุสด"
+              >
+                <Camera className="w-4 h-4 text-rose-600" />
+                <span>📷 ถ่ายรูปสด</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="p-2.5 bg-slate-50 hover:bg-slate-100 active:scale-95 text-slate-700 border border-slate-200 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-2xs"
+                title="เลือกรูปภาพจากคลังภาพในเครื่อง"
+              >
+                <ImageIcon className="w-4 h-4 text-slate-500" />
+                <span>🖼️ อัปโหลดรูปภาพ</span>
+              </button>
+            </div>
+
+            {/* Thumbnail Preview of Attached Images */}
+            {images.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative h-20 rounded-xl overflow-hidden border border-slate-200 group">
+                    <img src={img} alt={`alert_attach_${idx}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(idx)}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-red-600 transition"
+                      title="ลบรูปนี้"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <span>
-              <strong>ระบบป้องกันข่าวปลอม:</strong> คนในพื้นที่จะสามารถกดยืนยันเหตุจริง หรือแจ้งไม่พบเหตุได้ หากรายงานเป็นเท็จจะถูกทำเครื่องหมายและระงับโดยอัตโนมัติ
+              <strong>ระบบตรวจสอบโดยชุมชน:</strong> คนในพื้นที่จะสามารถกด <strong>"ยืนยันเหตุจริง"</strong> หรือ{' '}
+              <strong>"ไม่พบเหตุ / ข่าวปลอม"</strong> ได้ในหน้าฟีดชุมชนและแผนที่
             </span>
           </div>
 
@@ -196,10 +321,11 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition"
+              disabled={isProcessingImage}
+              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
             >
               <Send className="w-3.5 h-3.5" />
-              ส่งรายงานทันที
+              <span>ส่งรายงานทันที</span>
             </button>
           </div>
         </form>

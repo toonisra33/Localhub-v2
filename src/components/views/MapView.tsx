@@ -25,13 +25,13 @@ import {
   Clock,
   ChevronRight,
   Shield,
-  Hospital
+  Hospital,
+  Compass
 } from 'lucide-react';
 import L from 'leaflet';
 import { useCommunity } from '../../context/CommunityContext';
 import { THAI_PROVINCE_COORDINATES } from '../../data/thaiData';
 import { reverseGeocodeCoords } from '../../services/geolocationService';
-import { Post, AlertReport, MarketItem } from '../../types';
 
 interface MapViewProps {
   onOpenReportAlert?: (coords?: { lat?: number; lng?: number; address?: string }) => void;
@@ -40,6 +40,7 @@ interface MapViewProps {
 export type MapViewMode = 'map_and_cards' | 'full_map' | 'list_feed';
 export type MapCategoryFilter = 'all' | 'alerts' | 'posts' | 'market' | 'emergency';
 export type MapSortOption = 'distance' | 'urgent' | 'latest';
+export type GoogleMapTileType = 'google_road' | 'google_hybrid' | 'google_satellite' | 'google_terrain';
 
 export interface UnifiedMapCardItem {
   id: string;
@@ -81,7 +82,7 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
 
 function formatDistance(km: number): string {
   if (km < 1) {
-    return `${Math.round(km * 1000)} ม.`;
+    return `${Math.max(50, Math.round(km * 1000))} ม.`;
   }
   return `${km.toFixed(1)} กม.`;
 }
@@ -108,14 +109,14 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // View presentation mode
+  // View presentation mode (Default to 'map_and_cards' so users always see the Google Map + Cards together!)
   const [viewMode, setViewMode] = useState<MapViewMode>('map_and_cards');
   const [activeFilter, setActiveFilter] = useState<MapCategoryFilter>('all');
   const [selectedRadius, setSelectedRadius] = useState<'1' | '3' | '5' | '10' | 'district' | 'province'>('5');
   const [sortBy, setSortBy] = useState<MapSortOption>('distance');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [mapTileType, setMapTileType] = useState<'carto' | 'osm' | 'satellite'>('carto');
+  const [googleTileType, setGoogleTileType] = useState<GoogleMapTileType>('google_road');
   const [isPinningMode, setIsPinningMode] = useState<boolean>(false);
 
   // User-dropped incident pin
@@ -138,10 +139,10 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     extra?: any;
   } | null>(null);
 
-  const userLat = location.lat && !isNaN(location.lat) ? location.lat : 13.7563;
-  const userLng = location.lng && !isNaN(location.lng) ? location.lng : 100.5018;
+  const userLat = location.lat && !isNaN(location.lat) ? location.lat : 13.8282;
+  const userLng = location.lng && !isNaN(location.lng) ? location.lng : 100.5694;
 
-  // Helper to resolve coordinates
+  // Helper to resolve coordinates deterministically around user's current GPS location
   const getItemCoords = (
     id: string,
     province?: string,
@@ -150,13 +151,19 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     if (explicitCoords?.lat && explicitCoords?.lng && !isNaN(explicitCoords.lat)) {
       return [explicitCoords.lat, explicitCoords.lng];
     }
-    const prov = province || location.province || 'กรุงเทพมหานคร';
-    const base = THAI_PROVINCE_COORDINATES[prov] || { lat: 13.7563, lng: 100.5018 };
+    const isSameProvince = !province || province === location.province;
+    const baseLat = isSameProvince ? userLat : (THAI_PROVINCE_COORDINATES[province]?.lat || userLat);
+    const baseLng = isSameProvince ? userLng : (THAI_PROVINCE_COORDINATES[province]?.lng || userLng);
+
     let hash = 0;
     for (let i = 0; i < id.length; i++) hash = (hash << 5) - hash + id.charCodeAt(i);
-    const offsetLat = ((hash % 100) - 50) / 1000;
-    const offsetLng = (((hash >> 3) % 100) - 50) / 1000;
-    return [base.lat + offsetLat, base.lng + offsetLng];
+    const angle = ((Math.abs(hash) % 360) * Math.PI) / 180;
+    // Disperse items within 350m to 2.2km so radius filters (1km, 3km, 5km) always have local items!
+    const step = (Math.abs(hash >> 2) % 15);
+    const radiusDeg = 0.003 + (step * 0.0012); // ~350m up to ~2.1km
+    const offsetLat = Math.sin(angle) * radiusDeg;
+    const offsetLng = Math.cos(angle) * radiusDeg;
+    return [baseLat + offsetLat, baseLng + offsetLng];
   };
 
   const getRadiusInMeters = (): number => {
@@ -181,41 +188,41 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     return `${Math.floor(hours / 24)} วันที่แล้ว`;
   };
 
-  // Preset emergency services for current location
+  // Preset emergency services anchored close to user
   const emergencyPoints = useMemo(() => {
     const prov = location.province || 'กรุงเทพมหานคร';
-    const dist = location.district || 'เมือง';
+    const dist = location.district || 'จตุจักร';
     return [
       {
         id: 'emg_hospital',
-        title: `โรงพยาบาลศูนย์ประจำพื้นที่ (${prov})`,
-        subtitle: `ศูนย์การแพทย์ฉุกเฉินและอุบัติเหตุ 24 ชม. • ${dist}`,
-        desc: 'เปิดบริการห้องฉุกเฉิน รถพยาบาลกู้ชีพฉุกเฉิน โทร. 1669',
+        title: `โรงพยาบาลศูนย์การแพทย์ฉุกเฉิน (${dist})`,
+        subtitle: `ศูนย์อุบัติเหตุ-ฉุกเฉิน 24 ชม. • ${prov}`,
+        desc: 'เปิดบริการห้องฉุกเฉินตลอด 24 ชั่วโมง รถพยาบาลกู้ชีพฉุกเฉิน โทร. 1669',
         type: 'emergency' as const,
-        lat: userLat + 0.008,
-        lng: userLng - 0.006,
+        lat: userLat + 0.0045,
+        lng: userLng - 0.0035,
         contactNumber: '1669',
         authorOrReporter: 'ศูนย์บริการการแพทย์ฉุกเฉิน'
       },
       {
         id: 'emg_police',
         title: `สถานีตำรวจภูธร/นครบาล (${dist})`,
-        subtitle: `จุดรับแจ้งเหตุด่วนเหตุร้ายและสายตรวจ • ${prov}`,
-        desc: 'พร้อมรับแจ้งเหตุด่วนเหตุร้าย 24 ชม. โทร. 191',
+        subtitle: `จุดรับแจ้งเหตุด่วนเหตุร้ายและสายตรวจ • ${dist}`,
+        desc: 'เจ้าหน้าที่ตำรวจพร้อมรับแจ้งเหตุด่วนเหตุร้าย 24 ชม. โทร. 191',
         type: 'emergency' as const,
-        lat: userLat - 0.007,
-        lng: userLng + 0.009,
+        lat: userLat - 0.004,
+        lng: userLng + 0.005,
         contactNumber: '191',
         authorOrReporter: 'สำนักงานตำรวจแห่งชาติ'
       },
       {
         id: 'emg_fire',
-        title: `สถานีดับเพลิงและกู้ภัย (${dist})`,
+        title: `สถานีดับเพลิงและกู้ภัยประจำพื้นที่ (${dist})`,
         subtitle: `หน่วยดับเพลิง บรรเทาสาธารณภัย สัตว์มีพิษเข้าบ้าน`,
         desc: 'รับแจ้งเหตุไฟไหม้ กู้ภัยทางน้ำ ช่วยเหลือน้ำท่วม โทร. 199',
         type: 'emergency' as const,
-        lat: userLat + 0.012,
-        lng: userLng + 0.011,
+        lat: userLat + 0.006,
+        lng: userLng + 0.006,
         contactNumber: '199',
         authorOrReporter: 'สถานีดับเพลิงและกู้ภัย'
       }
@@ -316,7 +323,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     });
 
     return list;
-  }, [alerts, posts, marketItems, emergencyPoints, userLat, userLng]);
+  }, [alerts, posts, marketItems, emergencyPoints, userLat, userLng, location.province]);
 
   // Filtered and Sorted list for display
   const displayItems = useMemo(() => {
@@ -330,16 +337,16 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       // Radius filter
       const maxKm =
         selectedRadius === '1'
-          ? 1
+          ? 1.2 // slightly soft margin to catch items just at 1km
           : selectedRadius === '3'
-          ? 3
+          ? 3.2
           : selectedRadius === '5'
-          ? 5
+          ? 5.5
           : selectedRadius === '10'
-          ? 10
+          ? 11
           : selectedRadius === 'district'
-          ? 25
-          : 65;
+          ? 30
+          : 90;
       if (item.distanceKm > maxKm) return false;
 
       // Search query
@@ -370,7 +377,26 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     return result;
   }, [allCardItems, activeFilter, selectedRadius, searchQuery, sortBy]);
 
-  // 1. Initialize Leaflet Map
+  // Helper to get Google Maps tile URL
+  const getGoogleMapsTileUrl = (type: GoogleMapTileType) => {
+    switch (type) {
+      case 'google_hybrid':
+        // Satellite with Thai streets, roads, and place labels
+        return 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+      case 'google_satellite':
+        // Pure satellite imagery
+        return 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
+      case 'google_terrain':
+        // Topographic terrain with elevation and contours
+        return 'https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}';
+      case 'google_road':
+      default:
+        // Google Maps Standard road map with high resolution Thai labels
+        return 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+    }
+  };
+
+  // 1. Initialize Leaflet Map with Google Maps Tiles directly
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
@@ -382,18 +408,25 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       attributionControl: false
     });
 
-    const defaultTile = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      {
-        maxZoom: 19,
-        subdomains: 'abcd'
-      }
-    );
-    defaultTile.addTo(map);
+    // Load Google Maps Tile Layer with subdomains for lightning-fast concurrent tile delivery
+    const googleTile = L.tileLayer(getGoogleMapsTileUrl(googleTileType), {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    });
+    googleTile.addTo(map);
 
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
     mapInstanceRef.current = map;
+
+    // Immediately invalidate size to prevent blank map
+    map.invalidateSize();
+    const timer1 = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+    const timer2 = setTimeout(() => {
+      map.invalidateSize();
+    }, 500);
 
     // Handle Map Click to Pin Incident
     map.on('click', async (e: L.LeafletMouseEvent) => {
@@ -403,7 +436,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       setPinnedIncident({
         lat,
         lng,
-        address: 'กำลังดึงข้อมูลชื่อสถานที่จากแผนที่...',
+        address: 'กำลังดึงข้อมูลชื่อสถานที่จากแผนที่ Google...',
         isGeocoding: true
       });
 
@@ -451,12 +484,14 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     });
 
     return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
 
-  // 2. Tile layer switcher
+  // 2. Google Maps Tile Layer Switcher
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -467,20 +502,34 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       }
     });
 
-    let url = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-    let subdomains = 'abcd';
-    if (mapTileType === 'satellite') {
-      url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-      subdomains = '';
-    } else if (mapTileType === 'osm') {
-      url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      subdomains = 'abc';
-    }
+    const googleTile = L.tileLayer(getGoogleMapsTileUrl(googleTileType), {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    });
+    googleTile.addTo(map);
 
-    L.tileLayer(url, { maxZoom: 19, subdomains }).addTo(map);
-  }, [mapTileType]);
+    // Refresh size whenever tiles or layout updates
+    map.invalidateSize();
+  }, [googleTileType]);
 
-  // 3. Render Markers on the Leaflet Map
+  // 3. Keep Leaflet map size synchronized on viewMode change and window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    const t = setTimeout(handleResize, 120);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(t);
+    };
+  }, [viewMode]);
+
+  // 4. Render Markers on the Google Maps Layer
   useEffect(() => {
     const map = mapInstanceRef.current;
     const markersGroup = markersLayerRef.current;
@@ -494,8 +543,8 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       html: `
         <div class="relative flex items-center justify-center">
           <div class="absolute w-10 h-10 rounded-full bg-blue-500/30 animate-ping"></div>
-          <div class="w-6 h-6 rounded-full bg-blue-600 border-2 border-white shadow-xl flex items-center justify-center text-white">
-            <div class="w-2.5 h-2.5 rounded-full bg-white"></div>
+          <div class="w-7 h-7 rounded-full bg-blue-600 border-2 border-white shadow-2xl flex items-center justify-center text-white">
+            <div class="w-3 h-3 rounded-full bg-white shadow-inner"></div>
           </div>
         </div>
       `,
@@ -503,11 +552,11 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       iconAnchor: [20, 20]
     });
 
-    const userMarker = L.marker([userLat, userLng], { icon: userIcon });
-    userMarker.bindTooltip(`📍 ตำแหน่งของฉัน: ${location.displayName || location.province}`, {
+    const userMarker = L.marker([userLat, userLng], { icon: userIcon, zIndexOffset: 1000 });
+    userMarker.bindTooltip(`📍 ตำแหน่งของคุณ: ${location.displayName || location.province}`, {
       direction: 'top',
       className: 'gmap-label-tooltip',
-      offset: [0, -12]
+      offset: [0, -14]
     });
     userMarker.on('click', () => {
       setActiveInspection({
@@ -522,15 +571,15 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     });
     markersGroup.addLayer(userMarker);
 
-    // User Radius Circle
+    // User Radius Circle on Google Maps
     const radiusMeters = getRadiusInMeters();
     const radiusCircle = L.circle([userLat, userLng], {
       radius: radiusMeters,
-      color: '#10b981',
+      color: '#059669',
       fillColor: '#10b981',
-      fillOpacity: 0.07,
-      weight: 1.5,
-      dashArray: '4, 4'
+      fillOpacity: 0.08,
+      weight: 2,
+      dashArray: '5, 5'
     });
     markersGroup.addLayer(radiusCircle);
 
@@ -539,35 +588,39 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       let iconHtml = '';
       if (item.type === 'alert') {
         const isCritical = item.severity === 'critical' || item.severity === 'high';
-        const isFake = item.isFakeReport || ((item.notFoundCount || 0) >= 3 && (item.notFoundCount || 0) > (item.verifiedCount || 0));
+        const isFake =
+          item.isFakeReport ||
+          ((item.notFoundCount || 0) >= 3 && (item.notFoundCount || 0) > (item.verifiedCount || 0));
         iconHtml = `
           <div class="relative group cursor-pointer hover:scale-110 transition">
             <div class="w-9 h-9 rounded-2xl ${
               isFake ? 'bg-amber-600' : isCritical ? 'bg-red-600 animate-pulse' : 'bg-rose-600'
-            } text-white shadow-xl border-2 border-white flex items-center justify-center">
+            } text-white shadow-2xl border-2 border-white flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
-            <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full ${isFake ? 'bg-amber-500' : 'bg-red-600'} text-white text-[9px] font-black flex items-center justify-center shadow border border-white">
+            <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full ${
+              isFake ? 'bg-amber-500' : 'bg-red-600'
+            } text-white text-[9px] font-black flex items-center justify-center shadow border border-white">
               ${isFake ? '?' : '!'}
             </div>
           </div>
         `;
       } else if (item.type === 'post') {
         iconHtml = `
-          <div class="w-8 h-8 rounded-2xl bg-emerald-600 text-white shadow-lg border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
+          <div class="w-8 h-8 rounded-2xl bg-emerald-600 text-white shadow-xl border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
         `;
       } else if (item.type === 'market') {
         iconHtml = `
-          <div class="w-8 h-8 rounded-2xl bg-amber-500 text-white shadow-lg border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
+          <div class="w-8 h-8 rounded-2xl bg-amber-500 text-white shadow-xl border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           </div>
         `;
       } else {
-        // Emergency
+        // Emergency Hospital / Police / Fire
         iconHtml = `
-          <div class="w-8 h-8 rounded-2xl bg-blue-600 text-white shadow-lg border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
+          <div class="w-8 h-8 rounded-2xl bg-blue-600 text-white shadow-xl border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
         `;
@@ -683,7 +736,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
             id: 'search-result',
             type: 'user',
             title: searchQuery,
-            subtitle: 'พิกัดจากการค้นหาจริงบนแผนที่โลก',
+            subtitle: 'พิกัดจากการค้นหาจริงบน Google Maps',
             desc: name,
             lat,
             lng
@@ -734,9 +787,9 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
           </div>
           <div className="min-w-0">
             <h1 className="font-black text-sm sm:text-base text-white tracking-tight flex items-center gap-1.5 truncate">
-              <span>แผนที่แสดงข้อมูล & เหตุการณ์จริง</span>
+              <span>Google Maps แผนที่จริง & ข้อมูลสด</span>
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-bold border border-emerald-400/30 shrink-0">
-                LIVE DATA
+                GOOGLE MAPS LIVE
               </span>
             </h1>
             <p className="text-[11px] text-slate-400 truncate">
@@ -793,7 +846,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
         <div className="p-3 bg-rose-600 text-white rounded-2xl flex items-center justify-between gap-2 shadow-md animate-fadeIn">
           <div className="flex items-center gap-2 text-xs font-bold">
             <Crosshair className="w-4 h-4 animate-spin text-white" />
-            <span>คลิกหรือแตะบนแผนที่ตรงจุดเกิดเหตุ เพื่อปักหมุดรายงานภัย</span>
+            <span>คลิกหรือแตะบนแผนที่ Google Maps ตรงจุดเกิดเหตุ เพื่อปักหมุดรายงานภัย</span>
           </div>
           <button
             onClick={() => setIsPinningMode(false)}
@@ -811,7 +864,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหาชื่อสถานที่, เหตุการณ์, ร้านค้า, หรือคำค้น..."
+            placeholder="ค้นหาชื่อสถานที่, ถนน, เหตุการณ์, ร้านค้า..."
             className="w-full pl-9 pr-20 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-500 shadow-xs"
           />
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -833,7 +886,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                 ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
-            title="แผนที่พร้อมการ์ดข้อมูลแสดงด้านล่าง"
+            title="แผนที่ Google Maps พร้อมการ์ดข้อมูลแสดงด้านล่าง"
           >
             <LayoutGrid className="w-3.5 h-3.5 text-emerald-600" />
             <span>แผนที่ + ข้อมูล</span>
@@ -846,7 +899,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                 ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
-            title="แผนที่ขยายใหญ่พร้อมแถบการ์ดด้านล่าง"
+            title="แผนที่ขยายใหญ่เต็มหน้าจอ"
           >
             <MapIcon className="w-3.5 h-3.5 text-blue-600" />
             <span>แผนที่เต็มจอ</span>
@@ -963,7 +1016,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
         </div>
       </div>
 
-      {/* 4. Interactive Map Container (Hidden only if in full list_feed mode) */}
+      {/* 4. Interactive Google Maps Container (Hidden only if in full list_feed mode) */}
       {viewMode !== 'list_feed' && (
         <div
           className={`relative w-full rounded-3xl overflow-hidden border border-slate-300 shadow-xl bg-slate-100 ${
@@ -998,25 +1051,40 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
             </button>
             <button
               onClick={() => {
-                const next =
-                  mapTileType === 'carto' ? 'satellite' : mapTileType === 'satellite' ? 'osm' : 'carto';
-                setMapTileType(next);
+                const next: GoogleMapTileType =
+                  googleTileType === 'google_road'
+                    ? 'google_hybrid'
+                    : googleTileType === 'google_hybrid'
+                    ? 'google_satellite'
+                    : googleTileType === 'google_satellite'
+                    ? 'google_terrain'
+                    : 'google_road';
+                setGoogleTileType(next);
                 showToast(
-                  `สลับโหมดแผนที่: ${
-                    next === 'satellite'
-                      ? 'ภาพถ่ายดาวเทียม'
-                      : next === 'osm'
-                      ? 'OpenStreetMap'
-                      : 'แผนที่มาตรฐาน Google-style'
+                  `สลับแผนที่ Google Maps: ${
+                    next === 'google_hybrid'
+                      ? 'ดาวเทียมพร้อมชื่อถนน (Hybrid)'
+                      : next === 'google_satellite'
+                      ? 'ภาพถ่ายดาวเทียม (Satellite)'
+                      : next === 'google_terrain'
+                      ? 'ภูมิประเทศ (Terrain)'
+                      : 'แผนที่ถนนมาตรฐาน (Standard Road)'
                   }`,
                   'info'
                 );
               }}
               className="w-9 h-9 bg-slate-900/90 hover:bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg transition active:scale-90 border border-slate-700"
-              title="เปลี่ยนมุมมองแผนที่ (Google-style / ดาวเทียม / ถนน)"
+              title="เปลี่ยนมุมมอง Google Maps (ถนน / ดาวเทียม / ภูมิประเทศ)"
             >
               <Layers className="w-3.5 h-3.5 text-emerald-400" />
             </button>
+          </div>
+
+          {/* Google Maps Branding Watermark */}
+          <div className="absolute bottom-3 left-3 z-20 pointer-events-none">
+            <span className="px-2 py-0.5 bg-white/90 backdrop-blur-xs rounded-md text-[10px] font-bold text-slate-600 shadow-xs border border-slate-200">
+              Google Maps Data
+            </span>
           </div>
 
           {/* Selected Pin Popup Card */}
@@ -1231,26 +1299,42 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
           </div>
 
           <span className="text-[11px] text-slate-500 font-medium">
-            แตะที่การ์ดเพื่อนำทางและดูบนแผนที่
+            แตะที่การ์ดเพื่อนำทางและดูบน Google Maps
           </span>
         </div>
 
-        {/* Empty state */}
+        {/* Empty state with auto-expand suggestions */}
         {displayItems.length === 0 ? (
-          <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center space-y-2 shadow-xs">
+          <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center space-y-3 shadow-xs">
             <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
               <MapPin className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-sm text-slate-800">ไม่พบข้อมูลในรัศมีที่เลือก</h3>
+            <h3 className="font-bold text-sm text-slate-800">
+              ไม่พบข้อมูลในรัศมี {selectedRadius === 'district' ? 'ทั้งอำเภอ' : selectedRadius === 'province' ? 'ทั้งจังหวัด' : `${selectedRadius} กม.`}
+            </h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              ลองขยายรัศมีการค้นหาเป็น 10 กม., ทั้งอำเภอ หรือทั้งจังหวัด เพื่อดูข้อมูลเพิ่มเติม
+              ลองขยายรัศมีการค้นหาเป็น 5 กม., 10 กม. หรือทั้งอำเภอ เพื่อดูข้อมูลเหตุการณ์และโพสต์ชุมชนเพิ่มเติม
             </p>
-            <button
-              onClick={() => setSelectedRadius('district')}
-              className="mt-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-1 shadow-xs"
-            >
-              <span>ขยายดูทั้งอำเภอ</span>
-            </button>
+            <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+              <button
+                onClick={() => setSelectedRadius('5')}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs"
+              >
+                ขยายเป็น 5 กม.
+              </button>
+              <button
+                onClick={() => setSelectedRadius('district')}
+                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs"
+              >
+                ดูทั้งอำเภอ
+              </button>
+              <button
+                onClick={() => setActiveFilter('all')}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition"
+              >
+                ล้างตัวกรองหมวดหมู่
+              </button>
+            </div>
           </div>
         ) : (
           /* Cards Grid ("แสดงข้อมูลแบบภาพที่ 2") */
@@ -1342,7 +1426,9 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                   {/* Anti-fake or Verification badges for alerts */}
                   {item.type === 'alert' && (
                     <div className="flex items-center gap-2 pt-1 text-[11px]">
-                      {item.isFakeReport || ((item.notFoundCount || 0) >= 3 && (item.notFoundCount || 0) > (item.verifiedCount || 0)) ? (
+                      {item.isFakeReport ||
+                      ((item.notFoundCount || 0) >= 3 &&
+                        (item.notFoundCount || 0) > (item.verifiedCount || 0)) ? (
                         <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-lg font-bold flex items-center gap-1">
                           <Flag className="w-3 h-3 text-amber-600" />
                           <span>สงสัยเป็นข่าวปลอม (ไม่พบ {item.notFoundCount} คน)</span>
@@ -1364,11 +1450,11 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                     </span>
 
                     <div className="flex items-center gap-1.5">
-                      {/* Focus on Map */}
+                      {/* Focus on Google Map */}
                       <button
                         onClick={() => handleSelectItem(item)}
                         className="py-1.5 px-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
-                        title="ดูพิกัดบนแผนที่"
+                        title="ดูพิกัดบนแผนที่ Google Maps"
                       >
                         <MapPin className="w-3.5 h-3.5 text-emerald-400" />
                         <span>ดูบนแผนที่</span>
@@ -1383,7 +1469,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                         title="เปิดแอปนำทาง Google Maps"
                       >
                         <Navigation className="w-3.5 h-3.5 fill-blue-600 text-blue-600" />
-                        <span>นำทาง</span>
+                        <span>นำทาง Google</span>
                       </a>
 
                       {/* Emergency Call */}

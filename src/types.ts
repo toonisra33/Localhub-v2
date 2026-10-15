@@ -50,6 +50,7 @@ export interface PostComment {
   timestamp: number;
   likes: number;
   isOfficial?: boolean;
+  images?: string[];
 }
 
 export interface Post {
@@ -195,6 +196,7 @@ export interface AlertReport {
   status: 'active' | 'resolved' | 'investigating';
   coordinates?: { lat: number; lng: number };
   locationName?: string;
+  images?: string[];
 }
 
 export type TestSoundType = 'siren' | 'urgent' | 'high' | 'announcement';
