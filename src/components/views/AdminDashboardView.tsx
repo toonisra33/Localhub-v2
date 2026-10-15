@@ -23,7 +23,8 @@ import {
   ExternalLink,
   Flame,
   CloudLightning,
-  Sparkles
+  Sparkles,
+  ArrowLeft
 } from 'lucide-react';
 import { useBroadcast } from '../../context/BroadcastContext';
 import { useCommunity } from '../../context/CommunityContext';
@@ -56,7 +57,8 @@ export const AdminDashboardView: React.FC = () => {
     posts,
     alerts,
     setActiveTab,
-    loginAsAdminOwner
+    loginAsAdminOwner,
+    goBack
   } = useCommunity();
 
   // Test sound settings
@@ -101,10 +103,21 @@ export const AdminDashboardView: React.FC = () => {
         <div className="absolute -right-10 -bottom-10 w-56 h-56 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/20 text-red-400 border border-red-500/30 text-xs font-black">
-              <ShieldAlert className="w-3.5 h-3.5 text-red-500 animate-pulse" />
-              <span>ADMIN CENTRAL CONSOLE</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={goBack}
+                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 border border-white/20 transition active:scale-95"
+                title="ย้อนกลับ"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>ย้อนกลับ</span>
+              </button>
+
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/20 text-red-400 border border-red-500/30 text-xs font-black">
+                <ShieldAlert className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                <span>ADMIN CENTRAL CONSOLE</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+              </div>
             </div>
 
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">

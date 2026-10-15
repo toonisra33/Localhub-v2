@@ -7,7 +7,8 @@ import {
   ChevronDown,
   Camera,
   User,
-  Shield
+  Shield,
+  ArrowLeft
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { saveMediaFile } from '../utils/mediaStorage';
@@ -30,7 +31,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     openLocationModal,
     unreadNotifCount,
     showToast,
+    activeTab,
     setActiveTab,
+    goBack,
     currentUser,
     isAdmin,
     openLoginModal
@@ -70,15 +73,29 @@ export const Navbar: React.FC<NavbarProps> = ({
       />
 
       <div className="max-w-7xl mx-auto px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-3">
-        {/* Logo and Brand */}
-        <div
-          onClick={() => setActiveTab('home')}
-          className="flex items-center gap-2 sm:gap-3 shrink-0 cursor-pointer group"
-          title="ไปที่หน้าหลัก"
-        >
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0 group-hover:scale-105 transition-transform">
-            <span className="text-base sm:text-lg">🏠</span>
-          </div>
+        {/* Left Section: Back Button (if not on home) & Logo */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {activeTab !== 'home' && (
+            <button
+              onClick={goBack}
+              className="p-1.5 sm:p-2 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-xl transition flex items-center gap-1 text-xs font-bold shrink-0 border border-slate-200/80 shadow-2xs active:scale-95"
+              title="ย้อนกลับ (Back)"
+              aria-label="ย้อนกลับ"
+            >
+              <ArrowLeft className="w-4 h-4 text-slate-700" />
+              <span className="hidden xs:inline">ย้อนกลับ</span>
+            </button>
+          )}
+
+          {/* Logo and Brand */}
+          <div
+            onClick={() => setActiveTab('home')}
+            className="flex items-center gap-2 sm:gap-3 shrink-0 cursor-pointer group"
+            title="ไปที่หน้าหลัก"
+          >
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0 group-hover:scale-105 transition-transform">
+              <span className="text-base sm:text-lg">🏠</span>
+            </div>
 
           <div>
             <div className="flex items-center gap-1 sm:gap-1.5">
@@ -94,6 +111,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </p>
           </div>
         </div>
+      </div>
 
         {/* Center / Location Selector button */}
         <button

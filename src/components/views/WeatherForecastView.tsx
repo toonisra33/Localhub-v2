@@ -16,7 +16,8 @@ import {
   Eye,
   ExternalLink,
   ShieldCheck,
-  Zap
+  Zap,
+  ArrowLeft
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import {
@@ -29,7 +30,7 @@ import { WeatherData, WeatherCurrent } from '../../types';
 import { ALL_PROVINCES_LIST } from '../../data/thaiData';
 
 export const WeatherForecastView: React.FC = () => {
-  const { location, showToast } = useCommunity();
+  const { location, showToast, goBack } = useCommunity();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState<string>(location.province);
@@ -125,6 +126,21 @@ export const WeatherForecastView: React.FC = () => {
     <div className="space-y-4">
       {/* Top Banner & Control Bar */}
       <div className="p-5 bg-gradient-to-r from-sky-800 via-blue-900 to-indigo-950 text-white rounded-3xl shadow-lg border border-sky-600/40 space-y-4">
+        {/* Navigation Back & Status */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={goBack}
+            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 border border-white/20 transition active:scale-95"
+            title="ย้อนกลับ"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>ย้อนกลับ</span>
+          </button>
+          <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-400/30">
+            📡 สภาพอากาศสด (Live Weather)
+          </span>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="p-2.5 bg-sky-500/20 text-sky-300 rounded-2xl shadow-xs">

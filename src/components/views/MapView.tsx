@@ -16,7 +16,8 @@ import {
   ThumbsUp,
   Flag,
   Crosshair,
-  MapPinned
+  MapPinned,
+  ArrowLeft
 } from 'lucide-react';
 import L from 'leaflet';
 import { useCommunity } from '../../context/CommunityContext';
@@ -40,7 +41,8 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     setActiveTab,
     openPostDetail,
     confirmAlert,
-    reportAlertNotFound
+    reportAlertNotFound,
+    goBack
   } = useCommunity();
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -503,7 +505,16 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     <div className="space-y-3 max-w-4xl mx-auto animate-fadeIn pb-14">
       {/* 1. Header Bar with Real GPS status & Pinning Mode Action */}
       <div className="bg-slate-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-800 shadow-lg flex items-center justify-between gap-2 min-w-0">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1 truncate">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 truncate">
+          <button
+            onClick={goBack}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition shrink-0 active:scale-95"
+            title="ย้อนกลับ"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">ย้อนกลับ</span>
+          </button>
+
           <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shrink-0">
             <MapPin className="w-5 h-5 text-slate-950" />
           </div>

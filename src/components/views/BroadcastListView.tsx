@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   Compass,
   Newspaper,
-  ShieldAlert
+  ShieldAlert,
+  ArrowLeft
 } from 'lucide-react';
 import { useBroadcast } from '../../context/BroadcastContext';
 import { useCommunity } from '../../context/CommunityContext';
@@ -75,7 +76,8 @@ export const BroadcastListView: React.FC = () => {
     openPostDetail,
     confirmAlert,
     reportAlertNotFound,
-    setActiveTab
+    setActiveTab,
+    goBack
   } = useCommunity();
 
   const [activeFilter, setActiveFilter] = useState<NewsTabFilter>('popular');
@@ -247,6 +249,15 @@ export const BroadcastListView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={goBack}
+            className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20 active:scale-95"
+            title="ย้อนกลับ"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>ย้อนกลับ</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('map')}
             className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20 active:scale-95"

@@ -37,7 +37,8 @@ import {
   LogIn,
   Navigation,
   Users,
-  UserMinus
+  UserMinus,
+  ArrowLeft
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { useBroadcast } from '../../context/BroadcastContext';
@@ -65,7 +66,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     requestRealLocation,
     isLocatingGps,
     friends,
-    removeFriend
+    removeFriend,
+    goBack
   } = useCommunity();
 
   const {
@@ -100,6 +102,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
       {/* Top Header matching Screenshot 1 */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
+          <button
+            onClick={goBack}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 transition shrink-0 active:scale-95 border border-slate-200"
+            title="ย้อนกลับ"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden xs:inline">ย้อนกลับ</span>
+          </button>
+
           <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-md shadow-emerald-500/20">
             <span className="text-lg">🏠</span>
           </div>

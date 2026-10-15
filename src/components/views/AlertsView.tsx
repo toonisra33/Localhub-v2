@@ -15,7 +15,8 @@ import {
   Compass,
   ExternalLink,
   ShieldCheck,
-  Flag
+  Flag,
+  ArrowLeft
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { AlertReport } from '../../types';
@@ -27,7 +28,7 @@ interface AlertsViewProps {
 }
 
 export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert, onOpenWeather }) => {
-  const { alerts, location, showToast, confirmAlert, reportAlertNotFound, setActiveTab } = useCommunity();
+  const { alerts, location, showToast, confirmAlert, reportAlertNotFound, setActiveTab, goBack } = useCommunity();
   const [filterType, setFilterType] = useState<string>('all');
 
   const filteredAlerts = alerts.filter(a => {
@@ -78,6 +79,15 @@ export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert, onOpe
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={goBack}
+            className="px-3 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs font-bold flex items-center gap-1.5 border border-white/20 transition active:scale-95"
+            title="ย้อนกลับ"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>ย้อนกลับ</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('map')}
             className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs font-bold flex items-center gap-1.5 border border-white/20 transition active:scale-95"

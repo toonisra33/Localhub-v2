@@ -57,6 +57,8 @@ interface CommunityContextType {
 
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
+  goBack: () => void;
+  canGoBack: boolean;
   location: Location;
   setLocation: (loc: Location) => void;
   isLocationModalOpen: boolean;
@@ -379,8 +381,45 @@ const INITIAL_FRIENDS: FriendUser[] = [
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
+export const VALID_TABS: Tab[] = ['home', 'feed', 'broadcasts', 'alerts', 'weather', 'market', 'map', 'profile', 'admin'];
+
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [activeTab, setActiveTabState] = useState<Tab>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const cleanHash = window.location.hash.replace(/^#/, '').split('?')[0];
+      if (VALID_TABS.includes(cleanHash as Tab)) {
+        return cleanHash as Tab;
+      }
+    }
+    return 'home';
+  });
+
+  const [tabHistory, setTabHistory] = useState<Tab[]>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const cleanHash = window.location.hash.replace(/^#/, '').split('?')[0];
+      if (VALID_TABS.includes(cleanHash as Tab)) {
+        return ['home', cleanHash as Tab];
+      }
+    }
+    return ['home'];
+  });
+
+  const setActiveTab = useCallback((nextTab: Tab) => {
+    setActiveTabState(prev => {
+      if (prev === nextTab) {
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        return prev;
+      }
+      if (typeof window !== 'undefined') {
+        window.history.pushState({ type: 'tab', tab: nextTab }, '', '#' + nextTab);
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+      setTabHistory(h => [...h, nextTab]);
+      return nextTab;
+    });
+  }, []);
 
   // Friends state with persistence
   const [friends, setFriends] = useState<FriendUser[]>(() => {
@@ -881,23 +920,122 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [currentUser, showToast]);
 
-  // Post detail navigation
+  // Modal navigation handlers with browser history synchronization
   const openPostDetail = useCallback((postOrId: Post | string) => {
+    let targetPost: Post | undefined;
     if (typeof postOrId === 'string') {
-      const found = posts.find(p => p.id === postOrId);
-      if (found) {
-        setOpenedPost(found);
-      } else {
+      targetPost = posts.find(p => p.id === postOrId);
+      if (!targetPost) {
         showToast('ไม่พบโพสต์ที่ต้องการ หรืออาจถูกลบไปแล้ว', 'error');
+        return;
       }
     } else {
-      setOpenedPost(postOrId);
+      targetPost = postOrId;
     }
-  }, [posts, showToast]);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(
+        { type: 'modal', modal: 'post', postId: targetPost.id, tab: activeTab },
+        '',
+        '#' + activeTab + '?post=' + targetPost.id
+      );
+    }
+    setOpenedPost(targetPost);
+  }, [posts, showToast, activeTab]);
 
   const closePostDetail = useCallback(() => {
     setOpenedPost(null);
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'post') {
+      window.history.back();
+    }
   }, []);
+
+  const openLocationModal = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ type: 'modal', modal: 'location', tab: activeTab }, '', '#' + activeTab + '?modal=location');
+    }
+    setIsLocationModalOpen(true);
+  }, [activeTab]);
+
+  const closeLocationModal = useCallback(() => {
+    setIsLocationModalOpen(false);
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'location') {
+      window.history.back();
+    }
+  }, []);
+
+  const openContactAdminModal = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ type: 'modal', modal: 'contactAdmin', tab: activeTab }, '', '#' + activeTab + '?modal=contactAdmin');
+    }
+    setIsContactAdminModalOpen(true);
+  }, [activeTab]);
+
+  const closeContactAdminModal = useCallback(() => {
+    setIsContactAdminModalOpen(false);
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'contactAdmin') {
+      window.history.back();
+    }
+  }, []);
+
+  const openLoginModal = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ type: 'modal', modal: 'login', tab: activeTab }, '', '#' + activeTab + '?modal=login');
+    }
+    setIsLoginModalOpen(true);
+  }, [activeTab]);
+
+  const closeLoginModal = useCallback(() => {
+    setIsLoginModalOpen(false);
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'login') {
+      window.history.back();
+    }
+  }, []);
+
+  const goBack = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    if (openedPost) {
+      closePostDetail();
+      return;
+    }
+    if (isLocationModalOpen) {
+      closeLocationModal();
+      return;
+    }
+    if (isLocationPermissionModalOpen) {
+      setIsLocationPermissionModalOpen(false);
+      return;
+    }
+    if (isContactAdminModalOpen) {
+      closeContactAdminModal();
+      return;
+    }
+    if (isLoginModalOpen) {
+      closeLoginModal();
+      return;
+    }
+
+    if (window.history.length > 1 && tabHistory.length > 1) {
+      window.history.back();
+    } else if (activeTab !== 'home') {
+      setActiveTab('home');
+    }
+  }, [
+    openedPost,
+    isLocationModalOpen,
+    isLocationPermissionModalOpen,
+    isContactAdminModalOpen,
+    isLoginModalOpen,
+    closePostDetail,
+    closeLocationModal,
+    closeContactAdminModal,
+    closeLoginModal,
+    tabHistory.length,
+    activeTab,
+    setActiveTab
+  ]);
+
+  const canGoBack = activeTab !== 'home' || Boolean(openedPost || isLocationModalOpen || isContactAdminModalOpen || isLoginModalOpen);
 
   // Request browser location with real reverse geocoding to Thai physical address
   const requestRealLocation = useCallback(async () => {
@@ -1279,11 +1417,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         activeTab,
         setActiveTab,
+        goBack,
+        canGoBack,
         location,
         setLocation,
         isLocationModalOpen,
-        openLocationModal: () => setIsLocationModalOpen(true),
-        closeLocationModal: () => setIsLocationModalOpen(false),
+        openLocationModal,
+        closeLocationModal,
         isLocationPermissionModalOpen,
         openLocationPermissionModal: () => setIsLocationPermissionModalOpen(true),
         closeLocationPermissionModal: () => setIsLocationPermissionModalOpen(false),
@@ -1317,8 +1457,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         removeFriend,
         isFriend,
         isContactAdminModalOpen,
-        openContactAdminModal: () => setIsContactAdminModalOpen(true),
-        closeContactAdminModal: () => setIsContactAdminModalOpen(false),
+        openContactAdminModal,
+        closeContactAdminModal,
         isAdmin,
         setIsAdmin: safeSetIsAdmin,
         currentUser,
@@ -1328,8 +1468,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         loginWithEmail,
         logoutFirebase,
         isLoginModalOpen,
-        openLoginModal: () => setIsLoginModalOpen(true),
-        closeLoginModal: () => setIsLoginModalOpen(false),
+        openLoginModal,
+        closeLoginModal,
       }}
     >
       {children}

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BroadcastProvider, useBroadcast } from './context/BroadcastContext';
-import { CommunityProvider, useCommunity } from './context/CommunityContext';
+import { CommunityProvider, useCommunity, VALID_TABS } from './context/CommunityContext';
+import { Tab } from './types';
 import { Volume2, X } from 'lucide-react';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
 import { PWAInstallBanner } from './components/pwa/PWAInstallBanner';
@@ -44,9 +45,26 @@ function AppContent() {
     openedPost,
     closePostDetail,
     isContactAdminModalOpen,
-    closeContactAdminModal
+    closeContactAdminModal,
+    isLocationModalOpen,
+    closeLocationModal,
+    isLocationPermissionModalOpen,
+    closeLocationPermissionModal,
+    isLoginModalOpen,
+    closeLoginModal,
+    showToast,
+    goBack
   } = useCommunity();
-  const { isTestingLocalAdmin, stopLocalDeviceTest } = useBroadcast();
+  const {
+    isTestingLocalAdmin,
+    stopLocalDeviceTest,
+    isAdminModalOpen,
+    setOpenAdminModal,
+    isSignalTestModalOpen,
+    setOpenSignalTestModal,
+    activeTestSignal,
+    dismissTestSignal
+  } = useBroadcast();
 
   // Local modal states
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
@@ -59,15 +77,207 @@ function AppContent() {
   const [reportAlertCoords, setReportAlertCoords] = useState<{ lat?: number; lng?: number; address?: string } | undefined>();
 
   const openReportAlert = (coords?: { lat?: number; lng?: number; address?: string }) => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ type: 'modal', modal: 'reportAlert', tab: activeTab }, '', '#' + activeTab + '?modal=reportAlert');
+    }
     setReportAlertCoords(coords);
     setIsReportAlertModalOpen(true);
   };
 
+  const closeReportAlert = () => {
+    setIsReportAlertModalOpen(false);
+    setReportAlertCoords(undefined);
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'reportAlert') {
+      window.history.back();
+    }
+  };
+
   const openCreatePostWith = (mode: 'camera' | 'gallery' | 'video' | 'standard' = 'standard', images: string[] = []) => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ type: 'modal', modal: 'createPost', tab: activeTab }, '', '#' + activeTab + '?modal=createPost');
+    }
     setCreatePostInitialMode(mode);
     setCreatePostInitialImages(images);
     setIsCreatePostModalOpen(true);
   };
+
+  const closeCreatePost = () => {
+    setIsCreatePostModalOpen(false);
+    setCreatePostInitialImages([]);
+    setCreatePostInitialMode('standard');
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'createPost') {
+      window.history.back();
+    }
+  };
+
+  const openCreateMarket = () => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ type: 'modal', modal: 'createMarket', tab: activeTab }, '', '#' + activeTab + '?modal=createMarket');
+    }
+    setIsCreateMarketModalOpen(true);
+  };
+
+  const closeCreateMarket = () => {
+    setIsCreateMarketModalOpen(false);
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'createMarket') {
+      window.history.back();
+    }
+  };
+
+  const openNotifModal = () => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ type: 'modal', modal: 'notifications', tab: activeTab }, '', '#' + activeTab + '?modal=notifications');
+    }
+    setIsNotifModalOpen(true);
+  };
+
+  const closeNotifModal = () => {
+    setIsNotifModalOpen(false);
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'notifications') {
+      window.history.back();
+    }
+  };
+
+  const openInstantCamera = () => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ type: 'modal', modal: 'camera', tab: activeTab }, '', '#' + activeTab + '?modal=camera');
+    }
+    setIsInstantCameraOpen(true);
+  };
+
+  const closeInstantCamera = () => {
+    setIsInstantCameraOpen(false);
+    if (typeof window !== 'undefined' && window.history.state?.type === 'modal' && window.history.state?.modal === 'camera') {
+      window.history.back();
+    }
+  };
+
+  const lastBackPressRef = useRef(0);
+
+  // Global browser back and hardware back button listener
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const currentHash = window.location.hash.replace(/^#/, '').split('?')[0];
+      const initialTab = VALID_TABS.includes(currentHash as Tab) ? (currentHash as Tab) : activeTab || 'home';
+      
+      // Guard base state
+      if (!window.history.state) {
+        window.history.replaceState({ type: 'tab', tab: initialTab, isBase: true }, '', '#' + initialTab);
+        window.history.pushState({ type: 'tab', tab: initialTab, isRoot: true }, '', '#' + initialTab);
+      }
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      // 1. Check if any modal is currently open and close the active one
+      if (activeTestSignal) {
+        dismissTestSignal();
+        return;
+      }
+      if (isSignalTestModalOpen) {
+        setOpenSignalTestModal(false);
+        return;
+      }
+      if (isAdminModalOpen) {
+        setOpenAdminModal(false);
+        return;
+      }
+      if (isInstantCameraOpen) {
+        setIsInstantCameraOpen(false);
+        return;
+      }
+      if (isCreatePostModalOpen) {
+        setIsCreatePostModalOpen(false);
+        setCreatePostInitialImages([]);
+        setCreatePostInitialMode('standard');
+        return;
+      }
+      if (isCreateMarketModalOpen) {
+        setIsCreateMarketModalOpen(false);
+        return;
+      }
+      if (isReportAlertModalOpen) {
+        setIsReportAlertModalOpen(false);
+        setReportAlertCoords(undefined);
+        return;
+      }
+      if (openedPost) {
+        closePostDetail();
+        return;
+      }
+      if (isNotifModalOpen) {
+        setIsNotifModalOpen(false);
+        return;
+      }
+      if (isLocationModalOpen) {
+        closeLocationModal();
+        return;
+      }
+      if (isLocationPermissionModalOpen) {
+        closeLocationPermissionModal();
+        return;
+      }
+      if (isContactAdminModalOpen) {
+        closeContactAdminModal();
+        return;
+      }
+      if (isLoginModalOpen) {
+        closeLoginModal();
+        return;
+      }
+
+      // 2. If NO modal is open, navigate between tabs
+      const targetTab = (event.state?.tab as Tab) || (window.location.hash.replace(/^#/, '').split('?')[0] as Tab);
+      if (targetTab && VALID_TABS.includes(targetTab)) {
+        if (targetTab !== activeTab) {
+          setActiveTab(targetTab);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+      }
+
+      // 3. Root screen reached (home with no previous tabs in app history)
+      // Prevent accidental exiting and prompt user
+      const now = Date.now();
+      if (now - lastBackPressRef.current < 2500) {
+        // Double-back within 2.5s: permit normal browser exit
+        window.history.back();
+      } else {
+        lastBackPressRef.current = now;
+        showToast('กด ย้อนกลับ อีกครั้งเพื่อออกจากแอป', 'info');
+        window.history.pushState({ type: 'tab', tab: activeTab, isRoot: true }, '', '#' + activeTab);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [
+    activeTab,
+    activeTestSignal,
+    isSignalTestModalOpen,
+    isAdminModalOpen,
+    isInstantCameraOpen,
+    isCreatePostModalOpen,
+    isCreateMarketModalOpen,
+    isReportAlertModalOpen,
+    openedPost,
+    isNotifModalOpen,
+    isLocationModalOpen,
+    isLocationPermissionModalOpen,
+    isContactAdminModalOpen,
+    isLoginModalOpen,
+    closePostDetail,
+    closeLocationModal,
+    closeLocationPermissionModal,
+    closeContactAdminModal,
+    closeLoginModal,
+    dismissTestSignal,
+    setOpenSignalTestModal,
+    setOpenAdminModal,
+    setActiveTab,
+    showToast
+  ]);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 lg:pb-8 selection:bg-blue-500 selection:text-white">
@@ -118,10 +328,10 @@ function AppContent() {
 
       {/* Global Navbar */}
       <Navbar
-        onOpenNotifications={() => setIsNotifModalOpen(true)}
+        onOpenNotifications={openNotifModal}
         onOpenCreatePost={() => openCreatePostWith('standard')}
         onOpenCreatePostWithMode={(mode, images) => openCreatePostWith(mode, images || [])}
-        onOpenInstantCamera={() => setIsInstantCameraOpen(true)}
+        onOpenInstantCamera={openInstantCamera}
       />
 
       {/* Main Content Layout */}
@@ -134,9 +344,9 @@ function AppContent() {
           {activeTab === 'home' && (
             <HomeView
               onOpenCreatePost={() => openCreatePostWith('standard')}
-              onOpenInstantCamera={() => setIsInstantCameraOpen(true)}
-              onOpenNotifications={() => setIsNotifModalOpen(true)}
-              onOpenReportAlert={() => setIsReportAlertModalOpen(true)}
+              onOpenInstantCamera={openInstantCamera}
+              onOpenNotifications={openNotifModal}
+              onOpenReportAlert={() => openReportAlert()}
             />
           )}
 
@@ -145,7 +355,7 @@ function AppContent() {
               onOpenCreatePost={() => openCreatePostWith('standard')}
               onOpenCreatePostWithMode={(mode, images) => openCreatePostWith(mode, images || [])}
               onOpenWeather={() => setActiveTab('weather')}
-              onOpenInstantCamera={() => setIsInstantCameraOpen(true)}
+              onOpenInstantCamera={openInstantCamera}
             />
           )}
 
@@ -165,7 +375,7 @@ function AppContent() {
           )}
 
           {activeTab === 'market' && (
-            <MarketView onOpenCreateItem={() => setIsCreateMarketModalOpen(true)} />
+            <MarketView onOpenCreateItem={openCreateMarket} />
           )}
 
           {activeTab === 'map' && (
@@ -183,14 +393,14 @@ function AppContent() {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <MobileNav onOpenInstantCamera={() => setIsInstantCameraOpen(true)} />
+      <MobileNav onOpenInstantCamera={openInstantCamera} />
 
       {/* Modals */}
       <InstantCameraModal
         isOpen={isInstantCameraOpen}
-        onClose={() => setIsInstantCameraOpen(false)}
+        onClose={closeInstantCamera}
         onPhotoCaptured={(mediaUrl, mediaType) => {
-          setIsInstantCameraOpen(false);
+          closeInstantCamera();
           openCreatePostWith(mediaType === 'video' ? 'video' : 'standard', [mediaUrl]);
         }}
       />
@@ -201,7 +411,7 @@ function AppContent() {
 
       <NotificationCenterModal
         isOpen={isNotifModalOpen}
-        onClose={() => setIsNotifModalOpen(false)}
+        onClose={closeNotifModal}
       />
 
       {/* Global Post Detail & Comments Modal (Triggered immediately by Notifications or Toast jump) */}
@@ -219,24 +429,17 @@ function AppContent() {
         isOpen={isCreatePostModalOpen}
         initialMode={createPostInitialMode}
         initialImages={createPostInitialImages}
-        onClose={() => {
-          setIsCreatePostModalOpen(false);
-          setCreatePostInitialImages([]);
-          setCreatePostInitialMode('standard');
-        }}
+        onClose={closeCreatePost}
       />
 
       <CreateMarketItemModal
         isOpen={isCreateMarketModalOpen}
-        onClose={() => setIsCreateMarketModalOpen(false)}
+        onClose={closeCreateMarket}
       />
 
       <ReportAlertModal
         isOpen={isReportAlertModalOpen}
-        onClose={() => {
-          setIsReportAlertModalOpen(false);
-          setReportAlertCoords(undefined);
-        }}
+        onClose={closeReportAlert}
         initialCoords={reportAlertCoords?.lat && reportAlertCoords?.lng ? { lat: reportAlertCoords.lat, lng: reportAlertCoords.lng } : undefined}
         initialAddress={reportAlertCoords?.address}
       />

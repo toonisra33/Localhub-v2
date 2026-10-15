@@ -8,7 +8,8 @@ import {
   MapPin,
   Tag,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  ArrowLeft
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { MarketItem } from '../../types';
@@ -18,7 +19,7 @@ interface MarketViewProps {
 }
 
 export const MarketView: React.FC<MarketViewProps> = ({ onOpenCreateItem }) => {
-  const { marketItems, likeMarketItem, location, showToast } = useCommunity();
+  const { marketItems, likeMarketItem, location, showToast, goBack } = useCommunity();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -56,13 +57,24 @@ export const MarketView: React.FC<MarketViewProps> = ({ onOpenCreateItem }) => {
           </p>
         </div>
 
-        <button
-          onClick={onOpenCreateItem}
-          className="px-4 py-2.5 bg-white text-emerald-900 hover:bg-emerald-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          ลงขายสินค้าฟรี
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={goBack}
+            className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 border border-white/20 transition active:scale-95"
+            title="ย้อนกลับ"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>ย้อนกลับ</span>
+          </button>
+
+          <button
+            onClick={onOpenCreateItem}
+            className="px-4 py-2.5 bg-white text-emerald-900 hover:bg-emerald-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            ลงขายสินค้าฟรี
+          </button>
+        </div>
       </div>
 
       {/* Filters and search */}
