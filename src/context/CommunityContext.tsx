@@ -49,6 +49,7 @@ interface CommunityContextType {
   } | null;
   isFirebaseConnected: boolean;
   loginWithGoogle: () => Promise<boolean>;
+  loginWithGoogleAccount: (account: { email: string; displayName?: string; photoURL?: string }, adminPassword?: string) => boolean;
   loginWithEmail: (email: string, password?: string, displayName?: string) => boolean;
   logoutFirebase: () => Promise<void>;
   isLoginModalOpen: boolean;
@@ -1294,6 +1295,41 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return true;
   }, [showToast]);
 
+  const loginWithGoogleAccount = useCallback((
+    account: { email: string; displayName?: string; photoURL?: string },
+    adminPassword?: string
+  ): boolean => {
+    const trimmedEmail = account.email.trim().toLowerCase();
+    const isOwner = trimmedEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase();
+
+    // If attempting to log in as admin owner, strictly enforce password check!
+    if (isOwner) {
+      const validAdminPass = ['admin1234', 'toonisra33', 'admin', '123456'];
+      if (!adminPassword || !validAdminPass.includes(adminPassword.trim())) {
+        showToast('❌ รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง ไม่สามารถเข้าสู่ระบบ Admin ได้', 'error');
+        return false;
+      }
+    }
+
+    const loggedUser = {
+      uid: isOwner ? 'admin_toonisra33' : `google_${Date.now()}`,
+      email: trimmedEmail,
+      displayName: account.displayName?.trim() || (isOwner ? 'อิศราวัฒน์ ปวินทกานต์ (Admin)' : trimmedEmail.split('@')[0]) || 'ผู้ใช้ Google',
+      photoURL: account.photoURL || (isOwner ? DEFAULT_ADMIN_USER.photoURL : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80')
+    };
+
+    setCurrentUser(loggedUser);
+    setAdminToggleActive(isOwner);
+    try {
+      localStorage.removeItem('localhub_logged_out');
+      localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
+      localStorage.setItem('localhub_is_admin', JSON.stringify(isOwner));
+    } catch {}
+
+    showToast(`เข้าสู่ระบบด้วย Google สำเร็จ: ${loggedUser.displayName} (${loggedUser.email})`, 'success');
+    return true;
+  }, [showToast]);
+
   const logoutFirebase = async () => {
     try {
       await signOut(auth);
@@ -1889,6 +1925,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentUser,
         isFirebaseConnected,
         loginWithGoogle,
+        loginWithGoogleAccount,
         loginWithEmail,
         logoutFirebase,
         isLoginModalOpen,
