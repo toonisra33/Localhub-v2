@@ -52,6 +52,7 @@ import {
 import { useBroadcast } from '../../context/BroadcastContext';
 import { useCommunity, ORIGINAL_ADMIN_EMAIL } from '../../context/CommunityContext';
 import { TestSoundType, AdminBroadcast, Post, AlertReport } from '../../types';
+import { NotificationActivationBanner } from '../NotificationActivationBanner';
 import {
   isVibrationSupported,
   getNotificationPermission,
@@ -573,6 +574,9 @@ export const AdminDashboardView: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Notification Status & Test Bar (เฉพาะสิทธิ์ Admin ในแดชบอร์ดเท่านั้น) */}
+      <NotificationActivationBanner />
 
       {/* 3. Comprehensive Application Metrics Overview (รวมข้อมูลทั้งหมดของ application พร้อมจำนวนบัญชีผู้ใช้งานทั้งหมด) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

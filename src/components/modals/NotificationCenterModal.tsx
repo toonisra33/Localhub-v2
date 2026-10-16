@@ -124,30 +124,32 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           </div>
         </div>
 
-        {/* Real Web Notification Direct Trigger Bar */}
-        <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-indigo-900 font-bold">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span>ทดสอบระบบแจ้งเตือนเข้าเครื่องจริง</span>
+        {/* Real Web Notification Direct Trigger Bar (เฉพาะแอดมินเท่านั้น) */}
+        {isAdmin && (
+          <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-indigo-900 font-bold">
+              <Sparkles className="w-4 h-4 text-indigo-600" />
+              <span>ทดสอบระบบแจ้งเตือนเข้าเครื่องจริง (เฉพาะ Admin)</span>
+            </div>
+            <button
+              onClick={async () => {
+                playSynthesizedAlarm('announcement', 3);
+                triggerDeviceVibration([300, 100, 300]);
+                await sendSystemNotification({
+                  title: '🚨 LocalHub ทดสอบแจ้งเตือนเรียลไทม์',
+                  message: 'ระบบแจ้งเตือนพร้อมทำงานสมบูรณ์แบบบนอุปกรณ์ของคุณแล้ว!',
+                  type: 'broadcast',
+                  severity: 'urgent'
+                });
+                showToast('🔔 ยิงการแจ้งเตือนจริงไปยังอุปกรณ์เรียบร้อยแล้ว!', 'success');
+              }}
+              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>ยิงแจ้งเตือนทันที</span>
+            </button>
           </div>
-          <button
-            onClick={async () => {
-              playSynthesizedAlarm('announcement', 3);
-              triggerDeviceVibration([300, 100, 300]);
-              await sendSystemNotification({
-                title: '🚨 LocalHub ทดสอบแจ้งเตือนเรียลไทม์',
-                message: 'ระบบแจ้งเตือนพร้อมทำงานสมบูรณ์แบบบนอุปกรณ์ของคุณแล้ว!',
-                type: 'broadcast',
-                severity: 'urgent'
-              });
-              showToast('🔔 ยิงการแจ้งเตือนจริงไปยังอุปกรณ์เรียบร้อยแล้ว!', 'success');
-            }}
-            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
-          >
-            <Bell className="w-3.5 h-3.5" />
-            <span>ยิงแจ้งเตือนทันที</span>
-          </button>
-        </div>
+        )}
 
         {/* Notification List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5">

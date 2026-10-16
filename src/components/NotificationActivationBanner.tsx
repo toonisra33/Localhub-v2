@@ -59,36 +59,40 @@ export const NotificationActivationBanner: React.FC = () => {
 
   if (isDismissed) return null;
 
-  // If permission is already granted, render a subtle status bar or test trigger
+  // If permission is already granted, render a status bar or test trigger
   if (permission === 'granted') {
     return (
-      <div className="bg-emerald-900/90 text-white px-3 py-1.5 text-xs flex items-center justify-between border-b border-emerald-700">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="p-1 bg-emerald-500 text-white rounded-md shrink-0">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </span>
-            <span className="text-[11px] font-semibold text-emerald-100">
-              ระบบแจ้งเตือนฉุกเฉิน & บรอดแคสต์เปิดใช้งานแล้ว (เรียลไทม์ทุกอุปกรณ์)
-            </span>
+      <div className="bg-emerald-900/90 text-white px-4 py-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-emerald-700 shadow-md">
+        <div className="flex items-center gap-2.5">
+          <span className="p-1.5 bg-emerald-500 text-white rounded-xl shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </span>
+          <div>
+            <div className="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>ระบบแจ้งเตือนฉุกเฉิน & บรอดแคสต์เปิดใช้งานแล้ว (เรียลไทม์ทุกอุปกรณ์)</span>
+              <span className="px-1.5 py-0.2 bg-emerald-500/30 text-emerald-300 text-[10px] rounded-md border border-emerald-500/40 font-bold">เฉพาะ Admin</span>
+            </div>
+            <p className="text-[11px] text-emerald-200">
+              สถานะพร้อมกระจายสัญญาณเตือนภัยฉุกเฉินและข้อความบรอดแคสต์ไปยังผู้ใช้งานทุกคน
+            </p>
           </div>
-
-          <button
-            onClick={handleTestNotification}
-            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-lg text-[10px] font-extrabold flex items-center gap-1 transition shadow-xs shrink-0"
-            title="ทดสอบยิงการแจ้งเตือนจริงมาที่หน้าจอ"
-          >
-            <BellRing className="w-3 h-3 animate-bounce" />
-            <span>ทดสอบยิงแจ้งเตือนจริง</span>
-          </button>
         </div>
+
+        <button
+          onClick={handleTestNotification}
+          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer"
+          title="ทดสอบยิงการแจ้งเตือนจริงมาที่หน้าจอ"
+        >
+          <BellRing className="w-3.5 h-3.5 animate-bounce" />
+          <span>ทดสอบยิงแจ้งเตือนจริง</span>
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-indigo-700 text-white px-3 sm:px-4 py-2.5 shadow-md border-b-2 border-red-700 animate-fadeIn">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-indigo-700 text-white px-4 py-3.5 rounded-2xl shadow-md border border-red-700 animate-fadeIn">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           <span className="p-2 bg-white/20 rounded-xl backdrop-blur-xs animate-pulse shrink-0">
             <Bell className="w-5 h-5 text-yellow-300" />
@@ -97,11 +101,11 @@ export const NotificationActivationBanner: React.FC = () => {
             <div className="text-xs sm:text-sm font-black tracking-tight text-white flex items-center gap-1.5">
               <span>เปิดรับการแจ้งเตือนฉุกเฉิน & บรอดแคสต์เรียลไทม์</span>
               <span className="px-1.5 py-0.2 bg-yellow-400 text-slate-950 text-[10px] font-extrabold rounded-md shadow-xs">
-                สำคัญ
+                เฉพาะ Admin
               </span>
             </div>
             <p className="text-[11px] text-white/90">
-              กดอนุญาตเพื่อให้แอปสามารถยิงสัญญาณเตือนภัย เสียงไซเรน และข่าวสารด่วนขึ้นหน้าจอได้จริง
+              กดอนุญาตเพื่อให้แอดมินสามารถยิงสัญญาณเตือนภัย เสียงไซเรน และข่าวสารด่วนขึ้นหน้าจอได้จริง
             </p>
           </div>
         </div>
@@ -110,17 +114,10 @@ export const NotificationActivationBanner: React.FC = () => {
           <button
             onClick={handleEnableNotification}
             disabled={isRequesting}
-            className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-yellow-500/30 transition flex items-center gap-1.5 disabled:opacity-50"
+            className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-yellow-500/30 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <BellRing className="w-4 h-4 text-slate-950" />
             <span>{isRequesting ? 'กำลังขอสิทธิ์...' : 'เปิดรับการแจ้งเตือนทันที'}</span>
-          </button>
-
-          <button
-            onClick={() => setIsDismissed(true)}
-            className="text-[11px] text-white/70 hover:text-white px-2 py-1 rounded-lg"
-          >
-            ภายหลัง
           </button>
         </div>
       </div>

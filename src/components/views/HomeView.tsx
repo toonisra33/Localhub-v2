@@ -59,8 +59,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white rounded-3xl p-4 sm:p-5 shadow-xl border border-slate-800">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-emerald-500/20">
-              <span className="text-xl">🏠</span>
+            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg shadow-blue-900/30 shrink-0 bg-blue-950 flex items-center justify-center border border-white/10">
+              <img
+                src="/icon.svg"
+                alt="LocalHub"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/apple-touch-icon.png';
+                }}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">

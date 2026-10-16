@@ -48,9 +48,8 @@ interface CommunityContextType {
     photoURL: string | null;
   } | null;
   isFirebaseConnected: boolean;
-  loginWithGoogle: () => Promise<void>;
-  loginAsAdminOwner: () => void;
-  loginWithEmail: (email: string, displayName?: string, asAdmin?: boolean) => void;
+  loginWithGoogle: () => Promise<boolean>;
+  loginWithEmail: (email: string, password?: string, displayName?: string) => boolean;
   logoutFirebase: () => Promise<void>;
   isLoginModalOpen: boolean;
   openLoginModal: () => void;
@@ -644,13 +643,20 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const isLoggedOut = localStorage.getItem('localhub_logged_out');
       if (isLoggedOut === 'true') return false;
-      const stored = localStorage.getItem('localhub_is_admin');
-      if (stored !== null) return JSON.parse(stored);
+      const storedUser = localStorage.getItem('localhub_user');
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        if (u?.email && u.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()) {
+          const stored = localStorage.getItem('localhub_is_admin');
+          if (stored !== null) return JSON.parse(stored);
+          return true;
+        }
+      }
     } catch {}
-    return true; // Default to true for owner toonisra33@gmail.com
+    return false; // Default: Visitor / Not Admin!
   });
 
-  // Firebase state
+  // Firebase state (Default: null - Guest / Visitor mode)
   const [currentUser, setCurrentUser] = useState<{
     uid: string;
     email: string | null;
@@ -661,9 +667,12 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const isLoggedOut = localStorage.getItem('localhub_logged_out');
       if (isLoggedOut === 'true') return null;
       const stored = localStorage.getItem('localhub_user');
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u && u.email) return u;
+      }
     } catch {}
-    return DEFAULT_ADMIN_USER; // Default to verified owner
+    return null; // Default to null (Guest / Visitor mode)
   });
 
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
@@ -1152,18 +1161,31 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
       if (user && !user.isAnonymous) {
+        const userEmail = user.email?.toLowerCase().trim();
         const isOriginalAdmin = Boolean(
-          user.email && user.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
+          userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase()
         );
-        setCurrentUser({
+        const loggedUser = {
           uid: user.uid,
           email: user.email,
           displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน',
-          photoURL: user.photoURL || DEFAULT_ADMIN_USER.photoURL,
-        });
-        setIsAdmin(isOriginalAdmin || true);
+          photoURL: user.photoURL || null,
+        };
+        setCurrentUser(loggedUser);
+        setIsAdmin(isOriginalAdmin);
+        try {
+          localStorage.removeItem('localhub_logged_out');
+          localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
+          localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
+        } catch {}
       } else {
-        // Ensure anonymous auth token for Firestore read/writes
+        // Unauthenticated or anonymous session
+        const stored = localStorage.getItem('localhub_user');
+        if (!stored) {
+          setCurrentUser(null);
+          setIsAdmin(false);
+        }
+        // Ensure anonymous auth token for Firestore read/writes if not logged in
         signInAnonymously(auth).catch((e) => {
           console.warn('Anonymous auth note:', e);
         });
@@ -1172,18 +1194,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => unsub();
   }, []);
 
-  const loginAsAdminOwner = useCallback(() => {
-    setCurrentUser(DEFAULT_ADMIN_USER);
-    setIsAdmin(true);
-    try {
-      localStorage.removeItem('localhub_logged_out');
-      localStorage.setItem('localhub_user', JSON.stringify(DEFAULT_ADMIN_USER));
-      localStorage.setItem('localhub_is_admin', 'true');
-    } catch {}
-    showToast(`เข้าสู่ระบบในฐานะผู้ดูแลระบบ: ${ORIGINAL_ADMIN_EMAIL}`, 'success');
-  }, [showToast]);
-
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (): Promise<boolean> => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
@@ -1194,43 +1205,64 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         uid: user.uid,
         email: user.email,
         displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน',
-        photoURL: user.photoURL || DEFAULT_ADMIN_USER.photoURL,
+        photoURL: user.photoURL || null,
       };
       setCurrentUser(loggedIn);
-      setIsAdmin(isOriginalAdmin || true);
+      setIsAdmin(isOriginalAdmin);
       try {
         localStorage.removeItem('localhub_logged_out');
         localStorage.setItem('localhub_user', JSON.stringify(loggedIn));
-        localStorage.setItem('localhub_is_admin', isOriginalAdmin ? 'true' : 'false');
+        localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
       } catch {}
       showToast(`เข้าสู่ระบบสำเร็จ: ${loggedIn.displayName} (${loggedIn.email})`, 'success');
+      return true;
     } catch (err: any) {
-      console.warn('Google sign-in popup notice:', err);
-      loginAsAdminOwner();
+      console.warn('Google sign-in popup error:', err);
+      // NEVER promote to admin on failure!
+      if (err?.code === 'auth/popup-closed-by-user') {
+        showToast('คุณได้ปิดหน้าต่างเข้าสู่ระบบ Google', 'info');
+      } else if (err?.code === 'auth/cancelled-popup-request') {
+        showToast('การเปิดหน้าต่างเข้าสู่ระบบถูกยกเลิก', 'info');
+      } else if (err?.code === 'auth/popup-blocked') {
+        showToast('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป โปรดอนุญาตป๊อปอัปหรือเข้าสู่ระบบด้วยอีเมล', 'error');
+      } else if (err?.code === 'auth/unauthorized-domain') {
+        showToast('โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Auth โปรดเข้าสู่ระบบด้วยอีเมล', 'error');
+      } else {
+        showToast('ไม่สามารถเปิดหน้าต่าง Google ได้ โปรดเข้าสู่ระบบด้วยอีเมลและรหัสผ่านด้านล่าง', 'error');
+      }
+      return false;
     }
   };
 
-  const loginWithEmail = useCallback((email: string, displayName?: string, asAdmin?: boolean) => {
+  const loginWithEmail = useCallback((email: string, password?: string, displayName?: string): boolean => {
     const trimmedEmail = email.trim().toLowerCase();
     const isOwner = trimmedEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase();
-    const userRoleAdmin = asAdmin !== undefined ? asAdmin : isOwner;
+
+    // If attempting to log in as admin owner, enforce password check
+    if (isOwner) {
+      if (!password || password.trim().length < 4) {
+        showToast('กรุณาระบุรหัสผ่านเพื่อเข้าสู่ระบบผู้ดูแลระบบ', 'error');
+        return false;
+      }
+    }
 
     const loggedUser = {
       uid: isOwner ? 'admin_toonisra33' : `user_${Date.now()}`,
       email: trimmedEmail,
-      displayName: displayName?.trim() || (isOwner ? DEFAULT_ADMIN_USER.displayName : trimmedEmail.split('@')[0]) || 'ผู้ใช้งาน LocalHub',
+      displayName: displayName?.trim() || (isOwner ? 'อิศราวัฒน์ ปวินทกานต์ (Admin)' : trimmedEmail.split('@')[0]) || 'สมาชิก LocalHub',
       photoURL: isOwner ? DEFAULT_ADMIN_USER.photoURL : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
     };
 
     setCurrentUser(loggedUser);
-    setIsAdmin(userRoleAdmin);
+    setIsAdmin(isOwner);
     try {
       localStorage.removeItem('localhub_logged_out');
       localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
-      localStorage.setItem('localhub_is_admin', JSON.stringify(userRoleAdmin));
+      localStorage.setItem('localhub_is_admin', JSON.stringify(isOwner));
     } catch {}
 
     showToast(`เข้าสู่ระบบสำเร็จ: ${loggedUser.displayName} (${loggedUser.email})`, 'success');
+    return true;
   }, [showToast]);
 
   const logoutFirebase = async () => {
@@ -1246,13 +1278,23 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.removeItem('localhub_user');
       localStorage.setItem('localhub_is_admin', 'false');
     } catch {}
-    showToast('ออกจากระบบเรียบร้อยแล้ว (โหมดผู้เยี่ยมชม)', 'info');
+    setActiveTab('home'); // Ensure jumping to home page, never staying on admin
+    showToast('ออกจากระบบเรียบร้อยแล้ว (เข้าสู่โหมดผู้เยี่ยมชม)', 'info');
   };
 
   const safeSetIsAdmin = useCallback((val: boolean) => {
     if (val) {
-      if (!currentUser || !currentUser.email) {
-        setCurrentUser(DEFAULT_ADMIN_USER);
+      const isOwner = Boolean(
+        currentUser?.email &&
+        currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
+      );
+      if (!isOwner) {
+        showToast('เฉพาะบัญชีผู้ดูแลระบบ (toonisra33@gmail.com) เท่านั้นที่มีสิทธิ์เข้าถึงระบบ Admin', 'error');
+        setIsAdmin(false);
+        try {
+          localStorage.setItem('localhub_is_admin', 'false');
+        } catch {}
+        return;
       }
       setIsAdmin(true);
       try {
@@ -1264,7 +1306,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         localStorage.setItem('localhub_is_admin', 'false');
       } catch {}
-      showToast('ปิดโหมดผู้ดูแลระบบ (สมาชิกทั่วไป)', 'info');
+      showToast('สลับเข้าสู่มุมมองสมาชิกทั่วไป', 'info');
     }
   }, [currentUser, showToast]);
 
@@ -1813,7 +1855,6 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentUser,
         isFirebaseConnected,
         loginWithGoogle,
-        loginAsAdminOwner,
         loginWithEmail,
         logoutFirebase,
         isLoginModalOpen,

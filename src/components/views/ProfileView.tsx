@@ -60,8 +60,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     createPost,
     isCurrentAccountInactiveWarning,
     currentAccountDaysRemaining,
-    confirmActiveStatus,
-    simulateInactivity
+    confirmActiveStatus
   } = useCommunity();
 
   // Profile Sub-tab: 'posts' | 'alerts' | 'friends' | 'album'
@@ -362,18 +361,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
         </div>
       )}
 
-      {/* Simulator Test Bar for easy verification */}
-      <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between text-xs text-slate-600">
-        <div className="flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px]">สถานะการเคลื่อนไหวบัญชี: <strong>{isCurrentAccountInactiveWarning ? `⚠️ ไม่เคลื่อนไหวเกิน 3 เดือน (เหลือ ${currentAccountDaysRemaining} วัน)` : '🟢 ปกติ (Active)'}</strong></span>
+      {/* Real Account Status Bar (ระบบใช้งานจริง) */}
+      <div className="p-3 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between text-xs text-slate-600 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <span className={`w-2.5 h-2.5 rounded-full ${isCurrentAccountInactiveWarning ? 'bg-amber-500 animate-bounce' : 'bg-emerald-500 animate-pulse'} shrink-0`} />
+          <span className="text-xs">
+            สถานะการใช้งานบัญชี: <strong className={isCurrentAccountInactiveWarning ? 'text-amber-700 font-bold' : 'text-emerald-700 font-bold'}>
+              {isCurrentAccountInactiveWarning
+                ? `⚠️ แจ้งเตือนไม่เคลื่อนไหวเกิน 3 เดือน (เหลือเวลา ${currentAccountDaysRemaining} วัน)`
+                : '🟢 บัญชีปกติ (Active - มีการเข้าใช้งานและเคลื่อนไหวสม่ำเสมอ)'}
+            </strong>
+          </span>
         </div>
-        <button
-          onClick={() => simulateInactivity(!isCurrentAccountInactiveWarning)}
-          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-1 cursor-pointer"
-        >
-          <span>{isCurrentAccountInactiveWarning ? '🔄 คืนค่าปกติ' : '🧪 ทดสอบจำลองไม่เคลื่อนไหว 3 เดือน'}</span>
-        </button>
+        <div className="text-[11px] text-slate-400 font-medium hidden sm:block">
+          ระบบความปลอดภัย LocalHub
+        </div>
       </div>
 
       {/* 1. Profile Header Card (ไม่มีตัวจับพิกัด GPS ตามที่สั่ง) */}

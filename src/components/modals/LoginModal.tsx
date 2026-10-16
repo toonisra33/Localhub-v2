@@ -19,7 +19,6 @@ export const LoginModal: React.FC = () => {
     closeLoginModal,
     currentUser,
     isAdmin,
-    loginAsAdminOwner,
     loginWithGoogle,
     loginWithEmail,
     logoutFirebase,
@@ -36,8 +35,10 @@ export const LoginModal: React.FC = () => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
-      closeLoginModal();
+      const success = await loginWithGoogle();
+      if (success) {
+        closeLoginModal();
+      }
     } catch {
       // error handled in loginWithGoogle
     } finally {
@@ -57,8 +58,10 @@ export const LoginModal: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      loginWithEmail(emailInput.trim(), nameInput.trim() || undefined);
-      closeLoginModal();
+      const ok = loginWithEmail(emailInput.trim(), passwordInput.trim(), nameInput.trim() || undefined);
+      if (ok) {
+        closeLoginModal();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -217,11 +220,15 @@ export const LoginModal: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 active:scale-95"
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
-                <span>เข้าสู่ระบบปกติ</span>
+                <span>เข้าสู่ระบบ</span>
               </button>
+
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 leading-relaxed">
+                🛡️ <strong>ความปลอดภัย:</strong> สิทธิ์แอดมิน (Admin) สงวนไว้สำหรับ <strong>{ORIGINAL_ADMIN_EMAIL}</strong> พร้อมรหัสผ่านเท่านั้น ผู้ใช้งานทั่วไปจะเข้าสู่ระบบเป็นสมาชิกปกติ
+              </div>
             </form>
           </div>
         </div>

@@ -5,7 +5,6 @@ import { Tab } from './types';
 import { Volume2, X } from 'lucide-react';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
 import { PWAInstallBanner } from './components/pwa/PWAInstallBanner';
-import { NotificationActivationBanner } from './components/NotificationActivationBanner';
 import { Navbar } from './components/Navbar';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { MobileNav } from './components/MobileNav';
@@ -53,7 +52,8 @@ function AppContent() {
     isLoginModalOpen,
     closeLoginModal,
     showToast,
-    goBack
+    goBack,
+    isAdmin
   } = useCommunity();
   const {
     isTestingLocalAdmin,
@@ -281,8 +281,8 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 lg:pb-8 selection:bg-blue-500 selection:text-white">
-      {/* Floating Local Admin Test Status Pill */}
-      {isTestingLocalAdmin && (
+      {/* Floating Local Admin Test Status Pill (Admin Only) */}
+      {isAdmin && isTestingLocalAdmin && (
         <aside
           aria-label="สถานะการทดสอบสัญญาณ"
           className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-md px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-emerald-500/60 flex items-center justify-between gap-2 sm:gap-3 backdrop-blur-md animate-bounce-subtle"
@@ -316,9 +316,6 @@ function AppContent() {
 
       {/* PWA Mobile Installation Banner & Guide */}
       <PWAInstallBanner />
-
-      {/* Push Notification Activation & Test Banner */}
-      <NotificationActivationBanner />
 
       {/* Top Emergency & Announcement Broadcast Banner */}
       <AdminBroadcastBanner />
@@ -388,7 +385,25 @@ function AppContent() {
           )}
 
           {activeTab === 'admin' && (
-            <AdminDashboardView />
+            isAdmin ? (
+              <AdminDashboardView />
+            ) : (
+              <div className="bg-white rounded-3xl p-8 text-center space-y-3 border border-slate-200 shadow-sm max-w-md mx-auto my-12">
+                <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+                  🛡️
+                </div>
+                <h3 className="text-base font-black text-slate-800">ไม่มีสิทธิ์เข้าถึงหน้านี้</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  แดชบอร์ดนี้สำหรับผู้ดูแลระบบ (toonisra33@gmail.com) เท่านั้น ผู้ใช้งานทั่วไปไม่สามารถเข้าถึงได้
+                </p>
+                <button
+                  onClick={() => setActiveTab('home')}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  กลับหน้าหลัก
+                </button>
+              </div>
+            )
           )}
         </section>
       </main>
@@ -405,8 +420,8 @@ function AppContent() {
           openCreatePostWith(mediaType === 'video' ? 'video' : 'standard', [mediaUrl]);
         }}
       />
-      <AllDevicesTestAlertModal />
-      <AdminSignalTestModal />
+      {isAdmin && <AllDevicesTestAlertModal />}
+      {isAdmin && <AdminSignalTestModal />}
       <AdminBroadcastModal />
       <LoginModal />
 

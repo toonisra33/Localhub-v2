@@ -21,7 +21,7 @@ interface PWAInstallGuideModalProps {
 
 export const PWAInstallGuideModal: React.FC<PWAInstallGuideModalProps> = ({ isOpen, onClose }) => {
   const { isInstallable, install, isInstalled, isIOS, isAndroid } = usePWAInstall();
-  const { showToast } = useCommunity();
+  const { showToast, isAdmin } = useCommunity();
 
   if (!isOpen) return null;
 
@@ -139,16 +139,18 @@ export const PWAInstallGuideModal: React.FC<PWAInstallGuideModalProps> = ({ isOp
             </div>
           )}
 
-          {/* Test System Notification Button */}
-          <div className="pt-2 border-t border-slate-200">
-            <button
-              onClick={handleTestNotification}
-              className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition"
-            >
-              <Bell className="w-4 h-4 text-amber-400" />
-              ทดสอบส่งการแจ้งเตือนไปยังหน้าจอมือถือเดี๋ยวนี้
-            </button>
-          </div>
+          {/* Test System Notification Button (Admin Only) */}
+          {isAdmin && (
+            <div className="pt-2 border-t border-slate-200">
+              <button
+                onClick={handleTestNotification}
+                className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition"
+              >
+                <Bell className="w-4 h-4 text-amber-400" />
+                ทดสอบส่งการแจ้งเตือนไปยังหน้าจอมือถือ (เฉพาะ Admin)
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
