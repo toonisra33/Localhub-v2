@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   MapPin,
   Bell,
@@ -16,9 +16,11 @@ import {
   Store,
   ShieldCheck,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Briefcase
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
+import { JobsModal } from '../modals/JobsModal';
 
 interface HomeViewProps {
   onOpenCreatePost: () => void;
@@ -48,6 +50,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
     marketItems,
     alerts
   } = useCommunity();
+
+  const [isJobsModalOpen, setIsJobsModalOpen] = useState(false);
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto animate-fadeIn pb-12">
@@ -236,14 +240,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
-      {/* Services & Quick Actions (Matching Screenshot 3: บริการและเรื่องด่วน) */}
+      {/* Services & Quick Actions (บริการและเรื่องด่วน: 6 บริการหลักรวม ตลาด และ หางาน) */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between px-1">
           <h3 className="font-extrabold text-slate-900 text-sm">บริการและเรื่องด่วน</h3>
           <span className="text-[11px] text-slate-400">แตะเพื่อเปิดบริการ</span>
         </div>
 
-        <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2.5">
+          {/* 1. ติดต่อแอดมิน */}
           <button
             onClick={openContactAdminModal}
             className="p-1.5 sm:p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
@@ -254,6 +259,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">ติดต่อแอดมิน</span>
           </button>
 
+          {/* 2. แจ้งเหตุ */}
           <button
             onClick={() => (onOpenReportAlert ? onOpenReportAlert() : setActiveTab('alerts'))}
             className="p-1.5 sm:p-3 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
@@ -264,6 +270,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">แจ้งเหตุ</span>
           </button>
 
+          {/* 3. กินอะไรดี */}
           <button
             onClick={() => {
               showToast('เปิดรายชื่อร้านอาหารและเมนูยอดนิยมรอบตัว', 'info');
@@ -277,6 +284,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">กินอะไรดี</span>
           </button>
 
+          {/* 4. ตลาดนัด (ตลาดชุมชน) */}
           <button
             onClick={() => setActiveTab('market')}
             className="p-1.5 sm:p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
@@ -287,6 +295,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <span className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate w-full">ตลาดนัด</span>
           </button>
 
+          {/* 5. หางาน & รับสมัครงานชุมชน */}
+          <button
+            onClick={() => setIsJobsModalOpen(true)}
+            className="p-1.5 sm:p-3 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
+          >
+            <div className="p-1.5 sm:p-2 bg-blue-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-sm">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-blue-900 truncate w-full">หางาน</span>
+          </button>
+
+          {/* 6. รอบตัวฉัน */}
           <button
             onClick={() => setActiveTab('map')}
             className="p-1.5 sm:p-3 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
@@ -298,7 +318,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </button>
         </div>
       </div>
-
 
       {/* Share / Post Box */}
       <div className="p-3.5 sm:p-4 bg-white rounded-3xl border border-slate-200/90 shadow-xs flex items-center gap-3">
@@ -323,6 +342,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </button>
         )}
       </div>
+
+      {/* Local Community Jobs Modal */}
+      <JobsModal isOpen={isJobsModalOpen} onClose={() => setIsJobsModalOpen(false)} />
     </div>
   );
 };

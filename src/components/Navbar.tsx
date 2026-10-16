@@ -143,17 +143,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden md:inline">ถ่ายรูปสด</span>
           </button>
 
-          {/* Admin Dashboard Quick Button */}
+          {/* Admin Dashboard / User View Quick Switcher Button */}
           {isAdmin && (
-            <button
-              onClick={() => setActiveTab('admin')}
-              className="flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-300 rounded-xl text-xs font-black transition active:scale-95 shrink-0 shadow-2xs"
-              title="เปิดแดชบอร์ดแอดมิน & ระบบทดสอบสัญญาณ"
-            >
-              <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-              <span className="hidden sm:inline">แดชบอร์ดแอดมิน</span>
-              <span className="sm:hidden text-[11px]">แอดมิน</span>
-            </button>
+            activeTab === 'admin' ? (
+              <button
+                onClick={() => setActiveTab('home')}
+                className="flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-black transition active:scale-95 shrink-0 shadow-2xs"
+                title="สลับกลับไปมุมมองผู้ใช้งานทั่วไป (หน้าหลัก)"
+              >
+                <User className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden sm:inline">หน้าผู้ใช้งาน</span>
+                <span className="sm:hidden text-[11px]">หน้าผู้ใช้</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className="flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-300 rounded-xl text-xs font-black transition active:scale-95 shrink-0 shadow-2xs"
+                title="เปิดแดชบอร์ดแอดมิน & ระบบทดสอบสัญญาณ"
+              >
+                <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                <span className="hidden sm:inline">แดชบอร์ดแอดมิน</span>
+                <span className="sm:hidden text-[11px]">แอดมิน</span>
+              </button>
+            )
           )}
 
           {/* Notification Bell */}
@@ -170,12 +182,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* User Account / Login Button */}
+          {/* User Account / Profile Button (ไปหน้าฉัน) */}
           {currentUser && currentUser.email ? (
             <button
-              onClick={openLoginModal}
+              onClick={() => setActiveTab('profile')}
               className="flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 rounded-xl hover:bg-slate-100 transition active:scale-95 group shrink-0"
-              title={`บัญชี: ${currentUser.displayName || currentUser.email} (${isAdmin ? 'Admin' : 'User'})`}
+              title={`ไปหน้าฉัน (โปรไฟล์): ${currentUser.displayName || currentUser.email} (${isAdmin ? 'Admin' : 'User'})`}
             >
               <div className="relative">
                 <img
@@ -190,7 +202,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </div>
               <span className="text-xs font-bold text-slate-700 hidden lg:inline max-w-[80px] truncate">
-                {currentUser.displayName?.split(' ')[0] || 'บัญชี'}
+                {currentUser.displayName?.split(' ')[0] || 'หน้าฉัน'}
               </span>
             </button>
           ) : (

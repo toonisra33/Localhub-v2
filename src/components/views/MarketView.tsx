@@ -40,6 +40,7 @@ export const MarketView: React.FC<MarketViewProps> = ({ onOpenCreateItem }) => {
     { id: 'food', label: '🍱 อาหารปรุงสุก' },
     { id: 'craft', label: '🧵 งานคราฟต์' },
     { id: 'secondhand', label: '📦 มือสอง' },
+    { id: 'jobs', label: '💼 หางาน & จ้างงาน' },
   ];
 
   return (

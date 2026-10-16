@@ -23,7 +23,6 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
     { id: 'map', label: 'รอบตัว', icon: <MapPin className="w-5 h-5" /> },
     { id: 'feed', label: 'ฟีด', icon: <Users className="w-5 h-5" /> },
     { id: 'broadcasts', label: 'ศูนย์ข่าว', icon: <Newspaper className="w-5 h-5" /> },
-    { id: 'market', label: 'ตลาด', icon: <Store className="w-5 h-5" /> },
     ...(isAdmin
       ? [{ id: 'admin' as Tab, label: 'แดชบอร์ด', icon: <ShieldAlert className="w-5 h-5" /> }]
       : []),
@@ -31,14 +30,14 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-3 py-1 flex items-center justify-around shadow-lg">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-1 py-1 flex items-center justify-around shadow-lg">
       {navItems.map((item) => {
         const isActive = activeTab === item.id;
         return (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition relative group ${
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-0.5 sm:px-2 rounded-2xl transition relative group ${
               isActive ? 'text-emerald-700 font-bold' : 'text-slate-400 font-medium hover:text-slate-600'
             }`}
           >
@@ -55,7 +54,7 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
             >
               {item.icon}
             </div>
-            <span className={`text-[10px] mt-0.5 tracking-tight ${isActive ? (item.id === 'admin' ? 'text-red-700 font-bold' : 'text-emerald-700 font-bold') : 'text-slate-500 font-medium'}`}>
+            <span className={`text-[10px] sm:text-[11px] mt-0.5 tracking-tight truncate max-w-full ${isActive ? (item.id === 'admin' ? 'text-red-700 font-bold' : 'text-emerald-700 font-bold') : 'text-slate-500 font-medium'}`}>
               {item.label}
             </span>
             {isActive && (

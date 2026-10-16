@@ -625,6 +625,20 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
+
+  // Toast helper
+  const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'info', link?: string) => {
+    const id = Date.now().toString() + Math.random().toString(36).slice(2, 6);
+    setToasts(prev => [...prev, { id, message, type, link }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4500);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   const [isContactAdminModalOpen, setIsContactAdminModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     try {
@@ -706,7 +720,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } else {
         const newUser: UserAccount = {
           uid: currentUser.uid,
-          email: currentUser.email,
+          email: currentUser.email || 'user@example.com',
           displayName: currentUser.displayName || 'สมาชิกชุมชน',
           photoURL: currentUser.photoURL || undefined,
           role: isAdmin ? 'admin' : 'user',
@@ -1132,19 +1146,6 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     );
     return () => unsub();
-  }, []);
-
-  // Toast helper
-  const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'info', link?: string) => {
-    const id = Date.now().toString() + Math.random().toString(36).slice(2, 6);
-    setToasts(prev => [...prev, { id, message, type, link }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4500);
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
   // Auth Listener
