@@ -91,6 +91,7 @@ export const AdminDashboardView: React.FC = () => {
 
   const {
     isAdmin,
+    isEligibleAdmin,
     setIsAdmin,
     currentUser,
     showToast,
@@ -423,6 +424,26 @@ export const AdminDashboardView: React.FC = () => {
     if (hours < 24) return `${hours} ชม. ที่แล้ว`;
     return `${Math.floor(hours / 24)} วันที่แล้ว`;
   };
+
+  if (!isEligibleAdmin) {
+    return (
+      <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm max-w-md mx-auto my-12 space-y-4">
+        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-inner">
+          🛡️
+        </div>
+        <h2 className="text-lg font-black text-slate-800">สงวนสิทธิ์สำหรับแอดมินเท่านั้น</h2>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          แดชบอร์ดนี้สำหรับผู้ดูแลระบบ ({ORIGINAL_ADMIN_EMAIL}) เท่านั้น สมาชิกทั่วไปไม่สามารถเข้าถึงได้
+        </p>
+        <button
+          onClick={() => setActiveTab('home')}
+          className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+        >
+          กลับหน้าหลัก
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 pb-16 animate-fadeIn max-w-5xl mx-auto">

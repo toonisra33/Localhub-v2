@@ -226,7 +226,10 @@ function AppContent() {
       }
 
       // 2. If NO modal is open, navigate between tabs
-      const targetTab = (event.state?.tab as Tab) || (window.location.hash.replace(/^#/, '').split('?')[0] as Tab);
+      let targetTab = (event.state?.tab as Tab) || (window.location.hash.replace(/^#/, '').split('?')[0] as Tab);
+      if (targetTab === 'admin' && !isAdmin) {
+        targetTab = 'home';
+      }
       if (targetTab && VALID_TABS.includes(targetTab)) {
         if (targetTab !== activeTab) {
           setActiveTab(targetTab);
@@ -384,26 +387,8 @@ function AppContent() {
             <ProfileView onOpenCreatePost={() => openCreatePostWith('standard')} />
           )}
 
-          {activeTab === 'admin' && (
-            isAdmin ? (
-              <AdminDashboardView />
-            ) : (
-              <div className="bg-white rounded-3xl p-8 text-center space-y-3 border border-slate-200 shadow-sm max-w-md mx-auto my-12">
-                <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
-                  🛡️
-                </div>
-                <h3 className="text-base font-black text-slate-800">ไม่มีสิทธิ์เข้าถึงหน้านี้</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  แดชบอร์ดนี้สำหรับผู้ดูแลระบบ (toonisra33@gmail.com) เท่านั้น ผู้ใช้งานทั่วไปไม่สามารถเข้าถึงได้
-                </p>
-                <button
-                  onClick={() => setActiveTab('home')}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
-                >
-                  กลับหน้าหลัก
-                </button>
-              </div>
-            )
+          {activeTab === 'admin' && isAdmin && (
+            <AdminDashboardView />
           )}
         </section>
       </main>
