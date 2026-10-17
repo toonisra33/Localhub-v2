@@ -49,6 +49,12 @@ export interface BroadcastInput {
   expiresInMinutes?: number;
 }
 
+export interface BroadcastUserState {
+  viewedAt: number;        // Timestamp when user first opened/viewed this broadcast
+  durationMinutes: number; // Duration of countdown (defaults to 15 minutes)
+  linkClicked: boolean;    // When true, stops the 3-minute recurring audio alarm
+}
+
 interface BroadcastContextType {
   broadcasts: AdminBroadcast[];
   activeBroadcast: AdminBroadcast | null;
@@ -63,6 +69,13 @@ interface BroadcastContextType {
   setSoundEnabled: (val: boolean) => void;
   playSoundAlert: (severity?: BroadcastSeverity) => void;
   deleteBroadcast: (id: string) => void;
+
+  // Restored 15-minute countdown & 3-minute audio alert states
+  broadcastUserState: BroadcastUserState | null;
+  remainingCountdownSeconds: number;
+  isBroadcastLinkClicked: boolean;
+  markBroadcastLinkClicked: (id: string) => void;
+  markBroadcastViewed: (id: string) => void;
 
   // Signal Testing System
   isSignalTestModalOpen: boolean;
@@ -171,6 +184,19 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const localTestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentSoundStopperRef = useRef<(() => void) | null>(null);
 
+  const [userStates, setUserStates] = useState<Record<string, BroadcastUserState>>(() => {
+    try {
+      const stored = localStorage.getItem('localhub_broadcast_user_states');
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      console.warn('Failed to parse user states from storage:', e);
+    }
+    return {};
+  });
+
+  const [remainingCountdownSeconds, setRemainingCountdownSeconds] = useState<number>(0);
+  const lastAlertMinuteRef = useRef<Record<string, number>>({});
+
   // Save broadcasts to localStorage
   useEffect(() => {
     try {
@@ -187,6 +213,14 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.warn(e);
     }
   }, [dismissedIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('localhub_broadcast_user_states', JSON.stringify(userStates));
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [userStates]);
 
   // Audio tone generator for alert notification
   const playSoundAlert = useCallback((severity: BroadcastSeverity = 'urgent') => {
@@ -468,8 +502,8 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       actionText: data.actionText,
       broadcastAt: now,
       broadcastDateStr: dateStr,
-      expiresInMinutes: data.expiresInMinutes,
-      expiresAt: data.expiresInMinutes && data.expiresInMinutes > 0 ? now + data.expiresInMinutes * 60 * 1000 : undefined,
+      expiresInMinutes: data.expiresInMinutes !== undefined ? data.expiresInMinutes : 15,
+      expiresAt: (data.expiresInMinutes !== undefined ? data.expiresInMinutes : 15) > 0 ? now + (data.expiresInMinutes !== undefined ? data.expiresInMinutes : 15) * 60 * 1000 : undefined,
       adminName: 'ศูนย์อำนวยการ LocalHub',
       adminRole: 'System Admin',
       isPinned: data.severity === 'urgent' || data.severity === 'high',
@@ -555,6 +589,8 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const dismissBroadcast = (id: string) => {
+    stopSynthesizedAlarm();
+    stopDeviceVibration();
     setDismissedIds(prev => (prev.includes(id) ? prev : [...prev, id]));
   };
 
@@ -563,14 +599,147 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     deleteDoc(doc(db, 'broadcasts', id)).catch(() => {});
   };
 
+  // Mark broadcast as viewed when displayed on device (starts 15-minute countdown)
+  const markBroadcastViewed = useCallback((id: string) => {
+    setUserStates(prev => {
+      if (prev[id]) return prev;
+      const targetBc = broadcasts.find(b => b.id === id);
+      const duration = targetBc?.expiresInMinutes && targetBc.expiresInMinutes > 0 ? targetBc.expiresInMinutes : 15;
+      const next = {
+        ...prev,
+        [id]: {
+          viewedAt: Date.now(),
+          durationMinutes: duration,
+          linkClicked: false
+        }
+      };
+      try {
+        localStorage.setItem('localhub_broadcast_user_states', JSON.stringify(next));
+      } catch (e) {
+        console.warn(e);
+      }
+      return next;
+    });
+  }, [broadcasts]);
+
+  // Mark broadcast link clicked: PERMANENTLY stops audio alert for this broadcast
+  const markBroadcastLinkClicked = useCallback((id: string) => {
+    // 1. Immediately cut off any running siren or synthesized alarm
+    stopSynthesizedAlarm();
+    stopDeviceVibration();
+    if (currentSoundStopperRef.current) {
+      currentSoundStopperRef.current();
+      currentSoundStopperRef.current = null;
+    }
+
+    // 2. Persist linkClicked flag so recurring 3-minute alarms will not trigger
+    setUserStates(prev => {
+      const current = prev[id] || {
+        viewedAt: Date.now(),
+        durationMinutes: 15,
+        linkClicked: false
+      };
+      const next = {
+        ...prev,
+        [id]: {
+          ...current,
+          linkClicked: true
+        }
+      };
+      try {
+        localStorage.setItem('localhub_broadcast_user_states', JSON.stringify(next));
+      } catch (e) {
+        console.warn(e);
+      }
+      return next;
+    });
+  }, []);
+
   // Find the top un-dismissed and un-expired broadcast
+  // Expiration is counted per user device starting from viewedAt
   const currentTime = Date.now();
   const activeBroadcast =
     broadcasts.find((b) => {
       if (dismissedIds.includes(b.id)) return false;
-      if (b.expiresAt && b.expiresAt < currentTime) return false;
+      const uState = userStates[b.id];
+      if (uState) {
+        // If countdown started, check if user's 15 minutes expired
+        const userExpireAt = uState.viewedAt + uState.durationMinutes * 60 * 1000;
+        if (currentTime >= userExpireAt) return false;
+      }
       return true;
     }) || null;
+
+  const broadcastUserState = activeBroadcast ? userStates[activeBroadcast.id] || null : null;
+  const isBroadcastLinkClicked = Boolean(broadcastUserState?.linkClicked);
+
+  // 15-Minute Countdown & 3-Minute Recurring Alert Engine
+  useEffect(() => {
+    if (!activeBroadcast) {
+      setRemainingCountdownSeconds(0);
+      return;
+    }
+
+    const bcId = activeBroadcast.id;
+    // Auto-initialize viewed state on device so countdown begins
+    if (!userStates[bcId]) {
+      const duration = activeBroadcast.expiresInMinutes && activeBroadcast.expiresInMinutes > 0
+        ? activeBroadcast.expiresInMinutes
+        : 15;
+      setUserStates(prev => {
+        if (prev[bcId]) return prev;
+        const next = {
+          ...prev,
+          [bcId]: {
+            viewedAt: Date.now(),
+            durationMinutes: duration,
+            linkClicked: false
+          }
+        };
+        try {
+          localStorage.setItem('localhub_broadcast_user_states', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+
+    // Calculate remaining seconds & check 3-minute alert milestone
+    const tick = () => {
+      const now = Date.now();
+      const st = userStates[bcId];
+      if (!st) return;
+
+      const elapsedSec = Math.floor((now - st.viewedAt) / 1000);
+      const totalSec = st.durationMinutes * 60;
+      const leftSec = Math.max(0, totalSec - elapsedSec);
+
+      setRemainingCountdownSeconds(leftSec);
+
+      // Auto dismiss when countdown completes
+      if (leftSec <= 0) {
+        dismissBroadcast(bcId);
+        return;
+      }
+
+      // Rule: เสียงแจ้งเตือนทุก 3 นาที จนครบ 15 นาที
+      // แต่เสียงแจ้งเตือนจะไม่ดังก็ต่อเมื่อผู้ใช้งานได้กดเข้าลิงค์
+      if (!st.linkClicked && soundEnabled) {
+        const elapsedMinutes = Math.floor(elapsedSec / 60);
+        const lastMinute = lastAlertMinuteRef.current[bcId] ?? -1;
+
+        // Alerts at 3 min, 6 min, 9 min, 12 min milestones
+        if (elapsedMinutes > 0 && elapsedMinutes % 3 === 0 && elapsedMinutes !== lastMinute) {
+          lastAlertMinuteRef.current[bcId] = elapsedMinutes;
+          playSoundAlert(activeBroadcast.severity);
+          triggerDeviceVibration([400, 200, 400, 200, 600]);
+        }
+      }
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [activeBroadcast, userStates, soundEnabled, playSoundAlert]);
 
   return (
     <BroadcastContext.Provider
@@ -590,6 +759,11 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSoundEnabled,
         playSoundAlert,
         deleteBroadcast,
+        broadcastUserState,
+        remainingCountdownSeconds,
+        isBroadcastLinkClicked,
+        markBroadcastLinkClicked,
+        markBroadcastViewed,
         activeTestSignal,
         isTestingLocalAdmin,
         isTestingAllDevices,

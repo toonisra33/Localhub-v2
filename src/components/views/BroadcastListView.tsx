@@ -62,7 +62,8 @@ export const BroadcastListView: React.FC = () => {
     broadcasts,
     setOpenAdminModal,
     reBroadcastItem,
-    playSoundAlert
+    playSoundAlert,
+    markBroadcastLinkClicked
   } = useBroadcast();
 
   const {
@@ -526,6 +527,23 @@ export const BroadcastListView: React.FC = () => {
                   <p className="mt-1 text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line line-clamp-3">
                     {item.summary}
                   </p>
+                  {item.itemType === 'broadcast' && item.actionUrl && (
+                    <div className="pt-2">
+                      <a
+                        href={item.actionUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markBroadcastLinkClicked(item.originalData.id);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition border border-blue-200 shadow-2xs"
+                      >
+                        <span>{item.actionText || 'ตรวจสอบข้อมูลเพิ่มเติม'}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Media Image / Video if present */}

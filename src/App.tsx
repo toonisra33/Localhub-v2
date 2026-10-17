@@ -283,12 +283,12 @@ function AppContent() {
   ]);
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 lg:pb-8 selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 md:pb-8 selection:bg-blue-500 selection:text-white">
       {/* Floating Local Admin Test Status Pill (Admin Only) */}
       {isAdmin && isTestingLocalAdmin && (
         <aside
           aria-label="สถานะการทดสอบสัญญาณ"
-          className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-md px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-emerald-500/60 flex items-center justify-between gap-2 sm:gap-3 backdrop-blur-md animate-bounce-subtle"
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-md px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-emerald-500/60 flex items-center justify-between gap-2 sm:gap-3 backdrop-blur-md animate-bounce-subtle"
         >
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
             <span className="p-1 sm:p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl animate-pulse shrink-0">
@@ -335,8 +335,8 @@ function AppContent() {
       />
 
       {/* Main Content Layout */}
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5 sm:pt-6 flex-1 flex gap-6 items-start">
-        {/* Left Desktop Sidebar Navigation */}
+      <main className="max-w-7xl mx-auto w-full px-2.5 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 flex-1 flex gap-3 md:gap-4 lg:gap-6 items-start">
+        {/* Left Desktop/Tablet Sidebar Navigation */}
         <DesktopSidebar />
 
         {/* Center Dynamic Tab View */}

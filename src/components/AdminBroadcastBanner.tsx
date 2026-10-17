@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle,
   Radio,
@@ -11,16 +11,41 @@ import {
   Flame,
   CloudRain,
   Car,
-  BellRing
+  BellRing,
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
 import { useBroadcast } from '../context/BroadcastContext';
 import { useCommunity } from '../context/CommunityContext';
 import { BroadcastSeverity, BroadcastCategory } from '../types';
 
 export const AdminBroadcastBanner: React.FC = () => {
-  const { activeBroadcast, dismissBroadcast, soundEnabled, setSoundEnabled, playSoundAlert, setOpenAdminModal } = useBroadcast();
+  const {
+    activeBroadcast,
+    dismissBroadcast,
+    soundEnabled,
+    setSoundEnabled,
+    playSoundAlert,
+    setOpenAdminModal,
+    remainingCountdownSeconds,
+    isBroadcastLinkClicked,
+    markBroadcastLinkClicked,
+    markBroadcastViewed
+  } = useBroadcast();
   const { location, isAdmin } = useCommunity();
   const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (activeBroadcast) {
+      markBroadcastViewed(activeBroadcast.id);
+    }
+  }, [activeBroadcast, markBroadcastViewed]);
+
+  const formatCountdown = (totalSec: number) => {
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   if (!activeBroadcast) return null;
 
@@ -106,6 +131,29 @@ export const AdminBroadcastBanner: React.FC = () => {
                 {activeBroadcast.severity === 'normal' && '📢 ข่าว'}
               </span>
 
+              {/* 15-Minute Countdown Timer Pill */}
+              <div
+                className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-black/30 text-amber-200 border border-amber-300/35 shadow-xs"
+                title="นับถอยหลัง 15 นาทีหลังจากที่คุณเปิดดู"
+              >
+                <Clock className="w-3 h-3 text-amber-300 animate-pulse" />
+                <span>{formatCountdown(remainingCountdownSeconds)}</span>
+              </div>
+
+              {/* 3-Minute Audio Alert / Link Click Status Indicator */}
+              {isBroadcastLinkClicked ? (
+                <span className="hidden md:inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/30 text-emerald-100 border border-emerald-400/40">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-300" /> เข้าดูข้อมูลแล้ว (ปิดเสียงเตือน)
+                </span>
+              ) : (
+                <span
+                  className="hidden md:inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/20 text-white/90"
+                  title="มีเสียงแจ้งเตือนทุก 3 นาที จนครบ 15 นาที (จะหยุดเตือนเมื่อกดเข้าลิงก์ดูข้อมูล)"
+                >
+                  <BellRing className="w-3 h-3 text-amber-300" /> เตือนทุก 3 น.
+                </span>
+              )}
+
               {activeBroadcast.targetArea && (
                 <span className="hidden sm:inline-flex shrink-0 items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-black/20 text-white/95 truncate max-w-[100px]">
                   <MapPin className="w-3 h-3 text-white/80" />
@@ -153,6 +201,22 @@ export const AdminBroadcastBanner: React.FC = () => {
         {/* Expanded Details Accordion */}
         {isExpanded && (
           <div className="max-w-7xl mx-auto mt-2.5 pt-2.5 border-t border-white/20 text-xs sm:text-sm text-white/95 animate-fadeIn">
+            {/* Countdown info banner inside accordion */}
+            <div className="flex items-center gap-2 text-[11px] text-amber-200 bg-black/25 px-2.5 py-1.5 rounded-lg border border-white/10 mb-2 flex-wrap">
+              <Clock className="w-3.5 h-3.5 text-amber-300" />
+              <span>เริ่มนับถอยหลัง 15 นาทีหลังจากที่คุณเปิดดู • เหลือเวลาอีก <strong>{formatCountdown(remainingCountdownSeconds)} นาที</strong></span>
+              <span className="text-white/40">•</span>
+              {isBroadcastLinkClicked ? (
+                <span className="text-emerald-300 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" /> ยืนยันการเข้าดูข้อมูลแล้ว (ระบบปิดเสียงเตือน 3 นาทีให้อัตโนมัติ)
+                </span>
+              ) : (
+                <span className="text-amber-100 flex items-center gap-1">
+                  <BellRing className="w-3.5 h-3.5 text-amber-300" /> มีเสียงเตือนทุก 3 นาที จนครบ 15 นาที (จะหยุดเมื่อกดเข้าลิงก์ดูข้อมูล)
+                </span>
+              )}
+            </div>
+
             <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
               <div className="space-y-1.5 max-w-3xl min-w-0 flex-1">
                 <p className="leading-relaxed text-white/95 break-words">{activeBroadcast.message}</p>
@@ -184,17 +248,34 @@ export const AdminBroadcastBanner: React.FC = () => {
               )}
             </div>
 
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
               {activeBroadcast.actionUrl && (
                 <a
                   href={activeBroadcast.actionUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-white text-slate-900 font-semibold text-xs hover:bg-slate-100 transition shadow"
+                  onClick={() => markBroadcastLinkClicked(activeBroadcast.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-slate-900 font-bold text-xs hover:bg-slate-100 transition shadow"
                 >
-                  {activeBroadcast.actionText || 'ตรวจสอบข้อมูลเพิ่มเติม'}
+                  <span>{activeBroadcast.actionText || 'ตรวจสอบข้อมูลเพิ่มเติม'}</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
+              )}
+
+              {!isBroadcastLinkClicked ? (
+                <button
+                  onClick={() => markBroadcastLinkClicked(activeBroadcast.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition shadow"
+                  title="คลิกเพื่อเข้าดูข้อมูลหรือรับทราบ และหยุดเสียงเตือนทุก 3 นาทีทันที"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>รับทราบข้อมูล / ปิดเสียงเตือน 3 นาที</span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/25 text-emerald-100 border border-emerald-400/30 text-xs font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>เข้าดูข้อมูลแล้ว • ปิดเสียงเตือนเรียบร้อย</span>
+                </span>
               )}
 
               {isAdmin && (

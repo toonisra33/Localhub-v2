@@ -81,7 +81,7 @@ export const AdminBroadcastModal: React.FC = () => {
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [actionUrl, setActionUrl] = useState('');
   const [actionText, setActionText] = useState('');
-  const [expiresInMinutes, setExpiresInMinutes] = useState<number>(0);
+  const [expiresInMinutes, setExpiresInMinutes] = useState<number>(15); // Default 15 minutes
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const adminCameraInputRef = React.useRef<HTMLInputElement>(null);
@@ -431,22 +431,24 @@ export const AdminBroadcastModal: React.FC = () => {
 
               {/* Broadcast Duration / Expiry Setting (กี่นาที) */}
               <div className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50/60 space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-1">
                   <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-amber-600" />
-                    <span>ระยะเวลาของการบรอดแคสต์ (แสดงแบนเนอร์กี่นาที)</span>
+                    <span>ระยะเวลาของการบรอดแคสต์ (นับถอยหลังเมื่อผู้ใช้เปิดดู)</span>
                   </label>
-                  <span className="text-[10px] text-amber-700 font-medium">เมื่อครบกำหนดแถบจะปลดอัตโนมัติ</span>
+                  <span className="text-[10px] text-amber-800 font-semibold bg-amber-200/60 px-2 py-0.5 rounded-full">
+                    🔔 เตือนทุก 3 นาที (ตัดเสียงเมื่อกดลิงก์)
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 text-xs">
                   {[
-                    { val: 0, label: 'ตลอดไป' },
-                    { val: 15, label: '15 นาที' },
-                    { val: 30, label: '30 นาที' },
-                    { val: 60, label: '1 ชั่วโมง' },
-                    { val: 360, label: '6 ชั่วโมง' },
-                    { val: 1440, label: '24 ชั่วโมง' },
+                    { val: 15, label: '15 นาที', tag: 'ค่าเริ่มต้น' },
+                    { val: 30, label: '30 นาที', tag: '' },
+                    { val: 60, label: '1 ชั่วโมง', tag: '' },
+                    { val: 360, label: '6 ชั่วโมง', tag: '' },
+                    { val: 1440, label: '24 ชั่วโมง', tag: '' },
+                    { val: 0, label: 'ตลอดไป', tag: '' },
                   ].map((opt) => (
                     <button
                       key={opt.val}
@@ -454,14 +456,22 @@ export const AdminBroadcastModal: React.FC = () => {
                       onClick={() => setExpiresInMinutes(opt.val)}
                       className={`py-1.5 px-2 rounded-xl text-center font-bold transition border cursor-pointer ${
                         expiresInMinutes === opt.val
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-2xs ring-2 ring-amber-300'
                           : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-100/50'
                       }`}
                     >
-                      {opt.label}
+                      <div>{opt.label}</div>
+                      {opt.tag && (
+                        <div className={`text-[9px] font-normal ${expiresInMinutes === opt.val ? 'text-amber-100' : 'text-amber-600 font-semibold'}`}>
+                          {opt.tag}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
+                <p className="text-[10px] text-slate-500 pt-0.5">
+                  ระบบจะเริ่มนับถอยหลังจากที่ผู้ใช้งานได้เปิดดูบรอดแคสต์นั้นในแต่ละอุปกรณ์ และจะส่งเสียงเตือนซ้ำทุก 3 นาที จนครบ 15 นาที โดยเสียงจะหยุดทันทีเมื่อผู้ใช้งานกดเข้าลิงก์ดูข้อมูล
+                </p>
               </div>
 
               {/* Media Attachment (Photo & Video Upload) */}

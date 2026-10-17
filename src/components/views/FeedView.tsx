@@ -616,19 +616,19 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </div>
 
           {/* Primary Scope Segment: Friends or Device Current Area */}
-          <div className="bg-slate-900 text-white rounded-2xl p-1.5 shadow-md flex items-center justify-between gap-1 text-xs">
+          <div className="bg-slate-900 text-white rounded-2xl p-1 sm:p-1.5 shadow-md flex items-center justify-between gap-1 text-xs overflow-x-auto scrollbar-none">
             <button
               onClick={() => {
                 setFeedScope('friends_or_local');
                 setSearchQuery('');
               }}
-              className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs ${
+              className={`flex-1 min-w-[120px] sm:min-w-0 py-1.5 sm:py-2 px-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[10px] sm:text-xs shrink-0 sm:shrink ${
                 feedScope === 'friends_or_local'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300" />
               <span>เพื่อน & พื้นที่ของฉัน</span>
             </button>
 
@@ -637,14 +637,14 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 setFeedScope('friends_only');
                 setSearchQuery('');
               }}
-              className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs ${
+              className={`flex-1 min-w-[95px] sm:min-w-0 py-1.5 sm:py-2 px-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[10px] sm:text-xs shrink-0 sm:shrink ${
                 feedScope === 'friends_only'
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              <Users className="w-3.5 h-3.5" />
-              <span>เพื่อนของฉัน ({friends.length})</span>
+              <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span>เพื่อน ({friends.length})</span>
             </button>
 
             <button
@@ -652,13 +652,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 setFeedScope('local_only');
                 setSearchQuery('');
               }}
-              className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs truncate px-1 ${
+              className={`flex-1 min-w-[105px] sm:min-w-0 py-1.5 sm:py-2 px-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[10px] sm:text-xs truncate shrink-0 sm:shrink ${
                 feedScope === 'local_only'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+              <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
               <span className="truncate">พื้นที่ {location.province}</span>
             </button>
 
@@ -667,7 +667,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 setFeedScope('all');
                 setSearchQuery('');
               }}
-              className={`px-3 py-2 text-center rounded-xl font-bold transition text-[11px] sm:text-xs ${
+              className={`py-1.5 sm:py-2 px-2.5 sm:px-3 text-center rounded-xl font-bold transition text-[10px] sm:text-xs shrink-0 ${
                 feedScope === 'all'
                   ? 'bg-slate-800 text-white shadow-xs border border-slate-700'
                   : 'text-slate-400 hover:text-white'

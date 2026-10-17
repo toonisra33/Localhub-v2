@@ -32,8 +32,8 @@ export const DesktopSidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-5 sticky top-20 self-start">
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-3 shadow-xs space-y-1">
+    <aside className="hidden md:flex flex-col md:w-20 lg:w-64 shrink-0 md:space-y-3 lg:space-y-5 sticky top-20 self-start transition-all duration-200">
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-2 lg:p-3 shadow-xs space-y-1">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           const isAdminItem = item.id === 'admin';
@@ -42,7 +42,7 @@ export const DesktopSidebar: React.FC = () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
+              className={`w-full flex items-center justify-center lg:justify-between px-2.5 lg:px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all relative group ${
                 isActive
                   ? isAdminItem
                     ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
@@ -51,36 +51,51 @@ export const DesktopSidebar: React.FC = () => {
                   ? 'text-red-700 hover:text-red-900 hover:bg-red-50 border border-red-200/60'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
+              title={item.label}
             >
               <div className="flex items-center gap-3">
-                <span className={isActive ? 'text-white' : isAdminItem ? 'text-red-600' : 'text-slate-500'}>
+                <span className={`shrink-0 ${isActive ? 'text-white' : isAdminItem ? 'text-red-600' : 'text-slate-500'}`}>
                   {item.icon}
                 </span>
-                <span>{item.label}</span>
+                <span className="hidden lg:inline truncate">{item.label}</span>
               </div>
 
               {item.badge && (
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : isAdminItem
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-emerald-100 text-emerald-800'
-                  }`}
-                >
-                  {item.badge}
-                </span>
+                <>
+                  {/* Desktop Full Badge */}
+                  <span
+                    className={`hidden lg:inline text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : isAdminItem
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                  {/* Tablet Dot Indicator */}
+                  <span
+                    className={`lg:hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${
+                      isActive ? 'bg-white' : isAdminItem ? 'bg-red-500' : 'bg-emerald-500'
+                    }`}
+                  />
+                </>
               )}
+
+              {/* Tablet Floating Tooltip on Hover */}
+              <div className="lg:hidden absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-lg">
+                {item.label}
+              </div>
             </button>
           );
         })}
       </div>
 
-      {/* Account Widget */}
+      {/* Account Widget (Compact on tablet, full on desktop) */}
       <div
         onClick={openLoginModal}
-        className="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-xs group"
+        className="p-2 lg:p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex items-center justify-center lg:justify-between cursor-pointer transition shadow-xs group relative"
         title="จัดการบัญชี / เข้าสู่ระบบ"
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -89,7 +104,7 @@ export const DesktopSidebar: React.FC = () => {
             alt="avatar"
             className="w-8 h-8 rounded-full object-cover ring-1.5 ring-slate-200 group-hover:ring-emerald-500 shrink-0"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 hidden lg:block">
             <p className="text-xs font-bold text-slate-800 truncate">
               {currentUser?.displayName || 'ผู้เยี่ยมชม'}
             </p>
@@ -98,13 +113,18 @@ export const DesktopSidebar: React.FC = () => {
             </p>
           </div>
         </div>
-        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 group-hover:bg-emerald-100 px-2 py-0.5 rounded-lg shrink-0">
+        <span className="hidden lg:inline text-[10px] text-emerald-700 font-bold bg-emerald-50 group-hover:bg-emerald-100 px-2 py-0.5 rounded-lg shrink-0">
           {currentUser?.email ? 'จัดการ' : 'ล็อกอิน'}
         </span>
+
+        {/* Tablet Tooltip */}
+        <div className="lg:hidden absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-lg">
+          {currentUser?.displayName || 'เข้าสู่ระบบ'}
+        </div>
       </div>
 
-      {/* Contact Admin / Community Notice Card */}
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-3xl p-4 space-y-2.5">
+      {/* Contact Admin / Community Notice Card (Hidden on tablet, shown on desktop) */}
+      <div className="hidden lg:block bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-3xl p-4 space-y-2.5">
         <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs">
           <Megaphone className="w-4 h-4 text-indigo-600" />
           <span>ต้องการประชาสัมพันธ์?</span>
