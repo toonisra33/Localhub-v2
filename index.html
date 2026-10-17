@@ -18,6 +18,13 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
+    <!-- React Refresh Dev Preamble Protection (ensures $RefreshReg$ is available across all environments and cached webviews) -->
+    <script>
+      window.$RefreshReg$ = window.$RefreshReg$ || function() {};
+      window.$RefreshSig$ = window.$RefreshSig$ || function() { return function(type) { return type; }; };
+      window.__vite_plugin_react_preamble_installed__ = true;
+    </script>
+
     <script>
       // Automated Cache Invalidation & Instant Live Update
       (function() {
@@ -57,6 +64,9 @@
 
     <!-- Leaflet Map Engine CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+
+    <!-- Google Identity Services (GSI) for seamless Google Sign-In -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body class="bg-slate-100 text-slate-900 antialiased font-['Prompt',sans-serif]">
     <div id="root"></div>

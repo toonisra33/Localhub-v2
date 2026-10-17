@@ -9,7 +9,8 @@ import {
   Tag,
   CheckCircle,
   ExternalLink,
-  ArrowLeft
+  ArrowLeft,
+  Navigation
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { MarketItem } from '../../types';
@@ -19,7 +20,7 @@ interface MarketViewProps {
 }
 
 export const MarketView: React.FC<MarketViewProps> = ({ onOpenCreateItem }) => {
-  const { marketItems, likeMarketItem, location, showToast, goBack } = useCommunity();
+  const { marketItems, likeMarketItem, location, showToast, goBack, setActiveTab } = useCommunity();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -147,29 +148,64 @@ export const MarketView: React.FC<MarketViewProps> = ({ onOpenCreateItem }) => {
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <img
-                      src={item.sellerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-                      alt={item.seller || 'ร้านค้า'}
-                      className="w-5 h-5 rounded-full object-cover"
-                    />
-                    <span className="text-slate-600 truncate max-w-[100px]">{item.seller || 'ร้านค้าชุมชน'}</span>
+                <div className="pt-2 border-t border-slate-100 flex flex-col gap-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <img
+                        src={item.sellerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                        alt={item.seller || 'ร้านค้า'}
+                        className="w-5 h-5 rounded-full object-cover"
+                      />
+                      <span className="text-slate-600 truncate max-w-[100px] font-medium">{item.seller || 'ร้านค้าชุมชน'}</span>
+                    </div>
+
+                    <a
+                      href={`tel:${item.sellerContact}`}
+                      onClick={(e) => {
+                        if (!item.sellerContact) {
+                          e.preventDefault();
+                          showToast('ผู้ขายไม่ได้ระบุเบอร์ติดต่อ', 'info');
+                        }
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold transition"
+                    >
+                      <Phone className="w-3 h-3" />
+                      โทร
+                    </a>
                   </div>
 
-                  <a
-                    href={`tel:${item.sellerContact}`}
-                    onClick={(e) => {
-                      if (!item.sellerContact) {
-                        e.preventDefault();
-                        showToast('ผู้ขายไม่ได้ระบุเบอร์ติดต่อ', 'info');
-                      }
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold transition"
-                  >
-                    <Phone className="w-3 h-3" />
-                    ติดต่อ
-                  </a>
+                  {/* Navigation and Map Buttons */}
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('map');
+                        showToast(`ดูตำแหน่งร้านค้าบนแผนที่รอบตัว: ${item.title}`, 'info');
+                      }}
+                      className="flex-1 py-1.5 px-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center gap-1 transition active:scale-95 text-[11px] cursor-pointer"
+                    >
+                      <MapPin className="w-3 h-3 text-emerald-400" />
+                      <span>บนแผนที่</span>
+                    </button>
+
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${item.coordinates?.lat || 13.8282},${item.coordinates?.lng || 100.5694}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const lat = item.coordinates?.lat || 13.8282;
+                        const lng = item.coordinates?.lng || 100.5694;
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+                      }}
+                      className="flex-1 py-1.5 px-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-bold flex items-center justify-center gap-1 shadow-xs transition text-[11px] cursor-pointer"
+                      title="กดปุ่มเพื่อเปิด Google Maps นำทางไปยังร้านค้านี้ทันที"
+                    >
+                      <Navigation className="w-3 h-3 fill-white text-white" />
+                      <span>นำทาง</span>
+                      <ExternalLink className="w-2.5 h-2.5 text-blue-200" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

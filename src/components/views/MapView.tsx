@@ -38,13 +38,13 @@ interface MapViewProps {
 }
 
 export type MapViewMode = 'map_and_cards' | 'full_map' | 'list_feed';
-export type MapCategoryFilter = 'all' | 'alerts' | 'posts' | 'market' | 'emergency';
+export type MapCategoryFilter = 'all' | 'alerts' | 'market' | 'emergency';
 export type MapSortOption = 'distance' | 'urgent' | 'latest';
 export type GoogleMapTileType = 'google_road' | 'google_hybrid' | 'google_satellite' | 'google_terrain';
 
 export interface UnifiedMapCardItem {
   id: string;
-  type: 'alert' | 'post' | 'market' | 'emergency';
+  type: 'alert' | 'market' | 'emergency';
   title: string;
   subtitle: string;
   desc: string;
@@ -258,28 +258,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       });
     });
 
-    // 2. Posts
-    posts.forEach((post) => {
-      const [lat, lng] = getItemCoords(post.id, post.location.province, post.coordinates);
-      const dist = calculateDistanceKm(userLat, userLng, lat, lng);
-      list.push({
-        id: post.id,
-        type: 'post',
-        title: post.title,
-        subtitle: `💬 ชุมชน: ${post.location.district || post.location.province}`,
-        desc: post.content,
-        lat,
-        lng,
-        distanceKm: dist,
-        distanceStr: formatDistance(dist),
-        timeStr: timeAgo(post.createdAt),
-        imageUrl: post.images && post.images.length > 0 ? post.images[0] : undefined,
-        authorOrReporter: post.author,
-        originalData: post
-      });
-    });
-
-    // 3. Market Items
+    // 2. Market Items (ตำแหน่งร้านค้าชุมชนที่ผู้ใช้งานได้ลงทะเบียน)
     marketItems.forEach((item) => {
       const [lat, lng] = getItemCoords(item.id, item.province, item.coordinates);
       const dist = calculateDistanceKm(userLat, userLng, lat, lng);
@@ -287,7 +266,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
         id: item.id,
         type: 'market',
         title: item.title,
-        subtitle: `🛍️ ตลาดนัด: ${item.district || item.province} (฿${item.price.toLocaleString()})`,
+        subtitle: `🛍️ ร้านค้า/ตลาด: ${item.district || item.province} (฿${item.price.toLocaleString()})`,
         desc: item.description,
         lat,
         lng,
@@ -302,7 +281,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       });
     });
 
-    // 4. Emergency Services
+    // 3. Emergency Services (บริการฉุกเฉิน กู้ภัย/ตำรวจ/โรงพยาบาล)
     emergencyPoints.forEach((emg) => {
       const dist = calculateDistanceKm(userLat, userLng, emg.lat, emg.lng);
       list.push({
@@ -323,14 +302,13 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     });
 
     return list;
-  }, [alerts, posts, marketItems, emergencyPoints, userLat, userLng, location.province]);
+  }, [alerts, marketItems, emergencyPoints, userLat, userLng, location.province]);
 
   // Filtered and Sorted list for display
   const displayItems = useMemo(() => {
     let result = allCardItems.filter((item) => {
-      // Category filter
+      // Category filter (เฉพาะจุดแจ้งเหตุ, ร้านค้า และบริการฉุกเฉิน)
       if (activeFilter === 'alerts' && item.type !== 'alert') return false;
-      if (activeFilter === 'posts' && item.type !== 'post') return false;
       if (activeFilter === 'market' && item.type !== 'market') return false;
       if (activeFilter === 'emergency' && item.type !== 'emergency') return false;
 
@@ -369,7 +347,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
     } else if (sortBy === 'urgent') {
       result.sort((a, b) => {
         const getPriority = (x: UnifiedMapCardItem) =>
-          x.type === 'alert' ? 100 : x.type === 'emergency' ? 80 : x.type === 'post' ? 40 : 20;
+          x.type === 'alert' ? 100 : x.type === 'emergency' ? 80 : 20;
         return getPriority(b) - getPriority(a);
       });
     }
@@ -593,10 +571,10 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
           ((item.notFoundCount || 0) >= 3 && (item.notFoundCount || 0) > (item.verifiedCount || 0));
         iconHtml = `
           <div class="relative group cursor-pointer hover:scale-110 transition">
-            <div class="w-9 h-9 rounded-2xl ${
-              isFake ? 'bg-amber-600' : isCritical ? 'bg-red-600 animate-pulse' : 'bg-rose-600'
+            <div class="w-10 h-10 rounded-2xl ${
+              isFake ? 'bg-amber-600' : isCritical ? 'bg-red-600 animate-pulse ring-4 ring-red-400/50' : 'bg-red-600'
             } text-white shadow-2xl border-2 border-white flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full ${
               isFake ? 'bg-amber-500' : 'bg-red-600'
@@ -605,23 +583,17 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
             </div>
           </div>
         `;
-      } else if (item.type === 'post') {
-        iconHtml = `
-          <div class="w-8 h-8 rounded-2xl bg-emerald-600 text-white shadow-xl border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-        `;
       } else if (item.type === 'market') {
         iconHtml = `
-          <div class="w-8 h-8 rounded-2xl bg-amber-500 text-white shadow-xl border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <div class="w-9 h-9 rounded-2xl bg-amber-500 text-white shadow-xl border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition ring-2 ring-amber-300/40">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           </div>
         `;
       } else {
         // Emergency Hospital / Police / Fire
         iconHtml = `
-          <div class="w-8 h-8 rounded-2xl bg-blue-600 text-white shadow-xl border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div class="w-9 h-9 rounded-2xl bg-blue-600 text-white shadow-xl border-2 border-white flex items-center justify-center cursor-pointer hover:scale-110 transition ring-2 ring-blue-300/40">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
         `;
       }
@@ -629,19 +601,57 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
       const markerIcon = L.divIcon({
         className: `custom-marker-${item.type}`,
         html: iconHtml,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18]
+        iconSize: [38, 38],
+        iconAnchor: [19, 19]
       });
 
       const marker = L.marker([item.lat, item.lng], { icon: markerIcon });
       marker.bindTooltip(
-        `${item.type === 'alert' ? '🚨' : item.type === 'post' ? '💬' : item.type === 'market' ? '🛍️' : '🏥'} ${item.title.slice(0, 22)}... (${item.distanceStr})`,
+        `${item.type === 'alert' ? '🚨 จุดแจ้งเหตุ' : item.type === 'market' ? '🛍️ ร้านค้า' : '🏥 ฉุกเฉิน'}: ${item.title.slice(0, 22)} (${item.distanceStr})`,
         {
           direction: 'top',
           className: 'gmap-label-tooltip',
-          offset: [0, -12]
+          offset: [0, -14]
         }
       );
+
+      // Popup with instant Google Maps navigation button
+      const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+      const popupHtml = `
+        <div style="font-family: 'Prompt', sans-serif; padding: 4px; min-width: 210px; max-width: 270px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; ${
+              item.type === 'alert'
+                ? 'background: #fee2e2; color: #b91c1c;'
+                : item.type === 'market'
+                ? 'background: #fef3c7; color: #92400e;'
+                : 'background: #dbeafe; color: #1e40af;'
+            }">
+              ${item.type === 'alert' ? '🚨 จุดแจ้งเหตุด่วน' : item.type === 'market' ? '🛍️ ร้านค้าชุมชน' : '🏥 จุดบริการฉุกเฉิน'}
+            </span>
+            <span style="font-size: 10px; font-weight: 800; color: #047857; background: #ecfdf5; padding: 2px 6px; border-radius: 6px; border: 1px solid #a7f3d0;">
+              📍 ${item.distanceStr}
+            </span>
+          </div>
+          <h4 style="font-size: 12px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; line-height: 1.3;">
+            ${item.title}
+          </h4>
+          <p style="font-size: 11px; color: #475569; margin: 0 0 8px 0; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+            ${item.desc}
+          </p>
+          <a
+            href="${navUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+            onclick="window.open('${navUrl}', '_blank'); return true;"
+            style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 8px 12px; background: #2563eb; color: #ffffff !important; text-decoration: none !important; border-radius: 12px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 10px rgba(37,99,235,0.25); text-align: center; cursor: pointer;"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            <span>นำทางด้วย Google Maps</span>
+          </a>
+        </div>
+      `;
+      marker.bindPopup(popupHtml, { className: 'custom-leaflet-popup', maxWidth: 290 });
 
       marker.on('click', () => {
         handleSelectItem(item);
@@ -920,6 +930,25 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
         </div>
       </div>
 
+      {/* Informative Scope Header: Confirms map shows ONLY registered shops & incident alerts */}
+      <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between text-xs text-blue-900 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <span className="p-1 rounded-lg bg-blue-600 text-white shrink-0">
+            <MapPin className="w-3.5 h-3.5" />
+          </span>
+          <span className="text-[11px] sm:text-xs">
+            📍 <strong>ข้อมูลบนแผนที่รอบตัว:</strong> แสดงเฉพาะตำแหน่งร้านค้าที่ลงทะเบียน และจุดแจ้งเหตุด่วนที่มีเหตุการณ์จริง พร้อมปุ่มนำทาง Google Maps <em>(โพสต์ฟีดชุมชนทั่วไปจะไม่ขึ้นบนแผนที่เพื่อไม่ให้รกตา)</em>
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('feed')}
+          className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline shrink-0 hidden sm:inline cursor-pointer"
+        >
+          ไปที่ฟีดชุมชน →
+        </button>
+      </div>
+
       {/* 3. Category Filter Chips & Radius Selection */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
@@ -944,18 +973,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span>🚨 เหตุฉุกเฉิน ({alerts.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveFilter('posts')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 flex items-center gap-1 ${
-                activeFilter === 'posts'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <span>💬 ฟีดชุมชน ({posts.length})</span>
+              <span>🚨 จุดแจ้งเหตุด่วน ({alerts.length})</span>
             </button>
 
             <button
@@ -966,7 +984,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
-              <span>🛍️ ตลาด ({marketItems.length})</span>
+              <span>🛍️ ร้านค้าชุมชน ({marketItems.length})</span>
             </button>
 
             <button
@@ -977,7 +995,18 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
-              <span>🏥 จุดกู้ภัย/ฉุกเฉิน ({emergencyPoints.length})</span>
+              <span>🏥 บริการฉุกเฉิน ({emergencyPoints.length})</span>
+            </button>
+
+            {/* Separate Community Feed Button */}
+            <button
+              onClick={() => setActiveTab('feed')}
+              className="px-3 py-1.5 rounded-xl font-bold transition shrink-0 flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs cursor-pointer"
+              title="เปิดหน้าฟีดชุมชนสำหรับอ่านโพสต์ทั่วไป (แยกจากแผนที่เพื่อไม่ให้รกตา)"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+              <span>ฟีดโพสต์ชุมชน</span>
+              <ExternalLink className="w-3 h-3 text-emerald-600" />
             </button>
           </div>
 
@@ -1099,19 +1128,15 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                       ? 'bg-red-100 text-red-700'
                       : activeInspection.type === 'market'
                       ? 'bg-amber-100 text-amber-800'
-                      : activeInspection.type === 'post'
-                      ? 'bg-emerald-100 text-emerald-800'
                       : 'bg-blue-100 text-blue-800'
                   }`}
                 >
                   {activeInspection.type === 'pin'
                     ? '📍 จุดปักหมุดแจ้งเหตุตรงนี้'
                     : activeInspection.type === 'alert'
-                    ? '🚨 เหตุฉุกเฉินจริง'
+                    ? '🚨 จุดแจ้งเหตุด่วน'
                     : activeInspection.type === 'market'
-                    ? '🛍️ สินค้าตลาดนัด'
-                    : activeInspection.type === 'post'
-                    ? '💬 โพสต์ชุมชน'
+                    ? '🛍️ ตำแหน่งร้านค้า'
                     : '🏥 จุดบริการฉุกเฉิน'}
                 </span>
                 <button
@@ -1198,43 +1223,39 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Action Buttons: Instant Google Maps Navigation */}
               <div className="flex items-center gap-1.5 pt-1">
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${activeInspection.lat},${activeInspection.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 py-1.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${activeInspection.lat},${activeInspection.lng}`, '_blank');
+                  }}
+                  className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/30 cursor-pointer"
+                  title="กดปุ่มนำทางเพื่อเปิด Google Maps นำทางไปยังจุดนี้ทันที"
                 >
-                  <Navigation className="w-3 h-3 fill-white" />
+                  <Navigation className="w-3.5 h-3.5 fill-white text-white" />
                   <span>นำทาง Google Maps</span>
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="w-3 h-3 text-blue-200" />
                 </a>
 
                 {activeInspection.type === 'alert' && (
                   <button
                     onClick={() => setActiveTab('alerts')}
-                    className="py-1.5 px-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
+                    className="py-2 px-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                   >
                     <span>ศูนย์เตือนภัย</span>
-                  </button>
-                )}
-
-                {activeInspection.type === 'post' && (
-                  <button
-                    onClick={() => openPostDetail(activeInspection.id)}
-                    className="py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
-                  >
-                    <span>อ่านโพสต์</span>
                   </button>
                 )}
 
                 {activeInspection.type === 'market' && (
                   <button
                     onClick={() => setActiveTab('market')}
-                    className="py-1.5 px-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
+                    className="py-2 px-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                   >
-                    <span>ไปตลาด</span>
+                    <span>ดูร้านค้า</span>
                   </button>
                 )}
               </div>
@@ -1255,7 +1276,7 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                   >
                     <div className="flex items-start justify-between gap-1.5">
                       <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                        {item.type === 'alert' ? '🚨 เหตุฉุกเฉิน' : item.type === 'post' ? '💬 ชุมชน' : item.type === 'market' ? '🛍️ ตลาด' : '🏥 กู้ภัย/ฉุกเฉิน'}
+                        {item.type === 'alert' ? '🚨 จุดแจ้งเหตุด่วน' : item.type === 'market' ? '🛍️ ร้านค้าชุมชน' : '🏥 กู้ภัย/ฉุกเฉิน'}
                         <span>·</span>
                         <span className="text-emerald-700 font-extrabold">{item.distanceStr}</span>
                       </span>
@@ -1360,24 +1381,19 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                         className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase flex items-center gap-1 ${
                           item.type === 'alert'
                             ? 'bg-rose-100 text-rose-700'
-                            : item.type === 'post'
-                            ? 'bg-emerald-100 text-emerald-800'
                             : item.type === 'market'
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}
                       >
                         {item.type === 'alert' && <AlertTriangle className="w-3 h-3" />}
-                        {item.type === 'post' && <MessageSquare className="w-3 h-3" />}
                         {item.type === 'market' && <ShoppingBag className="w-3 h-3" />}
                         {item.type === 'emergency' && <Hospital className="w-3 h-3" />}
                         <span>
                           {item.type === 'alert'
-                            ? 'เหตุฉุกเฉิน'
-                            : item.type === 'post'
-                            ? 'โพสต์ชุมชน'
+                            ? 'จุดแจ้งเหตุด่วน'
                             : item.type === 'market'
-                            ? 'ตลาดนัด'
+                            ? 'ร้านค้าชุมชน'
                             : 'บริการฉุกเฉิน'}
                         </span>
                       </span>
@@ -1460,16 +1476,21 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                         <span>ดูบนแผนที่</span>
                       </button>
 
-                      {/* Google Maps Direction */}
+                      {/* Google Maps Direction Button (นำทาง Google Maps เด้งเข้าแอปทันที) */}
                       <a
                         href={`https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="py-1.5 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-blue-200"
-                        title="เปิดแอปนำทาง Google Maps"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`, '_blank');
+                        }}
+                        className="py-1.5 px-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-blue-600/30 cursor-pointer"
+                        title="กดปุ่มนำทางเพื่อเปิด Google Maps นำทางไปยังจุดนี้ทันที"
                       >
-                        <Navigation className="w-3.5 h-3.5 fill-blue-600 text-blue-600" />
-                        <span>นำทาง Google</span>
+                        <Navigation className="w-3.5 h-3.5 fill-white text-white" />
+                        <span>นำทาง Google Maps</span>
+                        <ExternalLink className="w-3 h-3 text-blue-200" />
                       </a>
 
                       {/* Emergency Call */}
@@ -1483,22 +1504,12 @@ export const MapView: React.FC<MapViewProps> = ({ onOpenReportAlert }) => {
                         </a>
                       )}
 
-                      {/* Context actions */}
-                      {item.type === 'post' && (
-                        <button
-                          onClick={() => openPostDetail(item.id)}
-                          className="py-1.5 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-emerald-200"
-                        >
-                          <span>อ่านโพสต์</span>
-                        </button>
-                      )}
-
                       {item.type === 'market' && (
                         <button
                           onClick={() => setActiveTab('market')}
-                          className="py-1.5 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-amber-200"
+                          className="py-1.5 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-amber-200 cursor-pointer"
                         >
-                          <span>ดูสินค้า</span>
+                          <span>ดูร้านค้า</span>
                         </button>
                       )}
                     </div>

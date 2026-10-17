@@ -69,6 +69,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
   // Scope filter: 'friends_or_local' (default per user prompt) | 'friends_only' | 'local_only' | 'all'
   const [feedScope, setFeedScope] = useState<'friends_or_local' | 'friends_only' | 'local_only' | 'all'>('friends_or_local');
+  // Separate Community Feed vs. Incident/Emergency Alerts per user requirement
+  const [mainFeedTab, setMainFeedTab] = useState<'community' | 'alerts'>('community');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<string | null>(null);
@@ -150,8 +152,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       if (!isInLocalArea) return false;
     }
 
-    // 2. Category Filter
-    if (selectedCategory === 'alert') return false; // Handled separately in alert view
+    // 2. Category Filter (Pure community feed categories, alert is separated)
     const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
 
     // 3. Search Query
@@ -171,11 +172,10 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
   const categories = [
     { id: 'all', label: 'ทั้งหมด' },
-    { id: 'alert', label: '🚨 ตรวจสอบเหตุฉุกเฉิน' },
     { id: 'news', label: '📰 ข่าวสาร' },
+    { id: 'general', label: '💬 พูดคุย' },
     { id: 'help', label: '🤝 ช่วยเหลือ/ของหาย' },
     { id: 'activity', label: '🎉 กิจกรรม' },
-    { id: 'general', label: '💬 พูดคุย' },
   ];
 
   const timeAgo = (timestamp: number) => {
@@ -438,31 +438,51 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </button>
         </div>
 
-        {/* Secondary Map Navigation Actions */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('map');
-              showToast(`เปิดแผนที่จุดเกิดเหตุ: ${alert.title}`, 'info');
-            }}
-            className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 transition"
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span>ดูพิกัดจุดเกิดเหตุบนแผนที่</span>
-          </button>
+        {/* Map Pinning Status & Direct Google Maps Navigation Button */}
+        <div className="pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-700 font-semibold min-w-0">
+            <span className="p-1 rounded-md bg-red-100 text-red-600 shrink-0">
+              <MapPin className="w-3.5 h-3.5" />
+            </span>
+            <span className="truncate text-[11px] sm:text-xs">
+              พิกัดปักหมุด: <strong>{alert.locationName || `${alert.district || alert.province}`}</strong>
+            </span>
+          </div>
 
-          {alert.coordinates?.lat && alert.coordinates?.lng && (
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Direct Google Maps Navigation Button: เด้งเข้า Google Maps ทันที */}
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${alert.coordinates.lat},${alert.coordinates.lng}`}
+              href={`https://www.google.com/maps/dir/?api=1&destination=${alert.coordinates?.lat || 13.8282},${alert.coordinates?.lng || 100.5694}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1 text-[11px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                const lat = alert.coordinates?.lat || 13.8282;
+                const lng = alert.coordinates?.lng || 100.5694;
+                window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+              }}
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm shadow-blue-500/25 transition cursor-pointer"
+              title="เปิด Google Maps เพื่อนำทางไปยังจุดแจ้งเหตุทันที"
             >
-              <ExternalLink className="w-3 h-3" />
-              <span>Google Maps นำทาง</span>
+              <Navigation className="w-3.5 h-3.5 fill-white text-white" />
+              <span>นำทาง Google Maps</span>
+              <ExternalLink className="w-3 h-3 text-blue-200" />
             </a>
-          )}
+
+            {/* View Pinned Location on In-App Map */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('map');
+                showToast(`เปิดแผนที่จุดเกิดเหตุ: ${alert.title}`, 'info');
+              }}
+              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+              title="ดูจุดปักหมุดบนแผนที่รอบตัว"
+            >
+              <Compass className="w-3.5 h-3.5 text-emerald-400" />
+              <span>ดูบนแผนที่</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -509,486 +529,562 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {/* Live Accurate Weather Widget */}
       <WeatherWidget onOpenFullForecast={onOpenWeather} />
 
-      {/* Friends Horizontal Bar */}
-      <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
-            <Users className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-slate-800">เพื่อนของฉัน ({friends.length})</div>
-            <div className="text-[10px] text-slate-400">คนในแวดวงชุมชนที่คุณติดตาม</div>
-          </div>
-        </div>
-
-        {/* Friends Avatars */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
-          {friends.map((friend) => (
-            <div
-              key={friend.id}
-              onClick={() => {
-                setFeedScope('friends_only');
-                setSearchQuery(friend.name);
-                showToast(`กรองโพสต์เฉพาะของคุณ ${friend.name}`, 'info');
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl cursor-pointer transition shrink-0 group active:scale-95"
-              title={`ดูโพสต์ของ ${friend.name}`}
-            >
-              <img
-                src={friend.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                alt={friend.name}
-                className="w-6 h-6 rounded-full object-cover border border-slate-200 group-hover:border-blue-400"
-              />
-              <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700 whitespace-nowrap">
-                {friend.name}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Primary Scope Segment: Friends or Device Current Area */}
-      <div className="bg-slate-900 text-white rounded-2xl p-1.5 shadow-md flex items-center justify-between gap-1 text-xs">
+      {/* 🌟 PRIMARY SEGMENT TABS: แยกชัดเจนระหว่าง "ฟีดชุมชน" กับ "โพสต์แจ้งเหตุด่วน" 🌟 */}
+      <div className="p-1.5 bg-slate-200/90 rounded-2xl border border-slate-300 shadow-xs grid grid-cols-2 gap-2">
         <button
+          type="button"
           onClick={() => {
-            setFeedScope('friends_or_local');
-            setSearchQuery('');
+            setMainFeedTab('community');
+            setSelectedCategory('all');
           }}
-          className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs ${
-            feedScope === 'friends_or_local'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-300 hover:text-white'
+          className={`py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer ${
+            mainFeedTab === 'community'
+              ? 'bg-white text-slate-900 shadow-md ring-2 ring-emerald-500'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-          <span>เพื่อน & พื้นที่ของฉัน</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setFeedScope('friends_only');
-            setSearchQuery('');
-          }}
-          className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs ${
-            feedScope === 'friends_only'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-300 hover:text-white'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>เพื่อนของฉัน ({friends.length})</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setFeedScope('local_only');
-            setSearchQuery('');
-          }}
-          className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs truncate px-1 ${
-            feedScope === 'local_only'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-300 hover:text-white'
-          }`}
-        >
-          <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="truncate">พื้นที่ {location.province}</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setFeedScope('all');
-            setSearchQuery('');
-          }}
-          className={`px-3 py-2 text-center rounded-xl font-bold transition text-[11px] sm:text-xs ${
-            feedScope === 'all'
-              ? 'bg-slate-800 text-white shadow-xs border border-slate-700'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          ทั้งหมด
-        </button>
-      </div>
-
-      {/* Scope Status Indicator */}
-      <div className="p-2.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 rounded-2xl flex items-center justify-between text-xs text-slate-700 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <span className="p-1 rounded-lg bg-emerald-600 text-white shrink-0">
-            <Compass className="w-3.5 h-3.5" />
+          <MessageSquare className="w-4 h-4 text-emerald-600" />
+          <span>💬 ฟีดโพสต์ชุมชน</span>
+          <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+            {filteredPosts.length}
           </span>
-          <span className="text-[11px] sm:text-xs">
-            {feedScope === 'friends_or_local' && (
-              <>
-                กำลังแสดงโพสต์ของ <strong>เพื่อนที่คุณเพิ่มไว้</strong> และ <strong>คนในพื้นที่ {location.province}</strong> (จากพิกัด GPS อุปกรณ์ปัจจุบัน)
-              </>
-            )}
-            {feedScope === 'friends_only' && (
-              <>
-                กำลังแสดงเฉพาะโพสต์ของ <strong>เพื่อนในรายชื่อของคุณ</strong> ({friends.length} คน)
-              </>
-            )}
-            {feedScope === 'local_only' && (
-              <>
-                กำลังแสดงโพสต์ของผู้ใช้ใน <strong>จ.{location.province} {location.district ? `(${location.district})` : ''}</strong>
-              </>
-            )}
-            {feedScope === 'all' && (
-              <>
-                กำลังแสดงโพสต์และเหตุการณ์ฉุกเฉิน <strong>ทั่วทั้งระบบ</strong>
-              </>
-            )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainFeedTab('alerts')}
+          className={`py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer ${
+            mainFeedTab === 'alerts'
+              ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-400'
+              : 'text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200'
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4 text-rose-500" />
+          <span>🚨 โพสต์แจ้งเหตุด่วน</span>
+          <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
+            mainFeedTab === 'alerts' ? 'bg-rose-700 text-white' : 'bg-rose-200 text-rose-800'
+          }`}>
+            {filteredAlerts.length}
           </span>
-        </div>
+          {filteredAlerts.length > 0 && (
+            <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
+          )}
+        </button>
       </div>
 
-      {/* Top Banner / Create Post bar with Direct Camera Shutter & Media Upload */}
-      <div className="p-4 bg-white rounded-2xl border-2 border-slate-200/90 shadow-xs space-y-3">
-        <div className="flex items-center gap-3">
-          <img
-            src={currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-            alt="User avatar"
-            className="w-10 h-10 rounded-full object-cover border border-slate-200"
-          />
-          <button
-            onClick={onOpenCreatePost}
-            className="flex-1 text-left px-4 py-2.5 bg-slate-100 hover:bg-slate-200/70 rounded-xl text-xs sm:text-sm text-slate-500 font-medium transition"
-          >
-            แชร์เรื่องราว ข่าวสาร หรือถามเพื่อนบ้านใน {location.province}...
-          </button>
-          <button
-            onClick={onOpenCreatePost}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition shrink-0 active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">สร้างโพสต์</span>
-          </button>
-        </div>
+      {/* ========================================================================= */}
+      {/* VIEW 1: 💬 ฟีดชุมชน (COMMUNITY FEED POSTS - ไม่แจ้งเตือนบนแผนที่ว่ารกตา)  */}
+      {/* ========================================================================= */}
+      {mainFeedTab === 'community' && (
+        <div className="space-y-4 animate-fadeIn">
+          {/* Friends Horizontal Bar */}
+          <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                <Users className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-800">เพื่อนของฉัน ({friends.length})</div>
+                <div className="text-[10px] text-slate-400">คนในแวดวงชุมชนที่คุณติดตาม</div>
+              </div>
+            </div>
 
-        {/* Action Buttons Row: Direct Camera & Media Upload */}
-        <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
-          {/* Button 1: Direct Native Camera Snap */}
-          <button
-            onClick={() => {
-              if (onOpenInstantCamera) {
-                onOpenInstantCamera();
-              } else {
-                directCameraInputRef.current?.click();
-              }
-            }}
-            className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-300 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition active:scale-95 shadow-xs group"
-            title="เปิดกล้องถ่ายภาพสดทันที"
-          >
-            <div className="p-1.5 rounded-full bg-emerald-600 text-white group-hover:scale-110 transition-transform">
-              <Camera className="w-4 h-4" />
+            {/* Friends Avatars */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
+              {friends.map((friend) => (
+                <div
+                  key={friend.id}
+                  onClick={() => {
+                    setFeedScope('friends_only');
+                    setSearchQuery(friend.name);
+                    showToast(`กรองโพสต์เฉพาะของคุณ ${friend.name}`, 'info');
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl cursor-pointer transition shrink-0 group active:scale-95"
+                  title={`ดูโพสต์ของ ${friend.name}`}
+                >
+                  <img
+                    src={friend.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                    alt={friend.name}
+                    className="w-6 h-6 rounded-full object-cover border border-slate-200 group-hover:border-blue-400"
+                  />
+                  <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700 whitespace-nowrap">
+                    {friend.name}
+                  </span>
+                </div>
+              ))}
             </div>
-            <div className="text-left">
-              <div className="text-[11px] sm:text-xs font-extrabold leading-tight">ถ่ายรูปสด</div>
-              <div className="text-[9px] text-emerald-700 font-semibold leading-tight hidden sm:block">เข้ากล้องตรง</div>
-            </div>
-          </button>
+          </div>
 
-          {/* Button 2: Gallery */}
-          <button
-            onClick={() => directGalleryInputRef.current?.click()}
-            className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-2xs group"
-            title="เลือกรูปภาพจากคลังภาพในเครื่อง"
-          >
-            <div className="p-1.5 rounded-full bg-blue-600 text-white group-hover:scale-110 transition-transform">
-              <ImageIcon className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="text-[11px] sm:text-xs font-extrabold leading-tight">คลังรูปภาพ</div>
-              <div className="text-[9px] text-blue-700 font-semibold leading-tight hidden sm:block">อัลบั้มในเครื่อง</div>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Filter Categories and Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {categories.map((cat) => (
+          {/* Primary Scope Segment: Friends or Device Current Area */}
+          <div className="bg-slate-900 text-white rounded-2xl p-1.5 shadow-md flex items-center justify-between gap-1 text-xs">
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
-                selectedCategory === cat.id
-                  ? cat.id === 'alert'
-                    ? 'bg-rose-700 text-white shadow-xs ring-2 ring-rose-400'
-                    : 'bg-slate-900 text-white shadow-xs'
-                  : cat.id === 'alert'
-                  ? 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-300 font-extrabold'
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              onClick={() => {
+                setFeedScope('friends_or_local');
+                setSearchQuery('');
+              }}
+              className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs ${
+                feedScope === 'friends_or_local'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
               }`}
             >
-              <span>{cat.label}</span>
-              {cat.id === 'alert' && filteredAlerts.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[10px] font-black">
-                  {filteredAlerts.length}
-                </span>
-              )}
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>เพื่อน & พื้นที่ของฉัน</span>
             </button>
-          ))}
-        </div>
 
-        {/* Search input */}
-        <div className="relative min-w-[200px]">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหาโพสต์, เหตุฉุกเฉิน, ชื่อเพื่อน..."
-            className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl outline-hidden focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-      </div>
+            <button
+              onClick={() => {
+                setFeedScope('friends_only');
+                setSearchQuery('');
+              }}
+              className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs ${
+                feedScope === 'friends_only'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>เพื่อนของฉัน ({friends.length})</span>
+            </button>
 
-      {/* 🚨 PROMINENT EMERGENCY VERIFICATION SECTION IN COMMUNITY FEED 🚨 */}
-      {/* (Shows when in 'all' category or 'alert' category, directly in Feed per user request) */}
-      {(selectedCategory === 'all' || selectedCategory === 'alert') && filteredAlerts.length > 0 && (
-        <section className="space-y-3 pt-1">
-          <div className="p-4 bg-gradient-to-r from-rose-950 via-red-900 to-rose-900 text-white rounded-3xl shadow-md border border-rose-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <button
+              onClick={() => {
+                setFeedScope('local_only');
+                setSearchQuery('');
+              }}
+              className={`flex-1 py-2 text-center rounded-xl font-bold transition flex items-center justify-center gap-1 text-[11px] sm:text-xs truncate px-1 ${
+                feedScope === 'local_only'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="truncate">พื้นที่ {location.province}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setFeedScope('all');
+                setSearchQuery('');
+              }}
+              className={`px-3 py-2 text-center rounded-xl font-bold transition text-[11px] sm:text-xs ${
+                feedScope === 'all'
+                  ? 'bg-slate-800 text-white shadow-xs border border-slate-700'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              ทั้งหมด
+            </button>
+          </div>
+
+          {/* Clean Community Notice Bar */}
+          <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs text-emerald-900 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded-lg bg-emerald-600 text-white shrink-0">
+                <MessageSquare className="w-3.5 h-3.5" />
+              </span>
+              <span className="text-[11px] sm:text-xs">
+                💬 <strong>ฟีดชุมชน:</strong> สำหรับแชร์เรื่องราว ข่าวสาร และคุยกับเพื่อนบ้าน <em>(โพสต์ทั่วไปจะไม่ขึ้นบนแผนที่รอบตัวเพื่อไม่ให้รกตา)</em>
+              </span>
+            </div>
+            {onOpenReportAlert && (
+              <button
+                type="button"
+                onClick={() => setMainFeedTab('alerts')}
+                className="text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:underline shrink-0 hidden sm:inline"
+              >
+                ดูแจ้งเหตุด่วน →
+              </button>
+            )}
+          </div>
+
+          {/* Create Post Bar with Direct Camera Shutter & Media Upload */}
+          <div className="p-4 bg-white rounded-2xl border-2 border-slate-200/90 shadow-xs space-y-3">
+            <div className="flex items-center gap-3">
+              <img
+                src={currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                alt="User avatar"
+                className="w-10 h-10 rounded-full object-cover border border-slate-200"
+              />
+              <button
+                onClick={onOpenCreatePost}
+                className="flex-1 text-left px-4 py-2.5 bg-slate-100 hover:bg-slate-200/70 rounded-xl text-xs sm:text-sm text-slate-500 font-medium transition cursor-pointer"
+              >
+                แชร์เรื่องราว ข่าวสาร หรือถามเพื่อนบ้านใน {location.province}...
+              </button>
+              <button
+                onClick={onOpenCreatePost}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition shrink-0 active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">สร้างโพสต์</span>
+              </button>
+            </div>
+
+            {/* Action Buttons Row: Direct Camera & Media Upload */}
+            <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  if (onOpenInstantCamera) {
+                    onOpenInstantCamera();
+                  } else {
+                    directCameraInputRef.current?.click();
+                  }
+                }}
+                className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-300 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition active:scale-95 shadow-xs group cursor-pointer"
+                title="เปิดกล้องถ่ายภาพสดทันที"
+              >
+                <div className="p-1.5 rounded-full bg-emerald-600 text-white group-hover:scale-110 transition-transform">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <div className="text-[11px] sm:text-xs font-extrabold leading-tight">ถ่ายรูปสด</div>
+                  <div className="text-[9px] text-emerald-700 font-semibold leading-tight hidden sm:block">เข้ากล้องตรง</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => directGalleryInputRef.current?.click()}
+                className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-2xs group cursor-pointer"
+                title="เลือกรูปภาพจากคลังภาพในเครื่อง"
+              >
+                <div className="p-1.5 rounded-full bg-blue-600 text-white group-hover:scale-110 transition-transform">
+                  <ImageIcon className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <div className="text-[11px] sm:text-xs font-extrabold leading-tight">คลังรูปภาพ</div>
+                  <div className="text-[9px] text-blue-700 font-semibold leading-tight hidden sm:block">อัลบั้มในเครื่อง</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Categories and Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
+                    selectedCategory === cat.id
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                  }`}
+                >
+                  <span>{cat.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="relative min-w-[200px]">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ค้นหาโพสต์, ชื่อเพื่อน..."
+                className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl outline-hidden focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          {/* Feed Posts Section */}
+          <div className="space-y-3.5 pt-1">
+            {filteredPosts.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-2">
+                <MessageSquare className="w-10 h-10 mx-auto text-slate-300 stroke-1" />
+                <p className="text-sm font-semibold text-slate-700">ไม่พบโพสต์ที่ตรงกับเงื่อนไขในมุมมองนี้</p>
+                <p className="text-xs text-slate-400">
+                  {feedScope === 'friends_only'
+                    ? 'เพื่อนของคุณยังไม่ได้สร้างโพสต์ หรือลองเพิ่มเพื่อนใหม่ในชุมชน'
+                    : 'ลองเปลี่ยนตัวกรอง หรือเป็นคนแรกที่สร้างโพสต์ในพื้นที่ของคุณ'}
+                </p>
+              </div>
+            ) : (
+              filteredPosts.map(post => {
+                const authorIsFriend = isFriend(post.author);
+                const isInLocalArea = post.location?.province?.trim() === location.province?.trim();
+                const isSelf = currentUser?.displayName === post.author;
+
+                return (
+                  <div
+                    key={post.id}
+                    onClick={() => openPostDetail(post)}
+                    className="p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer space-y-3 group"
+                  >
+                    {/* Author & Header with Add/Remove Friend button */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img
+                          src={post.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                          alt={typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'ผู้ใช้'}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-700 transition truncate">
+                              {typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'สมาชิกชุมชน'}
+                            </span>
+                            {post.isVerified && (
+                              <CheckCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white shrink-0" />
+                            )}
+
+                            {/* Friend / Local Area Badges */}
+                            {authorIsFriend && (
+                              <span className="px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200 flex items-center gap-1">
+                                <Users className="w-2.5 h-2.5" />
+                                เพื่อนของคุณ
+                              </span>
+                            )}
+
+                            {isInLocalArea && !authorIsFriend && (
+                              <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                                <MapPin className="w-2.5 h-2.5" />
+                                คนในพื้นที่
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
+                            <span className="flex items-center gap-0.5">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              {post.location?.province || 'พื้นที่ชุมชน'} {post.location?.district ? `(${post.location.district})` : ''}
+                            </span>
+                            <span>•</span>
+                            <span>{timeAgo(post.createdAt || Date.now())}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Add / Remove Friend Action Button on Post Header */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {!isSelf && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (authorIsFriend) {
+                                removeFriend(post.author);
+                              } else {
+                                addFriend({
+                                  id: `f_${post.author}`,
+                                  name: post.author,
+                                  avatar: post.authorAvatar,
+                                  province: post.location?.province,
+                                  district: post.location?.district
+                                });
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer ${
+                              authorIsFriend
+                                ? 'bg-blue-50 text-blue-700 hover:bg-rose-50 hover:text-rose-700 border border-blue-200'
+                                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300'
+                            }`}
+                            title={authorIsFriend ? 'เลิกติดตาม' : 'เพิ่มเป็นเพื่อนเพื่อเห็นโพสต์เสมอ'}
+                          >
+                            {authorIsFriend ? (
+                              <>
+                                <UserCheck className="w-3 h-3" />
+                                <span>เป็นเพื่อนแล้ว</span>
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="w-3 h-3" />
+                                <span>+ เพิ่มเพื่อน</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Post Title & Content */}
+                    <div className="space-y-1.5">
+                      <h3 className="font-extrabold text-sm sm:text-base text-slate-900 group-hover:text-emerald-800 transition leading-snug">
+                        {post.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line line-clamp-4">
+                        {post.content}
+                      </p>
+                    </div>
+
+                    {/* Media Attachments */}
+                    {post.images && post.images.length > 0 && (
+                      <div className={`grid gap-2 rounded-2xl overflow-hidden ${
+                        post.images.length === 1 ? 'grid-cols-1' : post.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                      }`}>
+                        {post.images.map((img, idx) => (
+                          <div
+                            key={idx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPhotoPreview(img);
+                            }}
+                            className="relative h-44 sm:h-52 rounded-xl overflow-hidden bg-slate-100 group/img cursor-pointer border border-slate-200"
+                          >
+                            <img
+                              src={img}
+                              alt="Media"
+                              className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <Eye className="w-6 h-6 drop-shadow" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                        {post.tags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[11px] px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-600 font-semibold"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Post Action Footer: Likes, Comments, Shares */}
+                    <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            likePost(post.id);
+                          }}
+                          className={`flex items-center gap-1.5 font-bold transition active:scale-90 cursor-pointer ${
+                            post.isLiked ? 'text-rose-600' : 'text-slate-500 hover:text-rose-600'
+                          }`}
+                        >
+                          <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-rose-600 text-rose-600' : ''}`} />
+                          <span>{post.likes || 0}</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPostDetail(post);
+                          }}
+                          className="flex items-center gap-1.5 font-semibold text-slate-500 hover:text-blue-600 transition cursor-pointer"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span>{post.comments?.length || post.commentsCount || 0}</span>
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={(e) => handleShare(post, e)}
+                        className="flex items-center gap-1 font-semibold text-slate-500 hover:text-emerald-700 transition cursor-pointer"
+                        title="แชร์โพสต์"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        <span className="hidden xs:inline">แชร์</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW 2: 🚨 โพสต์แจ้งเหตุด่วน (EMERGENCY INCIDENT REPORTS - ปักหมุดบนแผนที่)  */}
+      {/* ========================================================================= */}
+      {mainFeedTab === 'alerts' && (
+        <div className="space-y-4 animate-fadeIn">
+          {/* Header Banner */}
+          <div className="p-4 sm:p-5 bg-gradient-to-r from-rose-950 via-red-900 to-rose-900 text-white rounded-3xl shadow-lg border border-rose-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <span className="p-1.5 bg-rose-500/30 text-rose-300 rounded-xl border border-rose-400/30">
-                  <ShieldAlert className="w-4 h-4" />
+                  <ShieldAlert className="w-5 h-5" />
                 </span>
-                <h3 className="font-black text-sm sm:text-base text-white tracking-tight">
-                  การตรวจสอบเหตุฉุกเฉินในชุมชน (Community Verification)
+                <h3 className="font-black text-base sm:text-lg text-white tracking-tight">
+                  โพสต์แจ้งเหตุด่วนและภัยพิบัติ (ปักหมุดบนแผนที่จริง)
                 </h3>
-                <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black animate-pulse">
-                  {filteredAlerts.length} เหตุการณ์
-                </span>
               </div>
               <p className="text-xs text-rose-200 mt-1 leading-relaxed">
-                ร่วมกด <strong>"ยืนยันมีเหตุจริง"</strong> หรือ <strong>"ไม่พบเหตุการณ์"</strong> เพื่อช่วยคนในละแวกบ้านคัดกรองข่าวปลอม
+                รายงานสถานการณ์ฉุกเฉิน น้ำท่วม อุบัติเหตุ ไฟไหม้ ทุกเหตุการณ์จะ<strong>ปักหมุดบนแผนที่รอบตัว</strong> พร้อมปุ่มนำทาง Google Maps เด้งเข้าแอปทันที
               </p>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('map');
+                  showToast('เปิดแผนที่รอบตัวแสดงจุดแจ้งเหตุและร้านค้า', 'info');
+                }}
+                className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 border border-white/20 transition active:scale-95 cursor-pointer"
+              >
+                <Compass className="w-4 h-4 text-emerald-400" />
+                <span>ดูแผนที่รอบตัว</span>
+              </button>
+
               {onOpenReportAlert && (
                 <button
                   type="button"
                   onClick={onOpenReportAlert}
-                  className="px-3.5 py-2 bg-white text-rose-950 hover:bg-rose-50 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95"
+                  className="px-4 py-2.5 bg-white text-rose-950 hover:bg-rose-50 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5 text-rose-600" />
-                  <span>แจ้งเหตุด่วน</span>
+                  <Plus className="w-4 h-4 text-rose-600" />
+                  <span>+ แจ้งเหตุด่วนใหม่</span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* Emergency Cards List in Feed */}
-          <div className="space-y-3.5">
-            {filteredAlerts.map(alert => renderEmergencyVerificationCard(alert))}
+          {/* Anti-Fake News & Community Verification Bar */}
+          <div className="p-3 bg-amber-500/10 border border-amber-300/70 rounded-2xl flex items-center gap-2.5 text-xs text-amber-900 shadow-2xs">
+            <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="leading-snug">
+              <strong>ระบบร่วมตรวจสอบโดยชุมชน:</strong> คนในพื้นที่สามารถกดปุ่ม <em>"ยืนยันมีเหตุจริง"</em> หรือ <em>"ไม่พบเหตุการณ์"</em> เพื่อช่วยคัดกรองข่าวปลอมได้ทันที
+            </p>
           </div>
-        </section>
-      )}
 
-      {/* When category is specifically 'alert' and there are no alerts */}
-      {selectedCategory === 'alert' && filteredAlerts.length === 0 && (
-        <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-2">
-          <ShieldCheck className="w-10 h-10 mx-auto text-emerald-500 stroke-1" />
-          <p className="text-sm font-bold text-slate-800">ไม่มีเหตุฉุกเฉินค้างตรวจสอบในพื้นที่นี้</p>
-          <p className="text-xs text-slate-500">
-            สถานการณ์ในชุมชนปกติและปลอดภัย หากพบเหตุการณ์ผิดปกติสามารถกดปุ่มแจ้งเหตุด่วนได้ทันที
-          </p>
-          {onOpenReportAlert && (
-            <button
-              onClick={onOpenReportAlert}
-              className="mt-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition"
-            >
-              <Plus className="w-4 h-4" />
-              <span>แจ้งเหตุด่วนใหม่</span>
-            </button>
-          )}
-        </div>
-      )}
+          {/* Search Bar for Alerts */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ค้นหาจุดแจ้งเหตุ, น้ำท่วม, อุบัติเหตุ, สถานที่..."
+              className="w-full text-xs pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl outline-hidden focus:ring-2 focus:ring-rose-500 shadow-2xs"
+            />
+          </div>
 
-      {/* Feed Posts Section */}
-      {selectedCategory !== 'alert' && (
-        <div className="space-y-3.5 pt-1">
-          {filteredPosts.length === 0 ? (
-            <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-2">
-              <MessageSquare className="w-10 h-10 mx-auto text-slate-300 stroke-1" />
-              <p className="text-sm font-semibold text-slate-700">ไม่พบโพสต์ที่ตรงกับเงื่อนไขในมุมมองนี้</p>
-              <p className="text-xs text-slate-400">
-                {feedScope === 'friends_only'
-                  ? 'เพื่อนของคุณยังไม่ได้สร้างโพสต์ หรือลองเพิ่มเพื่อนใหม่ในชุมชน'
-                  : 'ลองเปลี่ยนตัวกรอง หรือเป็นคนแรกที่สร้างโพสต์ในพื้นที่ของคุณ'}
+          {/* Emergency Cards List */}
+          {filteredAlerts.length === 0 ? (
+            <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
+              <ShieldCheck className="w-12 h-12 mx-auto text-emerald-500 stroke-1" />
+              <h4 className="text-base font-bold text-slate-800">ไม่มีรายงานเหตุฉุกเฉินในพื้นที่ขณะนี้</h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                สถานการณ์ในพื้นที่ {location.province} ปลอดภัยและเป็นปกติ หากพบเหตุผิดปกติสามารถกดปุ่มแจ้งเหตุด่วนเพื่อปักหมุดบนแผนที่ได้ทันที
               </p>
+              {onOpenReportAlert && (
+                <button
+                  type="button"
+                  onClick={onOpenReportAlert}
+                  className="mt-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>แจ้งเหตุด่วนพร้อมปักหมุด</span>
+                </button>
+              )}
             </div>
           ) : (
-            filteredPosts.map(post => {
-              const authorIsFriend = isFriend(post.author);
-              const isInLocalArea = post.location?.province?.trim() === location.province?.trim();
-              const isSelf = currentUser?.displayName === post.author;
-
-              return (
-                <div
-                  key={post.id}
-                  onClick={() => openPostDetail(post)}
-                  className="p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer space-y-3 group"
-                >
-                  {/* Author & Header with Add/Remove Friend button */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <img
-                        src={post.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-                        alt={typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'ผู้ใช้'}
-                        className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-700 transition truncate">
-                            {typeof post.author === 'string' ? post.author : (post.author as any)?.name || 'สมาชิกชุมชน'}
-                          </span>
-                          {post.isVerified && (
-                            <CheckCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white shrink-0" />
-                          )}
-
-                          {/* Friend / Local Area Badges */}
-                          {authorIsFriend && (
-                            <span className="px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200 flex items-center gap-1">
-                              <Users className="w-2.5 h-2.5" />
-                              เพื่อนของคุณ
-                            </span>
-                          )}
-
-                          {isInLocalArea && !authorIsFriend && (
-                            <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
-                              <MapPin className="w-2.5 h-2.5" />
-                              คนในพื้นที่
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
-                          <span className="flex items-center gap-0.5">
-                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                            {post.location?.province || 'พื้นที่ชุมชน'} {post.location?.district ? `(${post.location.district})` : ''}
-                          </span>
-                          <span>•</span>
-                          <span>{timeAgo(post.createdAt || Date.now())}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Add / Remove Friend Action Button on Post Header */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {!isSelf && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (authorIsFriend) {
-                              removeFriend(post.author);
-                            } else {
-                              addFriend({
-                                id: `f_${post.author}`,
-                                name: post.author,
-                                avatar: post.authorAvatar,
-                                province: post.location?.province,
-                                district: post.location?.district
-                              });
-                            }
-                          }}
-                          className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1 transition active:scale-95 ${
-                            authorIsFriend
-                              ? 'bg-blue-50 text-blue-700 hover:bg-rose-50 hover:text-rose-700 border border-blue-200'
-                              : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300'
-                          }`}
-                          title={authorIsFriend ? 'คลิกเพื่อลบเพื่อน' : 'คลิกเพื่อเพิ่มเพื่อน'}
-                        >
-                          {authorIsFriend ? (
-                            <>
-                              <UserCheck className="w-3 h-3 text-blue-600" />
-                              <span>เป็นเพื่อนแล้ว</span>
-                            </>
-                          ) : (
-                            <>
-                              <UserPlus className="w-3 h-3 text-emerald-600" />
-                              <span>+ เพิ่มเพื่อน</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 hidden sm:inline-block">
-                        {post.category === 'news' && 'ข่าวสาร'}
-                        {post.category === 'help' && 'ช่วยเหลือ'}
-                        {post.category === 'activity' && 'กิจกรรม'}
-                        {post.category === 'general' && 'พูดคุย'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Title & Content */}
-                  <div>
-                    <h3 className="font-extrabold text-sm sm:text-base text-slate-900 leading-snug group-hover:text-emerald-800 transition">
-                      {post.title || 'ไม่มีหัวข้อ'}
-                    </h3>
-                    <p className="mt-1 text-xs sm:text-sm text-slate-600 line-clamp-3 leading-relaxed">
-                      {post.content || ''}
-                    </p>
-                  </div>
-
-                  {/* Images */}
-                  {Array.isArray(post.images) && post.images.length > 0 && (
-                    <div className={`grid gap-2 rounded-2xl overflow-hidden ${
-                      post.images.length === 1 ? 'grid-cols-1' : post.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-                    }`}>
-                      {post.images.slice(0, 3).map((img, i) => (
-                        <img
-                          key={i}
-                          src={img}
-                          alt="Post media"
-                          className="w-full h-44 object-cover hover:scale-105 transition-transform duration-300"
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Action Bar (Likes, Comments, Share) */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          likePost(post.id);
-                        }}
-                        className={`flex items-center gap-1.5 transition active:scale-90 font-bold ${
-                          post.isLiked ? 'text-rose-600' : 'text-slate-500 hover:text-rose-600'
-                        }`}
-                      >
-                        <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-rose-600' : ''}`} />
-                        <span>{post.likes}</span>
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openPostDetail(post);
-                        }}
-                        className="flex items-center gap-1.5 hover:text-blue-600 transition font-bold"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span>{Array.isArray(post.comments) ? post.comments.length : 0}</span>
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={(e) => handleShare(post, e)}
-                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition"
-                      title="แชร์โพสต์"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
+            <div className="space-y-3.5">
+              {filteredAlerts.map(alert => renderEmergencyVerificationCard(alert))}
+            </div>
           )}
         </div>
       )}

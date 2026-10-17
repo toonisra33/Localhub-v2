@@ -4,8 +4,26 @@ import App from './App';
 import './index.css';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-// Safely register Service Worker asynchronously without blocking React render (only when not in iframe)
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.self === window.top) {
+// In development, ensure any stale Service Workers from previous production builds are unregistered
+if (import.meta.env.DEV && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  try {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const reg of registrations) {
+        reg.unregister();
+      }
+    });
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        keys.forEach((key) => caches.delete(key));
+      });
+    }
+  } catch (e) {
+    console.warn('[SW Cleanup] dev cleanup skipped:', e);
+  }
+}
+
+// Safely register Service Worker asynchronously in production without blocking React render (only when not in iframe)
+if (import.meta.env.PROD && typeof window !== 'undefined' && 'serviceWorker' in navigator && window.self === window.top) {
   try {
     // Listen for service worker reload signal
     navigator.serviceWorker.addEventListener('message', (event) => {

@@ -24,13 +24,15 @@ interface CreatePostModalProps {
   onClose: () => void;
   initialMode?: 'camera' | 'gallery' | 'video' | 'standard';
   initialImages?: string[];
+  onOpenReportAlert?: () => void;
 }
 
 export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   isOpen,
   onClose,
   initialMode = 'standard',
-  initialImages = []
+  initialImages = [],
+  onOpenReportAlert
 }) => {
   const { createPost, location, showToast } = useCommunity();
   const [title, setTitle] = useState('');
@@ -613,19 +615,50 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {/* Category */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">หมวดหมู่โพสต์</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700">หมวดหมู่โพสต์ฟีดชุมชน</label>
+              <span className="text-[10px] text-slate-500 font-medium">💬 โพสต์ทั่วไปจะไม่ขึ้นบนแผนที่รอบตัว</span>
+            </div>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value as Post['category'])}
+              onChange={(e) => {
+                const val = e.target.value as Post['category'];
+                if (val === 'alert' && onOpenReportAlert) {
+                  onClose();
+                  onOpenReportAlert();
+                  return;
+                }
+                setCategory(val);
+              }}
               className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
             >
               <option value="news">📰 ข่าวสาร / ประกาศสำคัญ</option>
               <option value="general">💬 พูดคุยทั่วไปในชุมชน</option>
               <option value="help">🤝 ขอความช่วยเหลือ / ของหาย</option>
               <option value="activity">🎉 กิจกรรม / รวมกลุ่ม</option>
-              <option value="alert">⚠️ เตือนภัยในพื้นที่</option>
+              <option value="alert">🚨 แจ้งเหตุด่วน (สลับไปปักหมุดบนแผนที่ Google Maps)</option>
             </select>
           </div>
+
+          {/* Emergency Alert Switch Helper Banner */}
+          {onOpenReportAlert && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-2 text-xs">
+              <div className="text-rose-900 leading-tight">
+                <span className="font-bold">ต้องการแจ้งเหตุด่วน อุบัติเหตุ หรือภัยพิบัติ?</span>
+                <p className="text-[11px] text-rose-700 mt-0.5">ระบบจะปักหมุดบนแผนที่และมีปุ่มนำทาง Google Maps</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenReportAlert();
+                }}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold shrink-0 transition active:scale-95 shadow-xs"
+              >
+                ปักหมุดแจ้งเหตุ
+              </button>
+            </div>
+          )}
 
           {/* Title */}
           <div>

@@ -46,6 +46,7 @@ export interface BroadcastInput {
   videoDurationSec?: number;
   actionUrl?: string;
   actionText?: string;
+  expiresInMinutes?: number;
 }
 
 interface BroadcastContextType {
@@ -467,6 +468,8 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       actionText: data.actionText,
       broadcastAt: now,
       broadcastDateStr: dateStr,
+      expiresInMinutes: data.expiresInMinutes,
+      expiresAt: data.expiresInMinutes && data.expiresInMinutes > 0 ? now + data.expiresInMinutes * 60 * 1000 : undefined,
       adminName: 'ศูนย์อำนวยการ LocalHub',
       adminRole: 'System Admin',
       isPinned: data.severity === 'urgent' || data.severity === 'high',
@@ -560,8 +563,14 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     deleteDoc(doc(db, 'broadcasts', id)).catch(() => {});
   };
 
-  // Find the top un-dismissed broadcast
-  const activeBroadcast = broadcasts.find(b => !dismissedIds.includes(b.id)) || null;
+  // Find the top un-dismissed and un-expired broadcast
+  const currentTime = Date.now();
+  const activeBroadcast =
+    broadcasts.find((b) => {
+      if (dismissedIds.includes(b.id)) return false;
+      if (b.expiresAt && b.expiresAt < currentTime) return false;
+      return true;
+    }) || null;
 
   return (
     <BroadcastContext.Provider

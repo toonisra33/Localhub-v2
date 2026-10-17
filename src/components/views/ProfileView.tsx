@@ -60,7 +60,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     createPost,
     isCurrentAccountInactiveWarning,
     currentAccountDaysRemaining,
-    confirmActiveStatus
+    confirmActiveStatus,
+    openDirectChat,
+    totalUnreadChatCount
   } = useCommunity();
 
   // Profile Sub-tab: 'posts' | 'alerts' | 'friends' | 'album'
@@ -71,12 +73,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [userBio, setUserBio] = useState('ยินดีที่ได้รู้จักทุกคนในชุมชน LocalHub ร่วมสร้างพื้นที่น่าอยู่และปลอดภัยไปด้วยกันครับ 🏡✨');
 
-  // Check if current user is authorized as the system administrator
+  // Check if current user is authorized as the system administrator (ONLY toonisra33@gmail.com)
   const isEligibleAdmin = Boolean(
-    currentUser?.email && currentUser.email.toLowerCase() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
+    currentUser?.email && currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
   );
 
-  // 1. Filter User's Own Posts
+  // 1. Filter User's Own Posts & Shared Posts (ข้อมูลเฉพาะบุคคลของใครของคนนั้น ไม่รวมการกดไลค์/คอมเมนต์/เพื่อน)
   const myPosts = useMemo(() => {
     if (!currentUser) return [];
     const currentName = (currentUser.displayName || '').trim().toLowerCase();
@@ -84,12 +86,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
 
     return posts.filter((p) => {
       const author = (p.author || '').trim().toLowerCase();
-      return (
+      const isOriginalAuthor =
         author === currentName ||
         (currentEmail && author === currentEmail) ||
         author.includes(currentName) ||
-        (currentUser.displayName && author.includes('อิศราวัฒน์'))
+        (currentUser.displayName && author.includes('อิศราวัฒน์'));
+
+      // ข้อมูลของคนอื่นจะปรากฏเฉพาะกรณีที่เจ้าของบัญชีกด "แชร์โพสต์" เท่านั้น
+      const isSharedByMe = Boolean(
+        p.sharedFrom &&
+        (isOriginalAuthor || (p.sharedBy && p.sharedBy.some(s => s.toLowerCase() === currentName)))
       );
+
+      // กรองเฉพาะโพสต์ของตัวเอง หรือโพสต์ที่ตัวเองแชร์ (ไม่นับการกดไลค์ ไม่นับคอมเมนต์ ไม่เอาโพสต์เพื่อน)
+      return isOriginalAuthor || isSharedByMe;
     });
   }, [posts, currentUser]);
 
@@ -445,8 +455,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
             </div>
           </div>
 
-          {/* Action Buttons: Logout & Edit */}
-          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+          {/* Action Buttons: 💬 Direct Chat & Logout */}
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap">
+            <button
+              onClick={() => openDirectChat()}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+              title="เปิดกล่องข้อความสนทนาตัวต่อตัว (1-on-1 Direct Chat)"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>แชทคุยตัวต่อตัว</span>
+              {totalUnreadChatCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-white text-emerald-800 text-[10px] font-black animate-pulse">
+                  {totalUnreadChatCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={logoutFirebase}
               className="px-3.5 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-700 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95 border border-slate-200"
@@ -553,7 +577,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-          <span>โพสต์ทุกโพสต์ ({myPosts.length})</span>
+          <span>ฟีดของฉัน ({myPosts.length})</span>
         </button>
 
         <button
@@ -587,9 +611,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
         </button>
       </div>
 
-      {/* 4. Tab 1: โพสต์ทุกโพสต์ของผู้ใช้งาน (My Posts) */}
+      {/* 4. Tab 1: ข้อมูลเฉพาะบุคคลของเจ้าของบัญชี (โพสต์ส่วนตัว + โพสต์ที่แชร์เท่านั้น) */}
       {activeTabSub === 'posts' && (
         <div className="space-y-3">
+          {/* Personal Scope Indicator Banner */}
+          <div className="p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/90 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </span>
+              <div>
+                <p className="font-extrabold text-xs text-emerald-950">
+                  หน้าฟีดของฉัน (ข้อมูลเฉพาะบุคคลของ {currentUser.displayName || 'คุณ'})
+                </p>
+                <p className="text-[11px] text-emerald-800 leading-tight">
+                  รวบรวมเฉพาะโพสต์ ภาพถ่าย และการแจ้งเหตุที่คุณสร้าง รวมถึงโพสต์ของคนอื่นที่คุณเลือกแชร์เท่านั้น (ไม่รวมโพสต์เพื่อนหรือการกดไลค์/คอมเมนต์)
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-white text-emerald-800 border border-emerald-300 shadow-2xs shrink-0 hidden sm:inline">
+              🔒 เฉพาะเจ้าของบัญชี
+            </span>
+          </div>
+
           {/* Quick Post Box */}
           <form onSubmit={handleQuickCreatePost} className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs space-y-2.5">
             <div className="flex items-center gap-2">
@@ -660,8 +704,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
                   </div>
 
                   <div>
-                    <h5 className="font-extrabold text-sm text-slate-900 leading-snug">{post.title}</h5>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                    {post.sharedFrom ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-bold bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                          <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>🔁 คุณแชร์โพสต์นี้: {post.content}</span>
+                        </div>
+                        {/* Original Post Embedded Container */}
+                        <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={post.sharedFrom.originalAuthorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                              alt={post.sharedFrom.originalAuthor}
+                              className="w-6 h-6 rounded-full object-cover"
+                            />
+                            <span className="font-bold text-xs text-slate-800">{post.sharedFrom.originalAuthor}</span>
+                          </div>
+                          <h5 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-snug">{post.sharedFrom.originalTitle}</h5>
+                          <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{post.sharedFrom.originalContent}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <h5 className="font-extrabold text-sm text-slate-900 leading-snug">{post.title}</h5>
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                      </>
+                    )}
                   </div>
 
                   {/* Images if any */}
@@ -837,16 +905,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      removeFriend(friend.id);
-                      showToast(`ลบ ${friend.name} ออกจากเพื่อนแล้ว`, 'info');
-                    }}
-                    className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition shrink-0 active:scale-95"
-                    title="ลบเพื่อน"
-                  >
-                    <UserMinus className="w-4 h-4" />
-                  </button>
+                  {/* Action Buttons on Friend: 💬 Direct Chat & Remove */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => {
+                        openDirectChat({
+                          id: friend.id,
+                          name: friend.name,
+                          avatar: friend.avatar,
+                          province: friend.province,
+                          district: friend.district,
+                          isOnline: true
+                        });
+                      }}
+                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold transition flex items-center gap-1 active:scale-95 border border-emerald-200 cursor-pointer"
+                      title={`แชทคุยตัวต่อตัวกับ ${friend.name}`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>แชท</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        removeFriend(friend.id);
+                        showToast(`ลบ ${friend.name} ออกจากเพื่อนแล้ว`, 'info');
+                      }}
+                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition shrink-0 active:scale-95"
+                      title="ลบเพื่อน"
+                    >
+                      <UserMinus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

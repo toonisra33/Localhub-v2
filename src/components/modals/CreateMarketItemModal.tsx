@@ -73,12 +73,14 @@ export const CreateMarketItemModal: React.FC<CreateMarketItemModalProps> = ({ is
       return;
     }
 
+    const shopCoords = location.lat && location.lng ? { lat: location.lat, lng: location.lng } : undefined;
+
     addMarketItem({
       title: title.trim(),
       description: description.trim(),
       price: Number(price) || 0,
       category,
-      seller: 'คุณ (ผู้ขายในพื้นที่)',
+      seller: 'คุณ (ร้านค้าที่ลงทะเบียน)',
       sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       sellerContact: sellerContact.trim() || '081-000-0000',
       images:
@@ -87,8 +89,11 @@ export const CreateMarketItemModal: React.FC<CreateMarketItemModalProps> = ({ is
           : ['https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'],
       province: location.province,
       district: location.district || 'เมือง',
+      coordinates: shopCoords,
       isAvailable: true
     });
+
+    showToast('🛍️ ลงทะเบียนร้านค้าสำเร็จ! ตำแหน่งร้านจะปรากฏบนแผนที่รอบตัว', 'success');
 
     setTitle('');
     setDescription('');

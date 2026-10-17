@@ -431,6 +431,10 @@ function AppContent() {
         initialMode={createPostInitialMode}
         initialImages={createPostInitialImages}
         onClose={closeCreatePost}
+        onOpenReportAlert={() => {
+          closeCreatePost();
+          openReportAlert();
+        }}
       />
 
       <CreateMarketItemModal

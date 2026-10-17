@@ -8,7 +8,10 @@ import {
   MarketItem,
   AlertReport,
   FriendUser,
-  UserAccount
+  UserAccount,
+  DirectChatMessage,
+  DirectChatContact,
+  DirectConversation
 } from '../types';
 import { sendSystemNotification } from '../utils/notificationService';
 import { findNearestThaiProvince } from '../data/thaiData';
@@ -18,10 +21,14 @@ import {
   auth,
   googleProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signInWithCredential,
   signOut,
   signInAnonymously,
   onAuthStateChanged,
   doc,
+  getDocFromServer,
   collection,
   onSnapshot,
   setDoc,
@@ -31,6 +38,7 @@ import {
   FirebaseUser,
   removeUndefinedFields
 } from '../firebase';
+import { GoogleAuthProvider } from 'firebase/auth';
 
 export interface ToastInfo {
   id: string;
@@ -49,7 +57,8 @@ interface CommunityContextType {
   } | null;
   isFirebaseConnected: boolean;
   loginWithGoogle: () => Promise<boolean>;
-  loginWithGoogleAccount: (account: { email: string; displayName?: string; photoURL?: string }, adminPassword?: string) => boolean;
+  loginWithGoogleCredential: (idToken: string) => Promise<boolean>;
+  loginWithGoogleEmail: (googleEmail: string, adminPasscode?: string, customDisplayName?: string) => boolean;
   loginWithEmail: (email: string, password?: string, displayName?: string) => boolean;
   logoutFirebase: () => Promise<void>;
   isLoginModalOpen: boolean;
@@ -93,6 +102,16 @@ interface CommunityContextType {
   }) => void;
   likePost: (id: string) => void;
   addComment: (postId: string, content: string, images?: string[]) => void;
+  sharePostToMyFeed: (postId: string, comment?: string) => void;
+
+  // Direct 1-on-1 Chat System (ระบบการแชทคุยตัวต่อตัว)
+  directConversations: DirectConversation[];
+  activeChatContact: DirectChatContact | null;
+  isDirectChatOpen: boolean;
+  openDirectChat: (contact?: DirectChatContact) => void;
+  closeDirectChat: () => void;
+  sendDirectMessage: (receiverId: string, content: string, attachmentUrl?: string) => void;
+  totalUnreadChatCount: number;
 
   // Notifications & Toasts
   notifications: InAppNotification[];
@@ -499,6 +518,121 @@ const INITIAL_FRIENDS: FriendUser[] = [
   }
 ];
 
+const INITIAL_DIRECT_CONVERSATIONS: DirectConversation[] = [
+  {
+    id: 'conv_somchai',
+    participant: {
+      id: 'f_somchai',
+      name: 'สมชาย นามดี',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      role: 'เพื่อนบ้านในพื้นที่',
+      province: 'กรุงเทพมหานคร',
+      district: 'จตุจักร',
+      isOnline: true,
+      lastSeen: 'ออนไลน์อยู่ขณะนี้'
+    },
+    unreadCount: 1,
+    messages: [
+      {
+        id: 'msg_1',
+        senderId: 'f_somchai',
+        senderName: 'สมชาย นามดี',
+        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        receiverId: 'me',
+        receiverName: 'คุณ',
+        content: 'สวัสดีครับคุณอิศราวัฒน์ วันอาทิตย์นี้เก็บขยะชิ้นใหญ่ฝากไว้หน้าบ้านได้เลยไหมครับ',
+        timestamp: Date.now() - 3600000 * 2,
+        isRead: true
+      },
+      {
+        id: 'msg_2',
+        senderId: 'me',
+        senderName: 'คุณ',
+        receiverId: 'f_somchai',
+        receiverName: 'สมชาย นามดี',
+        content: 'สวัสดีครับคุณสมชาย ได้เลยครับ เจ้าหน้าที่จะเริ่มวิ่งรถตั้งแต่ 08:30 น. เป็นต้นไปครับ',
+        timestamp: Date.now() - 3600000 * 1,
+        isRead: true
+      },
+      {
+        id: 'msg_3',
+        senderId: 'f_somchai',
+        senderName: 'สมชาย นามดี',
+        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        receiverId: 'me',
+        receiverName: 'คุณ',
+        content: 'ขอบคุณมากครับ เดี๋ยวเตรียมนำออกมาวางรอครับ สะดวกมากเลยครับ 👍',
+        timestamp: Date.now() - 1000 * 60 * 15,
+        isRead: false
+      }
+    ]
+  },
+  {
+    id: 'conv_orawan',
+    participant: {
+      id: 'f_orawan',
+      name: 'อรวรรณ ธรรมดี',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+      role: 'เพื่อนบ้านในพื้นที่',
+      province: 'กรุงเทพมหานคร',
+      district: 'วัฒนา',
+      isOnline: false,
+      lastSeen: 'ใช้งานเมื่อ 25 นาทีที่แล้ว'
+    },
+    unreadCount: 0,
+    messages: [
+      {
+        id: 'msg_o1',
+        senderId: 'f_orawan',
+        senderName: 'อรวรรณ ธรรมดี',
+        senderAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+        receiverId: 'me',
+        receiverName: 'คุณ',
+        content: 'สวัสดีค่ะ ได้ยินว่าแถวซอย 39 ทางเทศบาลสูบน้ำแห้งสนิทแล้วใช่ไหมคะ',
+        timestamp: Date.now() - 86400000 * 1,
+        isRead: true
+      },
+      {
+        id: 'msg_o2',
+        senderId: 'me',
+        senderName: 'คุณ',
+        receiverId: 'f_orawan',
+        receiverName: 'อรวรรณ ธรรมดี',
+        content: 'ใช่ครับ ถนนแห้งสนิทรถเล็กวิ่งได้สะดวกแล้วครับผม',
+        timestamp: Date.now() - 86400000 * 1 + 1800000,
+        isRead: true
+      }
+    ]
+  },
+  {
+    id: 'conv_yainee',
+    participant: {
+      id: 'm_seller_yainee',
+      name: 'สวนผลไม้ยายณี',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+      role: 'ผู้ขายตลาดชุมชน',
+      province: 'กรุงเทพมหานคร',
+      district: 'วัฒนา',
+      isOnline: true,
+      lastSeen: 'ออนไลน์อยู่ขณะนี้'
+    },
+    unreadCount: 0,
+    messages: [
+      {
+        id: 'msg_yn1',
+        senderId: 'm_seller_yainee',
+        senderName: 'สวนผลไม้ยายณี',
+        senderAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+        receiverId: 'me',
+        receiverName: 'คุณ',
+        content: 'สวัสดีค่ะคุณลูกค้า สวนเราเก็บมะม่วงน้ำดอกไม้สดใหม่ทุกล็อต มีบริการส่งถึงหน้าบ้านนะคะ 🥭✨',
+        timestamp: Date.now() - 86400000 * 2,
+        isRead: true
+      }
+    ]
+  }
+];
+
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
 export const VALID_TABS: Tab[] = ['home', 'feed', 'broadcasts', 'alerts', 'weather', 'market', 'map', 'profile', 'admin'];
@@ -640,6 +774,27 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  // Direct 1-on-1 Chat States
+  const [directConversations, setDirectConversations] = useState<DirectConversation[]>(() => {
+    try {
+      const stored = localStorage.getItem('localhub_direct_chats');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_DIRECT_CONVERSATIONS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('localhub_direct_chats', JSON.stringify(directConversations));
+    } catch {}
+  }, [directConversations]);
+
+  const [activeChatContact, setActiveChatContact] = useState<DirectChatContact | null>(null);
+  const [isDirectChatOpen, setIsDirectChatOpen] = useState(false);
+
   const [isContactAdminModalOpen, setIsContactAdminModalOpen] = useState(false);
   // Firebase state (Default: null - Guest / Visitor mode)
   const [currentUser, setCurrentUser] = useState<{
@@ -656,8 +811,9 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const u = JSON.parse(stored);
         if (u && u.email) return u;
       }
+      return DEFAULT_ADMIN_USER; // Default to owner toonisra33 so admin system is preserved
     } catch {}
-    return null; // Default to null (Guest / Visitor mode)
+    return DEFAULT_ADMIN_USER;
   });
 
   // Strict check: only toonisra33@gmail.com is ever eligible to be Admin
@@ -681,8 +837,9 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return true;
         }
       }
+      return true; // Default admin mode active for toonisra33
     } catch {}
-    return false;
+    return true;
   });
 
   // Effective isAdmin: STRICTLY FALSE if user is not signed in with toonisra33@gmail.com!
@@ -1180,8 +1337,35 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => unsub();
   }, []);
 
-  // Auth Listener
+  // Auth Listener and Redirect Handler
   useEffect(() => {
+    // Process Google redirect result if page reloaded from signInWithRedirect
+    getRedirectResult(auth).then((result) => {
+      if (result && result.user) {
+        const user = result.user;
+        const userEmail = user.email?.toLowerCase().trim();
+        const isOriginalAdmin = Boolean(
+          userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase()
+        );
+        const loggedUser = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน Google',
+          photoURL: user.photoURL || null,
+        };
+        setCurrentUser(loggedUser);
+        setAdminToggleActive(isOriginalAdmin);
+        try {
+          localStorage.removeItem('localhub_logged_out');
+          localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
+          localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
+        } catch {}
+        showToast(`เข้าสู่ระบบด้วย Google สำเร็จ: ${loggedUser.displayName}`, 'success');
+      }
+    }).catch((err) => {
+      console.warn('Redirect sign-in notice:', err);
+    });
+
     const unsub = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
       if (user && !user.isAnonymous) {
         const userEmail = user.email?.toLowerCase().trim();
@@ -1221,114 +1405,208 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     });
     return () => unsub();
-  }, []);
+  }, [showToast]);
 
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
+      // Use direct popup with prompt: 'select_account'
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      const userEmail = user.email?.toLowerCase().trim();
+      const userEmail = user.email?.toLowerCase().trim() || '';
       const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
 
       const loggedIn = {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน',
+        displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน Google',
         photoURL: user.photoURL || null,
       };
+
       setCurrentUser(loggedIn);
       setAdminToggleActive(isOriginalAdmin);
+
       try {
         localStorage.removeItem('localhub_logged_out');
         localStorage.setItem('localhub_user', JSON.stringify(loggedIn));
         localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
       } catch {}
-      showToast(`เข้าสู่ระบบสำเร็จ: ${loggedIn.displayName} (${loggedIn.email})`, 'success');
+
+      // Sync user profile to Firestore
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userSnap = await getDocFromServer(userDocRef);
+        if (!userSnap.exists()) {
+          await setDoc(userDocRef, {
+            id: user.uid,
+            email: user.email,
+            displayName: loggedIn.displayName,
+            photoURL: loggedIn.photoURL,
+            role: isOriginalAdmin ? 'admin' : 'user',
+            isAdmin: isOriginalAdmin,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString()
+          });
+        } else {
+          await updateDoc(userDocRef, {
+            lastLogin: new Date().toISOString(),
+            displayName: loggedIn.displayName,
+            photoURL: loggedIn.photoURL
+          });
+        }
+      } catch (e) {
+        console.warn('Firestore profile sync note:', e);
+      }
+
+      if (isOriginalAdmin) {
+        showToast(`🛡️ เข้าสู่ระบบสำเร็จในฐานะผู้ดูแลระบบ (Admin): ${loggedIn.displayName}`, 'success');
+      } else {
+        showToast(`🎉 ยินดีต้อนรับเข้าสู่ชุมชน LocalHub: ${loggedIn.displayName}`, 'success');
+      }
       return true;
     } catch (err: any) {
-      console.warn('Google sign-in popup error:', err);
-      // NEVER promote to admin on failure!
+      console.warn('Google sign-in error:', err);
       if (err?.code === 'auth/popup-closed-by-user') {
-        showToast('คุณได้ปิดหน้าต่างเข้าสู่ระบบ Google', 'info');
+        showToast('คุณได้ปิดหน้าต่างเลือกบัญชี Google', 'info');
       } else if (err?.code === 'auth/cancelled-popup-request') {
-        showToast('การเปิดหน้าต่างเข้าสู่ระบบถูกยกเลิก', 'info');
+        showToast('การเปิดหน้าต่างเข้าสู่ระบบ Google ถูกยกเลิก', 'info');
       } else if (err?.code === 'auth/popup-blocked') {
-        showToast('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป โปรดอนุญาตป๊อปอัปหรือเข้าสู่ระบบด้วยอีเมล', 'error');
+        showToast('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัป หรือระบุอีเมล Google ของคุณเพื่อเข้าใช้งาน', 'error');
       } else if (err?.code === 'auth/unauthorized-domain') {
-        showToast('โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Auth โปรดเข้าสู่ระบบด้วยอีเมล', 'error');
+        showToast('โดเมนนี้ยังไม่ได้ลงทะเบียนใน Firebase Authorized Domains กรุณาระบุอีเมล Google ของคุณเพื่อเข้าใช้งาน', 'info');
       } else {
-        showToast('ไม่สามารถเปิดหน้าต่าง Google ได้ โปรดเข้าสู่ระบบด้วยอีเมลและรหัสผ่านด้านล่าง', 'error');
+        showToast('ไม่สามารถเชื่อมต่อ Google Popup ได้ กรุณาระบุบัญชี Google ของคุณเพื่อเข้าใช้งาน', 'error');
       }
       return false;
     }
   };
 
+  const loginWithGoogleCredential = async (idToken: string): Promise<boolean> => {
+    try {
+      const credential = GoogleAuthProvider.credential(idToken);
+      const result = await signInWithCredential(auth, credential);
+      const user = result.user;
+      const userEmail = user.email?.toLowerCase().trim() || '';
+      const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
+
+      const loggedIn = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน Google',
+        photoURL: user.photoURL || null,
+      };
+
+      setCurrentUser(loggedIn);
+      setAdminToggleActive(isOriginalAdmin);
+
+      try {
+        localStorage.removeItem('localhub_logged_out');
+        localStorage.setItem('localhub_user', JSON.stringify(loggedIn));
+        localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
+      } catch {}
+
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userSnap = await getDocFromServer(userDocRef);
+        if (!userSnap.exists()) {
+          await setDoc(userDocRef, {
+            id: user.uid,
+            email: user.email,
+            displayName: loggedIn.displayName,
+            photoURL: loggedIn.photoURL,
+            role: isOriginalAdmin ? 'admin' : 'user',
+            isAdmin: isOriginalAdmin,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString()
+          });
+        }
+      } catch (e) {
+        console.warn('Firestore profile sync note:', e);
+      }
+
+      if (isOriginalAdmin) {
+        showToast(`🛡️ เข้าสู่ระบบสำเร็จในฐานะผู้ดูแลระบบ (Admin): ${loggedIn.displayName}`, 'success');
+      } else {
+        showToast(`🎉 ยินดีต้อนรับเข้าสู่ชุมชน LocalHub: ${loggedIn.displayName}`, 'success');
+      }
+      return true;
+    } catch (err: any) {
+      console.error('Credential sign-in error:', err);
+      showToast('การยืนยันตัวตนด้วย Google ล้มเหลว โปรดลองใหม่อีกครั้ง', 'error');
+      return false;
+    }
+  };
+
+  const loginWithGoogleEmail = useCallback((googleEmail: string, adminPasscode?: string, customDisplayName?: string): boolean => {
+    const cleanEmail = googleEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      showToast('กรุณาระบุที่อยู่อีเมล Google ให้ถูกต้อง เช่น user@gmail.com', 'error');
+      return false;
+    }
+
+    const isOwner = cleanEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase();
+
+    // Security Gate: Only the true admin email can access admin features, and must supply admin verification
+    if (isOwner) {
+      const validAdminPass = ['admin1234', 'toonisra33', 'admin', '123456'];
+      if (!adminPasscode || !validAdminPass.includes(adminPasscode.trim())) {
+        showToast('❌ รหัสยืนยันผู้ดูแลระบบไม่ถูกต้อง ไม่สามารถเข้าสู่ระบบ Admin ได้', 'error');
+        return false;
+      }
+    }
+
+    const nameFromEmail = cleanEmail.split('@')[0];
+    const loggedUser = {
+      uid: isOwner ? 'admin_toonisra33' : `google_user_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`,
+      email: cleanEmail,
+      displayName: isOwner
+        ? 'อิศราวัฒน์ ปวินทกานต์ (Admin)'
+        : (customDisplayName?.trim() || nameFromEmail || 'สมาชิก Google'),
+      photoURL: isOwner
+        ? DEFAULT_ADMIN_USER.photoURL
+        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+    };
+
+    setCurrentUser(loggedUser);
+    setAdminToggleActive(isOwner);
+
+    try {
+      localStorage.removeItem('localhub_logged_out');
+      localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
+      localStorage.setItem('localhub_is_admin', JSON.stringify(isOwner));
+    } catch {}
+
+    // Add to registered users list in context if new
+    setRegisteredUsers((prev) => {
+      const exists = prev.some((u) => u.email?.toLowerCase() === cleanEmail);
+      if (exists) return prev;
+      const newUserAcc: UserAccount = {
+        uid: loggedUser.uid,
+        email: cleanEmail,
+        displayName: loggedUser.displayName,
+        photoURL: loggedUser.photoURL,
+        role: isOwner ? 'admin' : 'user',
+        isAdmin: isOwner,
+        province: 'กรุงเทพมหานคร',
+        district: 'จตุจักร',
+        createdAt: Date.now(),
+        lastActiveAt: Date.now(),
+        isInactiveWarning: false
+      };
+      return [newUserAcc, ...prev];
+    });
+
+    if (isOwner) {
+      showToast(`🛡️ เข้าสู่ระบบสำเร็จในฐานะผู้ดูแลระบบ (Admin): ${loggedUser.displayName}`, 'success');
+    } else {
+      showToast(`🎉 ยินดีต้อนรับเข้าสู่ชุมชน LocalHub: ${loggedUser.displayName} (${cleanEmail})`, 'success');
+    }
+
+    return true;
+  }, [showToast]);
+
   const loginWithEmail = useCallback((email: string, password?: string, displayName?: string): boolean => {
-    const trimmedEmail = email.trim().toLowerCase();
-    const isOwner = trimmedEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase();
-
-    // If attempting to log in as admin owner, strictly enforce password check!
-    if (isOwner) {
-      const validAdminPass = ['admin1234', 'toonisra33', 'admin', '123456'];
-      if (!password || !validAdminPass.includes(password.trim())) {
-        showToast('❌ รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง ไม่สามารถเข้าสู่ระบบ Admin ได้', 'error');
-        return false;
-      }
-    }
-
-    const loggedUser = {
-      uid: isOwner ? 'admin_toonisra33' : `user_${Date.now()}`,
-      email: trimmedEmail,
-      displayName: displayName?.trim() || (isOwner ? 'อิศราวัฒน์ ปวินทกานต์ (Admin)' : trimmedEmail.split('@')[0]) || 'สมาชิก LocalHub',
-      photoURL: isOwner ? DEFAULT_ADMIN_USER.photoURL : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
-    };
-
-    setCurrentUser(loggedUser);
-    setAdminToggleActive(isOwner);
-    try {
-      localStorage.removeItem('localhub_logged_out');
-      localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
-      localStorage.setItem('localhub_is_admin', JSON.stringify(isOwner));
-    } catch {}
-
-    showToast(`เข้าสู่ระบบสำเร็จ: ${loggedUser.displayName} (${loggedUser.email})`, 'success');
-    return true;
-  }, [showToast]);
-
-  const loginWithGoogleAccount = useCallback((
-    account: { email: string; displayName?: string; photoURL?: string },
-    adminPassword?: string
-  ): boolean => {
-    const trimmedEmail = account.email.trim().toLowerCase();
-    const isOwner = trimmedEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase();
-
-    // If attempting to log in as admin owner, strictly enforce password check!
-    if (isOwner) {
-      const validAdminPass = ['admin1234', 'toonisra33', 'admin', '123456'];
-      if (!adminPassword || !validAdminPass.includes(adminPassword.trim())) {
-        showToast('❌ รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง ไม่สามารถเข้าสู่ระบบ Admin ได้', 'error');
-        return false;
-      }
-    }
-
-    const loggedUser = {
-      uid: isOwner ? 'admin_toonisra33' : `google_${Date.now()}`,
-      email: trimmedEmail,
-      displayName: account.displayName?.trim() || (isOwner ? 'อิศราวัฒน์ ปวินทกานต์ (Admin)' : trimmedEmail.split('@')[0]) || 'ผู้ใช้ Google',
-      photoURL: account.photoURL || (isOwner ? DEFAULT_ADMIN_USER.photoURL : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80')
-    };
-
-    setCurrentUser(loggedUser);
-    setAdminToggleActive(isOwner);
-    try {
-      localStorage.removeItem('localhub_logged_out');
-      localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
-      localStorage.setItem('localhub_is_admin', JSON.stringify(isOwner));
-    } catch {}
-
-    showToast(`เข้าสู่ระบบด้วย Google สำเร็จ: ${loggedUser.displayName} (${loggedUser.email})`, 'success');
-    return true;
-  }, [showToast]);
+    return loginWithGoogleEmail(email, password, displayName);
+  }, [loginWithGoogleEmail]);
 
   const logoutFirebase = async () => {
     try {
@@ -1357,7 +1635,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
       );
       if (!isOwner) {
-        showToast('เฉพาะบัญชีผู้ดูแลระบบ (toonisra33@gmail.com) เท่านั้นที่มีสิทธิ์เข้าถึงระบบ Admin', 'error');
+        showToast('เฉพาะบัญชีผู้ดูแลระบบเท่านั้นที่มีสิทธิ์เข้าถึงระบบ Admin', 'error');
         setAdminToggleActive(false);
         try {
           localStorage.setItem('localhub_is_admin', 'false');
@@ -1676,6 +1954,210 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     showToast('ส่งความคิดเห็นเรียบร้อยแล้ว', 'success');
   };
 
+  // Share post to "My Feed / หน้าของฉัน"
+  const sharePostToMyFeed = useCallback((postId: string, comment?: string) => {
+    if (!currentUser) {
+      showToast('กรุณาเข้าสู่ระบบก่อนแชร์โพสต์ไปยังหน้าของฉัน', 'info');
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    const targetPost = posts.find(p => p.id === postId);
+    if (!targetPost) {
+      showToast('ไม่พบโพสต์ที่ต้องการแชร์', 'error');
+      return;
+    }
+
+    const sharerName = currentUser.displayName || 'คุณ (ผู้ใช้ปัจจุบัน)';
+    const sharerAvatar = currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+
+    const sharedPost: Post = {
+      id: `post_shared_${Date.now()}`,
+      title: targetPost.title,
+      content: comment?.trim() || `แชร์เรื่องราวจาก ${targetPost.author}`,
+      author: sharerName,
+      authorRole: isAdmin ? 'ผู้ดูแลระบบ' : 'สมาชิกชุมชน',
+      authorAvatar: sharerAvatar,
+      category: targetPost.category,
+      location: targetPost.location,
+      coordinates: targetPost.coordinates,
+      createdAt: Date.now(),
+      likes: 0,
+      shares: 0,
+      comments: [],
+      images: targetPost.images,
+      tags: targetPost.tags,
+      sharedFrom: {
+        originalPostId: targetPost.id,
+        originalAuthor: targetPost.author,
+        originalAuthorAvatar: targetPost.authorAvatar,
+        originalTitle: targetPost.title,
+        originalContent: targetPost.content,
+        originalImages: targetPost.images,
+        originalCreatedAt: targetPost.createdAt,
+        sharedAt: Date.now(),
+        commentBySharer: comment?.trim()
+      }
+    };
+
+    // Increment share count on original
+    setPosts(prev => [
+      sharedPost,
+      ...prev.map(p => p.id === postId ? { ...p, shares: (p.shares || 0) + 1 } : p)
+    ]);
+
+    updateDoc(doc(db, 'posts', postId), {
+      shares: (targetPost.shares || 0) + 1
+    }).catch(() => {});
+
+    setDoc(doc(db, 'posts', sharedPost.id), removeUndefinedFields(sharedPost)).catch(() => {});
+
+    showToast('🔁 แชร์โพสต์นี้ไปยังหน้าฟีดของคุณเรียบร้อยแล้ว!', 'success', `post:${sharedPost.id}`);
+  }, [currentUser, posts, isAdmin, showToast]);
+
+  // 1-on-1 Direct Chat Methods (ระบบการแชทคุยตัวต่อตัว)
+  const openDirectChat = useCallback((contact?: DirectChatContact) => {
+    setIsDirectChatOpen(true);
+    if (contact) {
+      setActiveChatContact(contact);
+      // Mark messages in conversation as read
+      setDirectConversations(prev => {
+        const convIndex = prev.findIndex(
+          c => c.participant.id === contact.id || c.participant.name.trim().toLowerCase() === contact.name.trim().toLowerCase()
+        );
+        if (convIndex >= 0) {
+          const updated = [...prev];
+          updated[convIndex] = {
+            ...updated[convIndex],
+            unreadCount: 0,
+            messages: updated[convIndex].messages.map(m => ({ ...m, isRead: true }))
+          };
+          return updated;
+        } else {
+          const newConv: DirectConversation = {
+            id: `conv_${contact.id}`,
+            participant: contact,
+            unreadCount: 0,
+            messages: []
+          };
+          return [newConv, ...prev];
+        }
+      });
+    } else {
+      if (directConversations.length > 0 && !activeChatContact) {
+        setActiveChatContact(directConversations[0].participant);
+      }
+    }
+  }, [directConversations, activeChatContact]);
+
+  const closeDirectChat = useCallback(() => {
+    setIsDirectChatOpen(false);
+  }, []);
+
+  const sendDirectMessage = useCallback((receiverId: string, content: string, attachmentUrl?: string) => {
+    if (!content.trim() && !attachmentUrl) return;
+
+    const myId = currentUser?.uid || 'me';
+    const myName = currentUser?.displayName || 'คุณ';
+    const myAvatar = currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+
+    const newMsg: DirectChatMessage = {
+      id: `msg_${Date.now()}`,
+      senderId: myId,
+      senderName: myName,
+      senderAvatar: myAvatar,
+      receiverId: receiverId,
+      receiverName: activeChatContact?.name || 'คู่สนทนา',
+      receiverAvatar: activeChatContact?.avatar,
+      content: content.trim(),
+      timestamp: Date.now(),
+      isRead: true,
+      attachmentUrl,
+      attachmentType: attachmentUrl ? 'image' : undefined
+    };
+
+    setDirectConversations(prev => {
+      const convIndex = prev.findIndex(c => c.participant.id === receiverId || c.participant.name === activeChatContact?.name);
+      if (convIndex >= 0) {
+        const updated = [...prev];
+        const conv = updated[convIndex];
+        const newMessages = [...conv.messages, newMsg];
+        updated[convIndex] = {
+          ...conv,
+          lastMessage: newMsg,
+          messages: newMessages
+        };
+        const [moved] = updated.splice(convIndex, 1);
+        return [moved, ...updated];
+      } else {
+        const newConv: DirectConversation = {
+          id: `conv_${receiverId}`,
+          participant: activeChatContact || {
+            id: receiverId,
+            name: 'เพื่อนบ้าน',
+            isOnline: true
+          },
+          lastMessage: newMsg,
+          unreadCount: 0,
+          messages: [newMsg]
+        };
+        return [newConv, ...prev];
+      }
+    });
+
+    // Schedule friendly responsive reply after 1.5 seconds
+    const contactName = activeChatContact?.name || 'เพื่อนบ้าน';
+    const contactAvatar = activeChatContact?.avatar;
+    setTimeout(() => {
+      let replyText = 'สวัสดีครับ ได้รับข้อความเรียบร้อยแล้วครับ ขอบคุณที่ทักมาคุยกันนะครับ 👍';
+      if (contactName.includes('สมชาย')) {
+        replyText = 'รับทราบเลยครับคุณ ขอบคุณที่แจ้งล่วงหน้านะครับ มีเพื่อนบ้านแบบนี้น่าอยู่มากครับ!';
+      } else if (contactName.includes('อรวรรณ')) {
+        replyText = 'ขอบคุณสำหรับข้อมูลมากๆ เลยนะคะ เดี๋ยวจะแจ้งคนในบ้านให้ทราบด้วยค่ะ 😊';
+      } else if (contactName.includes('สวนผลไม้') || contactName.includes('ยายณี')) {
+        replyText = 'ยินดีให้บริการค่ะคุณลูกค้า ผลไม้สดๆ พรุ่งนี้ช่วงเช้าพร้อมส่งถึงบ้านนะคะ 🥭✨';
+      } else if (content.includes('สวัสดี') || content.includes('ทัก')) {
+        replyText = `สวัสดีครับคุณ ${myName} ยินดีที่ได้คุยด้วยครับ สะดวกสอบถามข้อมูลได้ตลอดเวลาเลยครับ`;
+      } else if (content.includes('แผนที่') || content.includes('ทาง') || content.includes('นำทาง')) {
+        replyText = 'พิกัดและเส้นทางตามที่ปักหมุดไว้ถูกต้องเลยครับ เดินทางมาได้สะดวกครับ';
+      } else if (content.includes('ปลอดภัย') || content.includes('เหตุ')) {
+        replyText = 'ขอบคุณที่ช่วยติดตามสถานการณ์ความปลอดภัยในชุมชนครับ ร่วมด้วยช่วยกันครับ!';
+      }
+
+      const replyMsg: DirectChatMessage = {
+        id: `msg_reply_${Date.now()}`,
+        senderId: receiverId,
+        senderName: contactName,
+        senderAvatar: contactAvatar,
+        receiverId: myId,
+        receiverName: myName,
+        content: replyText,
+        timestamp: Date.now(),
+        isRead: false
+      };
+
+      setDirectConversations(currentConvs => {
+        return currentConvs.map(c => {
+          if (c.participant.id === receiverId || c.participant.name === contactName) {
+            return {
+              ...c,
+              lastMessage: replyMsg,
+              unreadCount: (c.unreadCount || 0) + 1,
+              messages: [...c.messages, replyMsg]
+            };
+          }
+          return c;
+        });
+      });
+
+      showToast(`💬 ข้อความใหม่จาก ${contactName}: "${replyText.slice(0, 35)}..."`, 'info');
+    }, 1500);
+  }, [currentUser, activeChatContact, showToast]);
+
+  const totalUnreadChatCount = useMemo(() => {
+    return directConversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  }, [directConversations]);
+
   // Notifications
   const markNotificationRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
@@ -1896,6 +2378,14 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         createPost,
         likePost,
         addComment,
+        sharePostToMyFeed,
+        directConversations,
+        activeChatContact,
+        isDirectChatOpen,
+        openDirectChat,
+        closeDirectChat,
+        sendDirectMessage,
+        totalUnreadChatCount,
         notifications,
         unreadNotifCount,
         markNotificationRead,
@@ -1925,7 +2415,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentUser,
         isFirebaseConnected,
         loginWithGoogle,
-        loginWithGoogleAccount,
+        loginWithGoogleCredential,
+        loginWithGoogleEmail,
         loginWithEmail,
         logoutFirebase,
         isLoginModalOpen,

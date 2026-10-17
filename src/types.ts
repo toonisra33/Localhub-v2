@@ -23,6 +23,8 @@ export interface AdminBroadcast {
   videoDurationSec?: number;
   broadcastAt: number;
   broadcastDateStr: string;
+  expiresInMinutes?: number;
+  expiresAt?: number;
   adminName: string;
   adminRole?: string;
   isPinned?: boolean;
@@ -103,6 +105,52 @@ export interface Post {
   price?: number;
   contactNumber?: string;
   pinned?: boolean;
+  sharedFrom?: {
+    originalPostId: string;
+    originalAuthor: string;
+    originalAuthorAvatar?: string;
+    originalTitle: string;
+    originalContent: string;
+    originalImages?: string[];
+    originalCreatedAt?: number;
+    sharedAt: number;
+    commentBySharer?: string;
+  };
+  sharedBy?: string[];
+}
+
+export interface DirectChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  receiverId: string;
+  receiverName: string;
+  receiverAvatar?: string;
+  content: string;
+  timestamp: number;
+  isRead: boolean;
+  attachmentUrl?: string;
+  attachmentType?: 'image';
+}
+
+export interface DirectChatContact {
+  id: string;
+  name: string;
+  avatar?: string;
+  role?: string;
+  province?: string;
+  district?: string;
+  isOnline?: boolean;
+  lastSeen?: string;
+}
+
+export interface DirectConversation {
+  id: string;
+  participant: DirectChatContact;
+  lastMessage?: DirectChatMessage;
+  unreadCount: number;
+  messages: DirectChatMessage[];
 }
 
 export interface WeatherCurrent {

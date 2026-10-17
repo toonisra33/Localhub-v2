@@ -81,6 +81,7 @@ export const AdminBroadcastModal: React.FC = () => {
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [actionUrl, setActionUrl] = useState('');
   const [actionText, setActionText] = useState('');
+  const [expiresInMinutes, setExpiresInMinutes] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const adminCameraInputRef = React.useRef<HTMLInputElement>(null);
@@ -172,6 +173,7 @@ export const AdminBroadcastModal: React.FC = () => {
         mediaFileName: mediaFileName || undefined,
         actionUrl: actionUrl.trim() || undefined,
         actionText: actionText.trim() || undefined,
+        expiresInMinutes: expiresInMinutes > 0 ? expiresInMinutes : undefined,
       };
 
       const created = await sendBroadcast(input);
@@ -425,6 +427,41 @@ export const AdminBroadcastModal: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Broadcast Duration / Expiry Setting (กี่นาที) */}
+              <div className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <span>ระยะเวลาของการบรอดแคสต์ (แสดงแบนเนอร์กี่นาที)</span>
+                  </label>
+                  <span className="text-[10px] text-amber-700 font-medium">เมื่อครบกำหนดแถบจะปลดอัตโนมัติ</span>
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-xs">
+                  {[
+                    { val: 0, label: 'ตลอดไป' },
+                    { val: 15, label: '15 นาที' },
+                    { val: 30, label: '30 นาที' },
+                    { val: 60, label: '1 ชั่วโมง' },
+                    { val: 360, label: '6 ชั่วโมง' },
+                    { val: 1440, label: '24 ชั่วโมง' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.val}
+                      type="button"
+                      onClick={() => setExpiresInMinutes(opt.val)}
+                      className={`py-1.5 px-2 rounded-xl text-center font-bold transition border cursor-pointer ${
+                        expiresInMinutes === opt.val
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-100/50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Media Attachment (Photo & Video Upload) */}
