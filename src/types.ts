@@ -50,6 +50,7 @@ export interface UserAccount {
   inactiveWarningAt?: number;
   warningDaysRemaining?: number;
   isAutoDeleted?: boolean;
+  password?: string;
 }
 
 export interface FriendUser {

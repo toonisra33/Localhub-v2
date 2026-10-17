@@ -9,7 +9,10 @@ import {
   signOut,
   onAuthStateChanged,
   User as FirebaseUser,
-  signInAnonymously
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -144,6 +147,9 @@ export {
   signOut,
   onAuthStateChanged,
   signInAnonymously,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   doc,
   getDocFromServer,
   collection,
