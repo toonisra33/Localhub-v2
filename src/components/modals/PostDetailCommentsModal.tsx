@@ -18,6 +18,7 @@ import {
 import { useCommunity } from '../../context/CommunityContext';
 import { Post } from '../../types';
 import { saveMediaFile } from '../../utils/mediaStorage';
+import { PostImageGallery } from '../PostImageGallery';
 
 interface PostDetailCommentsModalProps {
   post: Post | null;
@@ -224,16 +225,8 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
 
           {/* Images */}
           {post.images && post.images.length > 0 && (
-            <div className={`gap-2.5 ${post.images.length > 1 ? 'grid grid-cols-1 sm:grid-cols-2' : ''}`}>
-              {post.images.map((img, idx) => (
-                <div key={idx} className="rounded-xl overflow-hidden border border-slate-200 max-h-80 shadow-2xs">
-                  <img
-                    src={img}
-                    alt={`post_img_${idx}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
+            <div className="pt-2">
+              <PostImageGallery images={post.images} maxDisplay={4} />
             </div>
           )}
 

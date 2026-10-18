@@ -33,6 +33,7 @@ import {
 import { useCommunity } from '../../context/CommunityContext';
 import { WeatherWidget } from '../WeatherWidget';
 import { Post, AlertReport } from '../../types';
+import { PostImageGallery } from '../PostImageGallery';
 import { saveMediaFile } from '../../utils/mediaStorage';
 
 interface FeedViewProps {
@@ -303,26 +304,10 @@ export const FeedView: React.FC<FeedViewProps> = ({
               <Camera className="w-3 h-3 text-rose-500" />
               <span>ภาพถ่ายหลักฐานจุดเกิดเหตุ ({alert.images.length} รูป):</span>
             </div>
-            <div className={`grid gap-2 rounded-2xl overflow-hidden ${
-              alert.images.length === 1 ? 'grid-cols-1' : alert.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-            }`}>
-              {alert.images.map((img, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => setSelectedPhotoPreview(img)}
-                  className="relative h-32 sm:h-40 rounded-xl overflow-hidden border border-slate-200 cursor-pointer group bg-slate-100"
-                >
-                  <img
-                    src={img}
-                    alt={`Incident media ${idx}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                    <Eye className="w-5 h-5 drop-shadow" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <PostImageGallery
+              images={alert.images}
+              maxDisplay={4}
+            />
           </div>
         )}
 
@@ -910,29 +895,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
                     {/* Media Attachments */}
                     {post.images && post.images.length > 0 && (
-                      <div className={`grid gap-2 rounded-2xl overflow-hidden ${
-                        post.images.length === 1 ? 'grid-cols-1' : post.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-                      }`}>
-                        {post.images.map((img, idx) => (
-                          <div
-                            key={idx}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPhotoPreview(img);
-                            }}
-                            className="relative h-44 sm:h-52 rounded-xl overflow-hidden bg-slate-100 group/img cursor-pointer border border-slate-200"
-                          >
-                            <img
-                              src={img}
-                              alt="Media"
-                              className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <Eye className="w-6 h-6 drop-shadow" />
-                            </div>
-                          </div>
-                        ))}
+                      <div className="pt-1">
+                        <PostImageGallery
+                          images={post.images}
+                          maxDisplay={4}
+                        />
                       </div>
                     )}
 

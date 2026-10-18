@@ -21,6 +21,7 @@ import {
 import { useCommunity } from '../../context/CommunityContext';
 import { AlertReport } from '../../types';
 import { WeatherWidget } from '../WeatherWidget';
+import { PostImageGallery } from '../PostImageGallery';
 
 interface AlertsViewProps {
   onOpenReportAlert: () => void;
@@ -192,6 +193,13 @@ export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert, onOpe
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pl-1 sm:pl-11">
                   {alert.description}
                 </p>
+
+                {/* Evidence Photos (แสดงเต็มภาพ สูงสุด 4 ภาพ เกิน 4 มีปุ่มดูเพิ่มเติม) */}
+                {alert.images && alert.images.length > 0 && (
+                  <div className="pl-1 sm:pl-11 pt-1">
+                    <PostImageGallery images={alert.images} maxDisplay={4} />
+                  </div>
+                )}
 
                 {/* Fake News Warning or Credibility Banner */}
                 {isSuspectedFake ? (

@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { useCommunity, ORIGINAL_ADMIN_EMAIL } from '../../context/CommunityContext';
 import { Post, AlertReport } from '../../types';
+import { PostImageGallery } from '../PostImageGallery';
 
 interface ProfileViewProps {
   onOpenCreatePost?: () => void;
@@ -734,16 +735,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
 
                   {/* Images if any */}
                   {Array.isArray(post.images) && post.images.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-                      {post.images.map((img, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => setPreviewImageModal(img)}
-                          className="h-28 rounded-2xl overflow-hidden bg-slate-100 cursor-pointer border border-slate-200 hover:opacity-90 transition"
-                        >
-                          <img src={img} alt={`post_img_${idx}`} className="w-full h-full object-cover" />
-                        </div>
-                      ))}
+                    <div className="pt-2">
+                      <PostImageGallery
+                        images={post.images}
+                        maxDisplay={4}
+                        onImageClick={(img) => setPreviewImageModal(img)}
+                      />
                     </div>
                   )}
 

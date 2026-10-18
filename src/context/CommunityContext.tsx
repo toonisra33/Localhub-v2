@@ -300,6 +300,72 @@ const DEFAULT_LOCATION: Location = {
 
 const INITIAL_POSTS: Post[] = [
   {
+    id: 'post_incident_1',
+    title: '🚨 เสาไฟส่องสว่างกระพริบ สายสื่อสารห้อยต่ำขวางทางเท้า',
+    content: 'แจ้งเหตุเสาไฟส่องสว่างชำรุด มีสายสื่อสารห้อยลงมาระดับศีรษะคนเดินเท้า ใกล้แยกแพร่งภูธร ประชาชนโปรดระมัดระวัง ประสานงานเทศกิจและ กฟน. แล้วครับ',
+    author: 'กู้ภัย & อาสาจราจรเขตพระนคร',
+    authorRole: 'อาสาเตือนภัย',
+    authorAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
+    isVerified: true,
+    category: 'alert',
+    location: {
+      province: 'กรุงเทพมหานคร',
+      district: 'พระนคร',
+      subdistrict: 'ศาลเจ้าพ่อเสือ',
+      address: 'ซอยแพร่งภูธร'
+    },
+    coordinates: { lat: 13.7525, lng: 100.499 },
+    createdAt: Date.now() - 3600000 * 1.5,
+    likes: 42,
+    shares: 18,
+    images: [
+      'https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1584467735871-8e85353a8413?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1508873696983-2df5293cb32f?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80'
+    ],
+    tags: ['แจ้งเหตุ', 'ไฟฟ้าดับ', 'สายสื่อสาร', 'พระนคร'],
+    comments: [
+      {
+        id: 'ci_1',
+        author: 'สมเกียรติ สิทธิพร',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        content: 'เดินผ่านเมื่อเช้า อันตรายมากครับ ขอบคุณที่ช่วยแจ้งเหตุ',
+        timestamp: Date.now() - 3600000 * 1,
+        likes: 5
+      }
+    ]
+  },
+  {
+    id: 'post_incident_2',
+    title: '⚠️ ฝนตกหนัก ระดับน้ำในคลองแสนแสบสูงขึ้น เฝ้าระวังน้ำขังผิวทาง',
+    content: 'รายงานสดสภาพอากาศและระดับน้ำ: ขณะนี้มีฝนตกหนักต่อเนื่อง บริเวณถนนสุขุมวิท 39 และแยกอโศก ผิวจราจรเริ่มมีน้ำรอระบาย ขอให้ผู้ใช้เส้นทางชะลอความเร็ว',
+    author: 'ทีมข่าวเฝ้าระวังน้ำท่วม',
+    authorRole: 'ศูนย์เตือนภัยชุมชน',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    isVerified: true,
+    category: 'alert',
+    location: {
+      province: 'กรุงเทพมหานคร',
+      district: 'วัฒนา',
+      subdistrict: 'คลองตันเหนือ',
+      address: 'ซอยสุขุมวิท 39'
+    },
+    coordinates: { lat: 13.738, lng: 100.57 },
+    createdAt: Date.now() - 3600000 * 2.2,
+    likes: 67,
+    shares: 31,
+    images: [
+      'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1428592953211-077101b2021b?w=800&auto=format&fit=crop&q=80'
+    ],
+    tags: ['น้ำท่วม', 'ฝนตก', 'สุขุมวิท', 'แจ้งเหตุด่วน'],
+    comments: []
+  },
+  {
     id: 'post_1',
     title: '📢 แจ้งกำหนดการเก็บขยะชิ้นใหญ่ ประจำชุมชนเดือนนี้',
     content: 'วันอาทิตย์ที่ 15 นี้ เวลา 08:30 - 12:00 น. ทางฝ่ายรักษาความสะอาดจะนำรถขยะมาเก็บขยะชิ้นใหญ่ ที่นอน เฟอร์นิเจอร์เก่า ณ จุดพักขยะปากซอยสุขุมวิท 23 ครับ',
@@ -454,7 +520,12 @@ const INITIAL_ALERTS: AlertReport[] = [
     reporter: 'ศูนย์ตรวจสอบสถานการณ์ชุมชน',
     createdAt: Date.now() - 3600000 * 1,
     verifiedCount: 22,
-    status: 'resolved'
+    status: 'resolved',
+    coordinates: { lat: 13.738, lng: 100.57 },
+    images: [
+      'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=800&auto=format&fit=crop&q=80'
+    ]
   },
   {
     id: 'alt_2',
@@ -468,7 +539,11 @@ const INITIAL_ALERTS: AlertReport[] = [
     reporter: 'สน.ทองหล่อ',
     createdAt: Date.now() - 3600000 * 2,
     verifiedCount: 28,
-    status: 'investigating'
+    status: 'investigating',
+    coordinates: { lat: 13.748, lng: 100.563 },
+    images: [
+      'https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=800&auto=format&fit=crop&q=80'
+    ]
   }
 ];
 
