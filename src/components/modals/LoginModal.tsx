@@ -57,8 +57,6 @@ export const LoginModal: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const googleBtnContainerRef = useRef<HTMLDivElement>(null);
-
   // Reset form when modal opens or closes
   useEffect(() => {
     if (!isLoginModalOpen) {
@@ -115,19 +113,6 @@ export const LoginModal: React.FC = () => {
             auto_select: false,
             cancel_on_tap_outside: true,
           });
-
-          // Render official Google button into container if ref exists
-          if (googleBtnContainerRef.current) {
-            googleBtnContainerRef.current.innerHTML = '';
-            window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
-              theme: 'outline',
-              size: 'large',
-              width: '100%',
-              text: activeMode === 'register' ? 'signup_with' : 'continue_with',
-              shape: 'pill',
-              logo_alignment: 'left',
-            });
-          }
         }
       } catch (err) {
         console.warn('Google Identity Services notice:', err);
@@ -639,10 +624,7 @@ export const LoginModal: React.FC = () => {
               </div>
 
               {/* OFFICIAL GOOGLE SIGN-IN BUTTON & SELECTION */}
-              <div className="space-y-2.5">
-                {/* Official GSI Button Container (if supported) */}
-                <div ref={googleBtnContainerRef} className="w-full min-h-[44px] flex items-center justify-center empty:hidden" />
-
+              <div>
                 {/* Official Google Account Picker Button */}
                 <button
                   type="button"
