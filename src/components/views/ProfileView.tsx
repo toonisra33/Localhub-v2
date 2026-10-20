@@ -30,11 +30,16 @@ import {
   Download,
   Eye,
   SlidersHorizontal,
-  LayoutDashboard
+  LayoutDashboard,
+  Phone,
+  Building,
+  Home
 } from 'lucide-react';
 import { useCommunity, ORIGINAL_ADMIN_EMAIL } from '../../context/CommunityContext';
 import { Post, AlertReport } from '../../types';
 import { PostImageGallery } from '../PostImageGallery';
+import { PostActionMenu } from '../PostActionMenu';
+import { EditProfileModal } from '../modals/EditProfileModal';
 
 interface ProfileViewProps {
   onOpenCreatePost?: () => void;
@@ -68,6 +73,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
 
   // Profile Sub-tab: 'posts' | 'alerts' | 'friends' | 'album'
   const [activeTabSub, setActiveTabSub] = useState<ProfileActiveTab>('posts');
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [quickPostText, setQuickPostText] = useState('');
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
@@ -79,30 +85,47 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     currentUser?.email && currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
   );
 
-  // 1. Filter User's Own Posts & Shared Posts (ข้อมูลเฉพาะบุคคลของใครของคนนั้น ไม่รวมการกดไลค์/คอมเมนต์/เพื่อน)
+  // 1. Filter User's Own Posts & Shared Posts (ข้อมูลเฉพาะบุคคลของเจ้าของบัญชีเท่านั้น ยกเว้นจะมีการแชร์โพสต์คนอื่นจึงจะมาแสดงในหน้านี้ ไม่รวมการกดไลค์หรือ comment)
   const myPosts = useMemo(() => {
     if (!currentUser) return [];
     const currentName = (currentUser.displayName || '').trim().toLowerCase();
     const currentEmail = (currentUser.email || '').trim().toLowerCase();
+    const currentUid = currentUser.uid;
+    const isOwnerAdmin = Boolean(
+      currentEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase() ||
+      currentName.includes('อิศราวัฒน์') ||
+      isAdmin
+    );
 
     return posts.filter((p) => {
       const author = (p.author || '').trim().toLowerCase();
-      const isOriginalAuthor =
-        author === currentName ||
-        (currentEmail && author === currentEmail) ||
-        author.includes(currentName) ||
-        (currentUser.displayName && author.includes('อิศราวัฒน์'));
+      const authorId = (p as any).authorId;
 
-      // ข้อมูลของคนอื่นจะปรากฏเฉพาะกรณีที่เจ้าของบัญชีกด "แชร์โพสต์" เท่านั้น
-      const isSharedByMe = Boolean(
-        p.sharedFrom &&
-        (isOriginalAuthor || (p.sharedBy && p.sharedBy.some(s => s.toLowerCase() === currentName)))
+      // ก. ตรวจสอบว่าตนเองเป็นผู้สร้างโพสต์นี้หรือไม่
+      const isOriginalAuthor = Boolean(
+        (authorId && currentUid && authorId === currentUid) ||
+        (currentName && author === currentName) ||
+        (currentEmail && author === currentEmail) ||
+        author === 'คุณ (ผู้ใช้ปัจจุบัน)' ||
+        author.startsWith('คุณ') ||
+        (isOwnerAdmin && (author.includes('อิศราวัฒน์') || author.includes('toonisra')))
       );
 
-      // กรองเฉพาะโพสต์ของตัวเอง หรือโพสต์ที่ตัวเองแชร์ (ไม่นับการกดไลค์ ไม่นับคอมเมนต์ ไม่เอาโพสต์เพื่อน)
+      // ข. ยกเว้นจะมีการแชร์โพสต์คนอื่นจึงจะมาแสดงในหน้านี้
+      const isSharedByMe = Boolean(
+        p.sharedFrom && (
+          isOriginalAuthor ||
+          (Array.isArray(p.sharedBy) && p.sharedBy.some(s => {
+            const lowS = s.trim().toLowerCase();
+            return lowS === currentName || (currentEmail && lowS === currentEmail) || (isOwnerAdmin && lowS.includes('อิศราวัฒน์'));
+          }))
+        )
+      );
+
+      // แสดงเฉพาะโพสต์ที่เป็นของตนเอง หรือโพสต์ที่ตนเองแชร์เท่านั้น (ไม่รวมการกดไลค์หรือ comment)
       return isOriginalAuthor || isSharedByMe;
     });
-  }, [posts, currentUser]);
+  }, [posts, currentUser, isAdmin]);
 
   // 2. Filter User's Own Incident Reports
   const myAlerts = useMemo(() => {
@@ -423,6 +446,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
 
               <p className="text-xs text-slate-500">{currentUser.email}</p>
 
+              {/* Personal Details Badges (เบอร์โทร, ที่อยู่, อาชีพ) */}
+              {(currentUser.phone || currentUser.address || currentUser.district || currentUser.province || currentUser.occupation) && (
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px] text-slate-600">
+                  {currentUser.phone && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-medium">
+                      <Phone className="w-3 h-3 text-blue-600 shrink-0" />
+                      <span>{currentUser.phone}</span>
+                    </span>
+                  )}
+                  {(currentUser.address || currentUser.district || currentUser.province) && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-medium">
+                      <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                      <span>{[currentUser.address, currentUser.subdistrict, currentUser.district, currentUser.province].filter(Boolean).join(' ')}</span>
+                    </span>
+                  )}
+                  {currentUser.occupation && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-medium">
+                      <Building className="w-3 h-3 text-amber-600 shrink-0" />
+                      <span>{currentUser.occupation}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Bio / About */}
               <div className="pt-0.5">
                 {isEditingBio ? (
@@ -442,7 +489,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                    <span className="line-clamp-1">{userBio}</span>
+                    <span className="line-clamp-1">{currentUser.bio || userBio}</span>
                     <button
                       onClick={() => setIsEditingBio(true)}
                       className="text-slate-400 hover:text-slate-700 p-0.5"
@@ -456,8 +503,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
             </div>
           </div>
 
-          {/* Action Buttons: 💬 Direct Chat & Logout */}
+          {/* Action Buttons: ⚙️ ปุ่มฟันเฟืองข้อมูลส่วนตัว, 💬 Direct Chat & Logout */}
           <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap">
+            <button
+              onClick={() => setIsEditProfileModalOpen(true)}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95 border border-slate-200 cursor-pointer shadow-2xs"
+              title="ตั้งค่าและเพิ่มเติม/แก้ไขข้อมูลส่วนตัว (ชื่อ นามสกุล อีเมล ที่อยู่ เบอร์โทร ฯลฯ)"
+            >
+              <Settings className="w-3.5 h-3.5 text-slate-600" />
+              <span>แก้ไขข้อมูลส่วนตัว</span>
+            </button>
+
             <button
               onClick={() => openDirectChat()}
               className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
@@ -699,9 +755,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
                       </div>
                     </div>
 
-                    <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-bold">
-                      {post.category === 'news' ? 'ข่าวสาร' : post.category === 'help' ? 'ช่วยเหลือ' : 'ทั่วไป'}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                        {post.category === 'news' ? 'ข่าวสาร' : post.category === 'help' ? 'ช่วยเหลือ' : 'ทั่วไป'}
+                      </span>
+                      {/* ปุ่มจุด 3 จุดสำหรับแสดงข้อมูลและลบโพสต์ในหน้าฉัน */}
+                      <PostActionMenu post={post} />
+                    </div>
                   </div>
 
                   <div>
@@ -810,10 +870,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
                       <span>{alert.type}</span>
                     </span>
 
-                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{new Date(alert.createdAt).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{new Date(alert.createdAt).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </span>
+                      {/* ปุ่มจุด 3 จุดแสดงข้อมูลและลบการแจ้งเหตุในหน้าฉัน */}
+                      <PostActionMenu
+                        post={{
+                          id: alert.id,
+                          title: alert.title,
+                          content: alert.description,
+                          author: typeof alert.reporter === 'string' ? alert.reporter : 'คุณ',
+                          category: 'alert',
+                          createdAt: alert.createdAt
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -997,6 +1070,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
           </div>
         </div>
       )}
+
+      {/* Modal แก้ไขและเพิ่มเติมข้อมูลส่วนตัวของเจ้าของบัญชี */}
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+      />
     </div>
   );
 };

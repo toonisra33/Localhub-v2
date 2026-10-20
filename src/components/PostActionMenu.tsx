@@ -14,7 +14,7 @@ import {
   Image as ImageIcon,
   AlertTriangle
 } from 'lucide-react';
-import { useCommunity } from '../context/CommunityContext';
+import { useCommunity, ORIGINAL_ADMIN_EMAIL } from '../context/CommunityContext';
 import { Post, AlertReport } from '../types';
 
 export interface PostActionMenuProps {
@@ -66,15 +66,29 @@ export const PostActionMenu: React.FC<PostActionMenuProps> = ({
 
   // Ownership check: matches display name, email, uid, default user author, or admin
   const isOwner = Boolean(
-    (currentUser &&
-      (post.author === currentUser.displayName ||
-        post.author === currentUser.email ||
-        (currentUser.uid && post.author.includes(currentUser.uid)))) ||
-      post.author === 'คุณ (ผู้ใช้ปัจจุบัน)' ||
-      post.author.startsWith('คุณ') ||
-      post.author.includes('คุณ') ||
-      post.author.includes('(คุณ)') ||
-      post.author.includes('พลเมืองดี')
+    isAdmin ||
+    (currentUser && (
+      (post.author && currentUser.displayName && (
+        post.author.trim().toLowerCase() === currentUser.displayName.trim().toLowerCase() ||
+        post.author.toLowerCase().includes(currentUser.displayName.trim().toLowerCase()) ||
+        currentUser.displayName.toLowerCase().includes(post.author.trim().toLowerCase())
+      )) ||
+      (post.author && currentUser.email && (
+        post.author.trim().toLowerCase() === currentUser.email.trim().toLowerCase() ||
+        post.author.toLowerCase().includes(currentUser.email.trim().toLowerCase())
+      )) ||
+      (currentUser.uid && (
+        (post as any).authorId === currentUser.uid ||
+        post.author.includes(currentUser.uid)
+      )) ||
+      (currentUser.email && currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()) ||
+      (currentUser.displayName && (post.author.includes('อิศราวัฒน์') || post.author.includes('toonisra')))
+    )) ||
+    post.author === 'คุณ (ผู้ใช้ปัจจุบัน)' ||
+    post.author.startsWith('คุณ') ||
+    post.author.includes('คุณ') ||
+    post.author.includes('(คุณ)') ||
+    post.author.includes('พลเมืองดี')
   );
   const canDelete = isOwner || isAdmin;
 

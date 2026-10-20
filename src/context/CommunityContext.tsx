@@ -58,7 +58,34 @@ interface CommunityContextType {
     email: string | null;
     displayName: string | null;
     photoURL: string | null;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address?: string;
+    subdistrict?: string;
+    district?: string;
+    province?: string;
+    postalCode?: string;
+    bio?: string;
+    emergencyContact?: string;
+    occupation?: string;
   } | null;
+  updateUserProfile: (profileData: Partial<{
+    displayName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    subdistrict: string;
+    district: string;
+    province: string;
+    postalCode: string;
+    bio: string;
+    emergencyContact: string;
+    occupation: string;
+    photoURL: string;
+  }>) => Promise<boolean>;
   isFirebaseConnected: boolean;
   loginWithGoogle: () => Promise<boolean>;
   loginWithGoogleCredential: (idToken: string) => Promise<boolean>;
@@ -800,10 +827,24 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Active Post Detail Modal Navigation (Realtime jump from notifications/toasts)
   const [openedPost, setOpenedPost] = useState<Post | null>(null);
 
+  const [deletedPostIds, setDeletedPostIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('localhub_deleted_post_ids');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
   const [posts, setPosts] = useState<Post[]>(() => {
     try {
+      const deletedStored = localStorage.getItem('localhub_deleted_post_ids');
+      const deletedSet = deletedStored ? new Set(JSON.parse(deletedStored)) : new Set();
       const stored = localStorage.getItem('localhub_posts');
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed: Post[] = JSON.parse(stored);
+        return parsed.filter(p => !deletedSet.has(p.id));
+      }
     } catch {
       // ignore
     }
@@ -883,6 +924,17 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     email: string | null;
     displayName: string | null;
     photoURL: string | null;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address?: string;
+    subdistrict?: string;
+    district?: string;
+    province?: string;
+    postalCode?: string;
+    bio?: string;
+    emergencyContact?: string;
+    occupation?: string;
   } | null>(() => {
     try {
       const isLoggedOut = localStorage.getItem('localhub_logged_out');
@@ -1292,7 +1344,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             });
           });
           cloudPosts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-          setPosts(cloudPosts);
+          let currentDeletedIds = new Set<string>();
+          try {
+            const stored = localStorage.getItem('localhub_deleted_post_ids');
+            if (stored) currentDeletedIds = new Set(JSON.parse(stored));
+          } catch {}
+          const activeCloudPosts = cloudPosts.filter(p => !currentDeletedIds.has(p.id));
+          setPosts(activeCloudPosts);
         } else {
           // Seed real posts to Firestore
           INITIAL_POSTS.forEach((p) => {
@@ -1490,8 +1548,17 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
-      // Use direct popup with prompt: 'select_account'
-      const result = await signInWithPopup(auth, googleProvider);
+      // Wrap signInWithPopup with an 18-second timeout to prevent infinite hanging when mobile Chrome opens a disconnected blank tab
+      const popupPromise = signInWithPopup(auth, googleProvider);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          const timeoutErr: any = new Error('Google sign-in popup timed out or connection was blocked by mobile browser');
+          timeoutErr.code = 'auth/popup-timeout';
+          reject(timeoutErr);
+        }, 18000);
+      });
+
+      const result = await Promise.race([popupPromise, timeoutPromise]);
       const user = result.user;
       const userEmail = user.email?.toLowerCase().trim() || '';
       const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
@@ -1546,14 +1613,16 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return true;
     } catch (err: any) {
       console.warn('Google sign-in error:', err);
-      if (err?.code === 'auth/popup-closed-by-user') {
+      if (err?.code === 'auth/popup-timeout') {
+        showToast('หน้าต่าง Google ไม่ตอบสนองหรือถูกจำกัดบนเบราว์เซอร์มือถือ สามารถใช้วิธีระบุอีเมล Google ด้านล่างเพื่อเข้าสู่ระบบได้ทันที', 'info');
+      } else if (err?.code === 'auth/popup-closed-by-user') {
         showToast('คุณได้ปิดหน้าต่างเลือกบัญชี Google', 'info');
       } else if (err?.code === 'auth/cancelled-popup-request') {
         showToast('การเปิดหน้าต่างเข้าสู่ระบบ Google ถูกยกเลิก', 'info');
       } else if (err?.code === 'auth/popup-blocked') {
-        showToast('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัป หรือระบุอีเมล Google ของคุณเพื่อเข้าใช้งาน', 'error');
+        showToast('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัป หรือระบุอีเมล Google ของคุณด้านล่างเพื่อเข้าใช้งาน', 'error');
       } else if (err?.code === 'auth/unauthorized-domain') {
-        showToast('โดเมนนี้ยังไม่ได้ลงทะเบียนใน Firebase Authorized Domains กรุณาระบุอีเมล Google ของคุณเพื่อเข้าใช้งาน', 'info');
+        showToast('โดเมนนี้ยังไม่ได้ลงทะเบียนใน Firebase Authorized Domains กรุณาระบุอีเมล Google ของคุณด้านล่างเพื่อเข้าใช้งาน', 'info');
       } else {
         showToast('ไม่สามารถเชื่อมต่อ Google Popup ได้ กรุณาระบุบัญชี Google ของคุณเพื่อเข้าใช้งาน', 'error');
       }
@@ -2163,6 +2232,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       title: data.title,
       content: data.content,
       author: authorName,
+      authorId: currentUser?.uid || 'user_local',
       authorRole: isAdmin ? 'ผู้ดูแลระบบ' : 'สมาชิกชุมชน',
       authorAvatar: authorAvatar,
       category: data.category,
@@ -2235,41 +2305,114 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deletePost = async (id: string): Promise<boolean> => {
     try {
-      // 1. Remove from local posts state
+      // 1. Mark in deletedPostIds state and localStorage so it can never be resurrected
+      setDeletedPostIds(prev => {
+        const next = new Set(prev);
+        next.add(id);
+        try {
+          localStorage.setItem('localhub_deleted_post_ids', JSON.stringify(Array.from(next)));
+        } catch {}
+        return next;
+      });
+
+      // 2. Remove immediately from local posts state
       setPosts(prev => {
         const next = prev.filter(p => p.id !== id);
         try {
           localStorage.setItem('localhub_posts', JSON.stringify(next));
-        } catch {
-          // ignore
-        }
+        } catch {}
         return next;
       });
 
-      // 2. Also check if it's in alerts state
+      // 3. Remove immediately from alerts state if it's an alert
       setAlerts(prev => {
         const next = prev.filter(a => a.id !== id);
         try {
           localStorage.setItem('localhub_alerts', JSON.stringify(next));
-        } catch {
-          // ignore
-        }
+        } catch {}
         return next;
       });
 
-      // 3. Close openedPost if open
+      // 4. Close openedPost if open
       setOpenedPost(prev => (prev?.id === id ? null : prev));
 
-      // 4. Delete from Firestore
-      deleteDoc(doc(db, 'posts', id)).catch(() => {
-        deleteDoc(doc(db, 'alerts', id)).catch(() => {});
-      });
+      // 5. Delete from Firestore
+      try {
+        await deleteDoc(doc(db, 'posts', id));
+      } catch (e) {
+        console.warn('Firestore post delete note:', e);
+      }
+      try {
+        await deleteDoc(doc(db, 'alerts', id));
+      } catch (e) {
+        console.warn('Firestore alert delete note:', e);
+      }
 
       showToast('ลบโพสต์เรียบร้อยแล้ว', 'success');
       return true;
     } catch (err) {
       console.error('deletePost error:', err);
       showToast('เกิดข้อผิดพลาดในการลบโพสต์', 'error');
+      return false;
+    }
+  };
+
+  const updateUserProfile = async (profileData: Partial<{
+    displayName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    subdistrict: string;
+    district: string;
+    province: string;
+    postalCode: string;
+    bio: string;
+    emergencyContact: string;
+    occupation: string;
+    photoURL: string;
+  }>): Promise<boolean> => {
+    try {
+      if (!currentUser) {
+        showToast('กรุณาเข้าสู่ระบบก่อนแก้ไขข้อมูล', 'error');
+        return false;
+      }
+
+      const updatedUser = {
+        ...currentUser,
+        ...profileData,
+        displayName: profileData.displayName || 
+          (profileData.firstName && profileData.lastName 
+            ? `${profileData.firstName.trim()} ${profileData.lastName.trim()}`
+            : profileData.firstName?.trim() || currentUser.displayName)
+      };
+
+      setCurrentUser(updatedUser);
+
+      // Persist in localStorage
+      try {
+        localStorage.setItem('localhub_user', JSON.stringify(updatedUser));
+      } catch {}
+
+      // Persist in Firestore users collection
+      if (currentUser.uid) {
+        try {
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          await setDoc(userDocRef, removeUndefinedFields({
+            ...updatedUser,
+            updatedAt: new Date().toISOString()
+          }), { merge: true });
+        } catch (err) {
+          console.warn('Firestore user profile sync warning:', err);
+        }
+      }
+
+      showToast('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว', 'success');
+      return true;
+    } catch (err) {
+      console.error('updateUserProfile error:', err);
+      showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูลส่วนตัว', 'error');
       return false;
     }
   };
@@ -2747,6 +2890,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         createPost,
         likePost,
         deletePost,
+        updateUserProfile,
         addComment,
         sharePostToMyFeed,
         directConversations,

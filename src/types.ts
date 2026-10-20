@@ -44,6 +44,15 @@ export interface UserAccount {
   isAdmin?: boolean;
   province?: string;
   district?: string;
+  subdistrict?: string;
+  address?: string;
+  postalCode?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  bio?: string;
+  emergencyContact?: string;
+  occupation?: string;
   createdAt: number;
   lastActiveAt: number;
   isInactiveWarning?: boolean;
@@ -78,6 +87,7 @@ export interface Post {
   title: string;
   content: string;
   author: string;
+  authorId?: string;
   authorRole?: string;
   authorAvatar: string;
   isVerified?: boolean;
