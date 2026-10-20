@@ -31,6 +31,7 @@ import {
 import { useCommunity } from '../../context/CommunityContext';
 import { JobsModal } from '../modals/JobsModal';
 import { PostImageGallery } from '../PostImageGallery';
+import { PostActionMenu } from '../PostActionMenu';
 import { Post, AlertReport } from '../../types';
 
 interface HomeViewProps {
@@ -272,11 +273,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white rounded-3xl p-4 sm:p-5 shadow-xl border border-slate-800">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg shadow-blue-900/30 shrink-0 bg-blue-950 flex items-center justify-center border border-white/10">
+            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/40 shrink-0 flex items-center justify-center">
               <img
                 src="/icon.svg"
                 alt="LocalHub"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src = '/apple-touch-icon.png';
                 }}
@@ -443,10 +444,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </button>
 
           <button
-            onClick={() => {
-              const el = document.getElementById('market-showcase-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => setActiveTab('market')}
             className="p-3 bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-100 rounded-2xl flex items-center gap-2.5 text-left transition active:scale-98"
           >
             <div className="p-2 bg-emerald-500 text-white rounded-xl shrink-0">
@@ -483,12 +481,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <span className="text-[10px] sm:text-[11px] font-black text-rose-950 truncate w-full">แจ้งเหตุด่วน</span>
           </button>
 
-          {/* 2. ตลาดนัดชุมชน (นำปุ่มตลาดมาไว้หน้าหลัก) */}
+          {/* 2. ตลาดนัดชุมชน (นำปุ่มตลาดมาไว้หน้าหลัก แตะเข้าดูตลาดชุมชนได้ทันที) */}
           <button
-            onClick={() => {
-              const el = document.getElementById('market-showcase-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => setActiveTab('market')}
             className="p-2 sm:p-3 bg-gradient-to-b from-emerald-50 to-teal-100/80 hover:from-emerald-100 hover:to-teal-200 border-2 border-emerald-300 rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-sm group"
           >
             <div className="p-2 bg-emerald-600 text-white rounded-xl mb-1 sm:mb-1.5 shadow-md shadow-emerald-600/30 group-hover:scale-105 transition-transform">
@@ -511,9 +506,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {/* 4. กินอะไรดี */}
           <button
             onClick={() => {
-              showToast('เปิดร้านอาหารยอดนิยมในพื้นที่', 'info');
-              const el = document.getElementById('market-showcase-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
+              setActiveTab('market');
+              showToast('เปิดร้านอาหารและของกินยอดนิยมในตลาดชุมชน', 'info');
             }}
             className="p-1.5 sm:p-3 bg-amber-50 hover:bg-amber-100 border border-amber-100 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition active:scale-95 shadow-xs"
           >
@@ -686,9 +680,30 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       </div>
                     </div>
 
-                    <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
-                      🚨 แจ้งเหตุด่วน
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+                        🚨 แจ้งเหตุด่วน
+                      </span>
+                      <PostActionMenu
+                        post={{
+                          id: incident.id,
+                          title: incident.title,
+                          content: incident.content,
+                          author: incident.reporter,
+                          authorRole: incident.reporterRole,
+                          category: incident.category || 'alert',
+                          location: {
+                            province: incident.province,
+                            district: incident.district,
+                            subdistrict: incident.subdistrict,
+                            address: incident.address
+                          },
+                          coordinates: incident.coordinates,
+                          createdAt: incident.createdAt,
+                          images: incident.images
+                        }}
+                      />
+                    </div>
                   </div>
 
                   {/* Content / Description */}
@@ -792,103 +807,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
               );
             })
           )}
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 6. ตลาด นำไปแสดงผลที่หน้าหลักทั้งหมด (ตลาดนัดชุมชน & สินค้าท้องถิ่น)          */}
-      {/* ========================================================================= */}
-      <section
-        id="market-showcase-section"
-        aria-label="ตลาดนัดชุมชนบนหน้าหลัก"
-        className="space-y-3 pt-4"
-      >
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 text-white rounded-3xl shadow-xl border border-emerald-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black tracking-wide shadow-xs">
-                <Store className="w-3.5 h-3.5" />
-                ตลาดชุมชน & ของดีรอบตัว
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-white/10 text-emerald-200 text-[10px] font-bold">
-                {marketItems.length} สินค้าพร้อมส่ง
-              </span>
-            </div>
-            <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
-              ตลาดนัดชุมชนรอบตัวคุณ
-            </h2>
-            <p className="text-xs text-emerald-200/80 mt-0.5 leading-relaxed">
-              ซื้อขายของกิน ของใช้ ผลผลิตเกษตรอินทรีย์ และสินค้ามือสองจากเพื่อนบ้านในพื้นที่
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setActiveTab('market')}
-              className="px-4 py-2.5 bg-white hover:bg-emerald-50 text-emerald-950 rounded-2xl text-xs font-black flex items-center gap-1.5 shadow-lg shadow-black/30 transition active:scale-95"
-            >
-              <Store className="w-4 h-4 text-emerald-600" />
-              <span>เปิดดูตลาดทั้งหมด</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Market Showcase Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {marketItems.map((item) => (
-            <div
-              key={item.id}
-              className="p-3.5 bg-white rounded-3xl border border-slate-200/90 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between space-y-2.5"
-            >
-              {/* Image Preview with PostImageGallery */}
-              {item.images && item.images.length > 0 && (
-                <div className="rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 aspect-video flex items-center justify-center">
-                  <img
-                    src={item.images[0]}
-                    alt={item.title}
-                    className="w-full h-full object-contain"
-                    loading="lazy"
-                  />
-                </div>
-              )}
-
-              <div>
-                <div className="flex items-center justify-between gap-1 text-[11px] text-slate-500 mb-1">
-                  <span className="font-semibold flex items-center gap-0.5">
-                    <MapPin className="w-3 h-3 text-slate-400" />
-                    {item.district ? `อ.${item.district}, ` : ''}จ.{item.province}
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                    ฿{item.price.toLocaleString()}
-                  </span>
-                </div>
-
-                <h4 className="font-bold text-xs sm:text-sm text-slate-900 line-clamp-2 leading-snug">
-                  {item.title}
-                </h4>
-
-                <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">
-                  {item.description}
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-[11px] text-slate-600 truncate font-medium">
-                  ผู้ขาย: <strong>{item.seller}</strong>
-                </span>
-
-                <button
-                  onClick={() => likeMarketItem(item.id)}
-                  className={`flex items-center gap-1 font-bold text-xs transition active:scale-90 ${
-                    item.isLiked ? 'text-rose-600' : 'text-slate-400 hover:text-rose-500'
-                  }`}
-                >
-                  <Heart className={`w-3.5 h-3.5 ${item.isLiked ? 'fill-rose-600' : ''}`} />
-                  <span>{item.likes}</span>
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

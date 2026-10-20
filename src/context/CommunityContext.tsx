@@ -36,6 +36,7 @@ import {
   onSnapshot,
   setDoc,
   updateDoc,
+  deleteDoc,
   handleFirestoreError,
   OperationType,
   FirebaseUser,
@@ -105,6 +106,7 @@ interface CommunityContextType {
     tags?: string[];
   }) => void;
   likePost: (id: string) => void;
+  deletePost: (id: string) => Promise<boolean>;
   addComment: (postId: string, content: string, images?: string[]) => void;
   sharePostToMyFeed: (postId: string, comment?: string) => void;
 
@@ -2231,6 +2233,47 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   };
 
+  const deletePost = async (id: string): Promise<boolean> => {
+    try {
+      // 1. Remove from local posts state
+      setPosts(prev => {
+        const next = prev.filter(p => p.id !== id);
+        try {
+          localStorage.setItem('localhub_posts', JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+        return next;
+      });
+
+      // 2. Also check if it's in alerts state
+      setAlerts(prev => {
+        const next = prev.filter(a => a.id !== id);
+        try {
+          localStorage.setItem('localhub_alerts', JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+        return next;
+      });
+
+      // 3. Close openedPost if open
+      setOpenedPost(prev => (prev?.id === id ? null : prev));
+
+      // 4. Delete from Firestore
+      deleteDoc(doc(db, 'posts', id)).catch(() => {
+        deleteDoc(doc(db, 'alerts', id)).catch(() => {});
+      });
+
+      showToast('ลบโพสต์เรียบร้อยแล้ว', 'success');
+      return true;
+    } catch (err) {
+      console.error('deletePost error:', err);
+      showToast('เกิดข้อผิดพลาดในการลบโพสต์', 'error');
+      return false;
+    }
+  };
+
   const addComment = (postId: string, content: string, images?: string[]) => {
     const authorName = currentUser?.displayName || 'คุณ (ผู้ใช้ปัจจุบัน)';
     const authorAvatar = currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
@@ -2703,6 +2746,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         posts,
         createPost,
         likePost,
+        deletePost,
         addComment,
         sharePostToMyFeed,
         directConversations,

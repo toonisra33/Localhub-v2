@@ -34,6 +34,7 @@ import { useCommunity } from '../../context/CommunityContext';
 import { WeatherWidget } from '../WeatherWidget';
 import { Post, AlertReport } from '../../types';
 import { PostImageGallery } from '../PostImageGallery';
+import { PostActionMenu } from '../PostActionMenu';
 import { saveMediaFile } from '../../utils/mediaStorage';
 
 interface FeedViewProps {
@@ -290,6 +291,24 @@ export const FeedView: React.FC<FeedViewProps> = ({
               </div>
             </div>
           </div>
+          <PostActionMenu
+            post={{
+              id: alert.id,
+              title: alert.title,
+              content: alert.description,
+              author: typeof alert.reporter === 'string' ? alert.reporter : 'พลเมืองดี',
+              category: 'alert',
+              location: {
+                province: alert.province,
+                district: alert.district,
+                subdistrict: alert.subdistrict,
+                address: alert.locationName
+              },
+              coordinates: alert.coordinates,
+              createdAt: alert.createdAt,
+              images: alert.images
+            }}
+          />
         </div>
 
         {/* Incident Description */}
@@ -880,6 +899,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                             )}
                           </button>
                         )}
+                        <PostActionMenu post={post} />
                       </div>
                     </div>
 

@@ -22,6 +22,7 @@ import { useCommunity } from '../../context/CommunityContext';
 import { AlertReport } from '../../types';
 import { WeatherWidget } from '../WeatherWidget';
 import { PostImageGallery } from '../PostImageGallery';
+import { PostActionMenu } from '../PostActionMenu';
 
 interface AlertsViewProps {
   onOpenReportAlert: () => void;
@@ -180,13 +181,33 @@ export const AlertsView: React.FC<AlertsViewProps> = ({ onOpenReportAlert, onOpe
                     </div>
                   </div>
 
-                  <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold shrink-0 ${
-                    alert.status === 'active'
-                      ? 'bg-red-50 text-red-600 border border-red-200'
-                      : 'bg-amber-50 text-amber-600 border border-amber-200'
-                  }`}>
-                    {alert.status === 'active' ? '● กำลังเกิดเหตุ' : 'กำลังตรวจสอบ'}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold shrink-0 ${
+                      alert.status === 'active'
+                        ? 'bg-red-50 text-red-600 border border-red-200'
+                        : 'bg-amber-50 text-amber-600 border border-amber-200'
+                    }`}>
+                      {alert.status === 'active' ? '● กำลังเกิดเหตุ' : 'กำลังตรวจสอบ'}
+                    </span>
+                    <PostActionMenu
+                      post={{
+                        id: alert.id,
+                        title: alert.title,
+                        content: alert.description,
+                        author: typeof alert.reporter === 'string' ? alert.reporter : 'พลเมืองดี',
+                        category: 'alert',
+                        location: {
+                          province: alert.province,
+                          district: alert.district,
+                          subdistrict: alert.subdistrict,
+                          address: alert.locationName
+                        },
+                        coordinates: alert.coordinates,
+                        createdAt: alert.createdAt,
+                        images: alert.images
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Description */}

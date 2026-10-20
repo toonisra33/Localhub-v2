@@ -19,6 +19,7 @@ import { useCommunity } from '../../context/CommunityContext';
 import { Post } from '../../types';
 import { saveMediaFile } from '../../utils/mediaStorage';
 import { PostImageGallery } from '../PostImageGallery';
+import { PostActionMenu } from '../PostActionMenu';
 
 interface PostDetailCommentsModalProps {
   post: Post | null;
@@ -182,12 +183,15 @@ export const PostDetailCommentsModal: React.FC<PostDetailCommentsModalProps> = (
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <PostActionMenu post={post} onDeleted={onClose} />
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Content */}

@@ -17,7 +17,7 @@ export default defineConfig({
         name: 'LocalHub',
         short_name: 'LocalHub',
         description: 'LocalHub ศูนย์รวมข้อมูล ข่าวสาร บรอดแคสเตือนภัย และตลาดนัดชุมชนใกล้ตัวคุณ',
-        theme_color: '#1e3a8a',
+        theme_color: '#00a374',
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'portrait-primary',
@@ -46,6 +46,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         importScripts: ['sw-notifications.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [

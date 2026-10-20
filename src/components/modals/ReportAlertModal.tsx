@@ -31,7 +31,7 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
   initialCoords,
   initialAddress
 }) => {
-  const { addAlert, location, showToast } = useCommunity();
+  const { addAlert, location, showToast, currentUser } = useCommunity();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<AlertReport['type']>('flood');
@@ -114,8 +114,8 @@ export const ReportAlertModal: React.FC<ReportAlertModalProps> = ({
       province: location.province,
       district: location.district || 'เมือง',
       subdistrict: subdistrict.trim() || 'ชุมชนทั่วไป',
-      reporter: 'พลเมืองดี (รายงานสด)',
-      reporterAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      reporter: currentUser?.displayName || 'คุณ (พลเมืองดี)',
+      reporterAvatar: currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       coordinates: coordsToUse,
       locationName: initialAddress || subdistrict.trim() || undefined,
       images: images.length > 0 ? images : undefined

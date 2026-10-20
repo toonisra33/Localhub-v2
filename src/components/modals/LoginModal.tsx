@@ -247,11 +247,11 @@ export const LoginModal: React.FC = () => {
         {/* Header */}
         <div className="px-5 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-md flex items-center justify-center bg-blue-950 border border-blue-400/30 shrink-0">
+            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-md flex items-center justify-center shrink-0">
               <img
                 src="./icon.svg"
                 alt="LocalHub Logo"
-                className="w-8 h-8 object-contain"
+                className="w-full h-full object-contain"
                 onError={(e) => {
                   (e.currentTarget as HTMLElement).style.display = 'none';
                 }}

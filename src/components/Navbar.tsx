@@ -93,11 +93,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-2 sm:gap-3 shrink-0 cursor-pointer group"
             title="ไปที่หน้าหลัก"
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-md shadow-blue-900/20 shrink-0 group-hover:scale-105 transition-transform flex items-center justify-center bg-blue-950">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-md shadow-emerald-900/30 shrink-0 group-hover:scale-105 transition-transform flex items-center justify-center">
               <img
                 src="/icon.svg"
                 alt="LocalHub"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src = '/apple-touch-icon.png';
                 }}
