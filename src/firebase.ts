@@ -33,8 +33,23 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
+// Calculate first-party same-origin authDomain to prevent third-party storage partitioning
+// When running on Cloud Run or dev host, proxying /__/auth makes auth same-origin with the app
+const getEffectiveAuthDomain = (): string => {
+  if (typeof window !== 'undefined' && window.location.host) {
+    const host = window.location.host;
+    if (host.includes('run.app') || host.includes('localhost') || host.includes('127.0.0.1')) {
+      return host;
+    }
+  }
+  return firebaseConfig.authDomain;
+};
+
 // Initialize Firebase App
-const app = initializeApp(firebaseConfig);
+const app = initializeApp({
+  ...firebaseConfig,
+  authDomain: getEffectiveAuthDomain(),
+});
 
 // Initialize Firestore with specific database ID (CRITICAL: Required for named databases)
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
@@ -124,16 +139,9 @@ export async function testFirestoreConnection(): Promise<boolean> {
   }
 }
 
-// Automatic seamless Auth ensuring a valid auth token for Firestore writes
+// Check current user Auth
 export async function ensureUserAuthenticated(): Promise<FirebaseUser | null> {
-  if (auth.currentUser) return auth.currentUser;
-  try {
-    const cred = await signInAnonymously(auth);
-    return cred.user;
-  } catch (e) {
-    console.warn('Anonymous sign-in not available or disabled in console:', e);
-    return null;
-  }
+  return auth.currentUser || null;
 }
 
 // Start connection test on load

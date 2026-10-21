@@ -89,5 +89,17 @@ export default defineConfig({
     port: 3000,
     host: '0.0.0.0',
     hmr: false,
+    proxy: {
+      '/__/auth': {
+        target: 'https://localhub-69fbe.firebaseapp.com',
+        changeOrigin: true,
+        secure: true,
+      },
+      '/__/firebase': {
+        target: 'https://localhub-69fbe.firebaseapp.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 });

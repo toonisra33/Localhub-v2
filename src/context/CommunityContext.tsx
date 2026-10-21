@@ -1537,10 +1537,6 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             setAdminToggleActive(false);
           }
         }
-        // Ensure anonymous auth token for Firestore read/writes if not logged in
-        signInAnonymously(auth).catch((e) => {
-          console.warn('Anonymous auth note:', e);
-        });
       }
     });
     return () => unsub();
@@ -1548,17 +1544,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
-      // Wrap signInWithPopup with an 18-second timeout to prevent infinite hanging when mobile Chrome opens a disconnected blank tab
-      const popupPromise = signInWithPopup(auth, googleProvider);
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          const timeoutErr: any = new Error('Google sign-in popup timed out or connection was blocked by mobile browser');
-          timeoutErr.code = 'auth/popup-timeout';
-          reject(timeoutErr);
-        }, 18000);
-      });
-
-      const result = await Promise.race([popupPromise, timeoutPromise]);
+      // Always use signInWithPopup for Google Sign-In.
+      // signInWithRedirect hangs on a blank screen on modern mobile browsers (Chrome 115+, Safari)
+      // due to third-party storage partitioning on firebaseapp.com/__/auth/handler.
+      const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       const userEmail = user.email?.toLowerCase().trim() || '';
       const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
@@ -1613,18 +1602,15 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return true;
     } catch (err: any) {
       console.warn('Google sign-in error:', err);
-      if (err?.code === 'auth/popup-timeout') {
-        showToast('หน้าต่าง Google ไม่ตอบสนองหรือถูกจำกัดบนเบราว์เซอร์มือถือ สามารถใช้วิธีระบุอีเมล Google ด้านล่างเพื่อเข้าสู่ระบบได้ทันที', 'info');
+
+      if (err?.code === 'auth/popup-blocked') {
+        showToast('เบราว์เซอร์บล็อกหน้าต่างเลือกบัญชี Google โปรดแตะ "อนุญาตป๊อปอัป" แล้วกดใหม่อีกครั้ง', 'error');
       } else if (err?.code === 'auth/popup-closed-by-user') {
         showToast('คุณได้ปิดหน้าต่างเลือกบัญชี Google', 'info');
-      } else if (err?.code === 'auth/cancelled-popup-request') {
-        showToast('การเปิดหน้าต่างเข้าสู่ระบบ Google ถูกยกเลิก', 'info');
-      } else if (err?.code === 'auth/popup-blocked') {
-        showToast('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัป หรือระบุอีเมล Google ของคุณด้านล่างเพื่อเข้าใช้งาน', 'error');
       } else if (err?.code === 'auth/unauthorized-domain') {
-        showToast('โดเมนนี้ยังไม่ได้ลงทะเบียนใน Firebase Authorized Domains กรุณาระบุอีเมล Google ของคุณด้านล่างเพื่อเข้าใช้งาน', 'info');
+        showToast('โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Authentication', 'error');
       } else {
-        showToast('ไม่สามารถเชื่อมต่อ Google Popup ได้ กรุณาระบุบัญชี Google ของคุณเพื่อเข้าใช้งาน', 'error');
+        showToast(err?.message || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ โปรดลองอีกครั้ง', 'error');
       }
       return false;
     }
@@ -1695,7 +1681,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     const isOwner = cleanEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase();
 
-    // Security Gate: Only the true admin email can access admin features, and must supply admin verification
+    // Security Gate: Only the true admin email can access admin features, and MUST supply admin verification
     if (isOwner) {
       const validAdminPass = ['admin1234', 'toonisra33', 'admin', '123456'];
       if (!adminPasscode || !validAdminPass.includes(adminPasscode.trim())) {

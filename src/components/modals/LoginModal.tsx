@@ -32,8 +32,6 @@ export const LoginModal: React.FC = () => {
     currentUser,
     isAdmin,
     loginWithGoogle,
-    loginWithGoogleCredential,
-    loginWithGoogleEmail,
     loginWithEmail,
     registerWithEmail,
     logoutFirebase,
@@ -56,12 +54,6 @@ export const LoginModal: React.FC = () => {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
 
-  // Direct Google Email input state (Instant mobile-friendly fallback)
-  const [showDirectGoogleInput, setShowDirectGoogleInput] = useState(false);
-  const [directGoogleEmail, setDirectGoogleEmail] = useState('');
-  const [directAdminPass, setDirectAdminPass] = useState('');
-  const googleBtnContainerRef = useRef<HTMLDivElement>(null);
-
   // Form error & loading states
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +63,6 @@ export const LoginModal: React.FC = () => {
     if (!isLoginModalOpen) {
       setErrorMessage('');
       setIsLoading(false);
-      setShowDirectGoogleInput(false);
     }
   }, [isLoginModalOpen]);
 
@@ -95,110 +86,26 @@ export const LoginModal: React.FC = () => {
     };
   }, [regPassword, regConfirmPassword]);
 
-  // Initialize Google Identity Services (GSI) when modal opens
-  useEffect(() => {
-    if (!isLoginModalOpen) return;
-
-    let isMounted = true;
-
-    const initGSI = () => {
-      try {
-        if (typeof window !== 'undefined' && window.google?.accounts?.id && firebaseConfig.oAuthClientId) {
-          window.google.accounts.id.initialize({
-            client_id: firebaseConfig.oAuthClientId,
-            callback: async (response: any) => {
-              if (!isMounted) return;
-              if (response?.credential) {
-                setIsLoading(true);
-                try {
-                  const success = await loginWithGoogleCredential(response.credential);
-                  if (success) {
-                    closeLoginModal();
-                  }
-                } finally {
-                  if (isMounted) setIsLoading(false);
-                }
-              }
-            },
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
-
-          // Render official GSI button into container if container exists
-          if (googleBtnContainerRef.current) {
-            try {
-              googleBtnContainerRef.current.innerHTML = '';
-              window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
-                type: 'standard',
-                theme: 'outline',
-                size: 'large',
-                width: 320,
-                text: activeMode === 'register' ? 'signup_with' : 'signin_with',
-                shape: 'rectangular',
-                logo_alignment: 'left',
-                locale: 'th'
-              });
-            } catch (renderErr) {
-              console.warn('GSI renderButton notice:', renderErr);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Google Identity Services notice:', err);
-      }
-    };
-
-    const timer = setTimeout(initGSI, 250);
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, [isLoginModalOpen, loginWithGoogleCredential, closeLoginModal, activeMode]);
-
   if (!isLoginModalOpen) return null;
 
-  // Real Google Sign-In Popup Handler: Opens Google Account Chooser
+  // Official Google Sign-In Handler
   const handleGoogleSignInClick = async () => {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      // Try prompt/One-Tap if available
-      if (typeof window !== 'undefined' && window.google?.accounts?.id) {
-        try {
-          window.google.accounts.id.prompt();
-        } catch {}
-      }
-
       const success = await loginWithGoogle();
       if (success) {
         closeLoginModal();
-      } else {
-        // Automatically open direct Google email option if popup failed or timed out
-        setShowDirectGoogleInput(true);
       }
     } catch (err: any) {
       console.warn('Google Sign-In click error:', err);
-      setShowDirectGoogleInput(true);
+      if (err?.code === 'auth/popup-blocked') {
+        setErrorMessage('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป โปรดแตะอนุญาตป๊อปอัปในเบราว์เซอร์แล้วลองอีกครั้ง');
+      } else if (err?.code !== 'auth/popup-closed-by-user') {
+        setErrorMessage(err?.message || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ โปรดลองใหม่อีกครั้ง');
+      }
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Direct Google Email Login (Mobile-friendly alternative without popup blockers)
-  const handleDirectGoogleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage('');
-    const email = directGoogleEmail.trim();
-    if (!email || !email.includes('@')) {
-      setErrorMessage('กรุณาระบุที่อยู่อีเมล Google ให้ถูกต้อง เช่น user@gmail.com');
-      return;
-    }
-
-    const success = loginWithGoogleEmail(email, directAdminPass);
-    if (success) {
-      setDirectGoogleEmail('');
-      setDirectAdminPass('');
-      closeLoginModal();
     }
   };
 
@@ -681,17 +588,13 @@ export const LoginModal: React.FC = () => {
                 <div className="border-t border-slate-200 w-full" />
               </div>
 
-              {/* OFFICIAL GOOGLE SIGN-IN BUTTON & SELECTION */}
-              <div className="space-y-2.5">
-                {/* Official Google Identity Button (GSI - No popup required, works natively) */}
-                <div ref={googleBtnContainerRef} className="w-full flex justify-center empty:hidden min-h-0" />
-
-                {/* Standard Google Account Picker Button */}
+              {/* OFFICIAL GOOGLE SIGN-IN BUTTON */}
+              <div>
                 <button
                   type="button"
                   onClick={handleGoogleSignInClick}
                   disabled={isLoading}
-                  className="w-full py-3 px-4 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 border-2 border-slate-300 hover:border-blue-500 rounded-2xl font-bold transition flex items-center justify-center gap-3 shadow-xs hover:shadow-md cursor-pointer active:scale-[0.99]"
+                  className="w-full py-3 px-4 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 border border-slate-300 hover:border-slate-400 rounded-2xl font-bold transition flex items-center justify-center gap-3 shadow-xs cursor-pointer active:scale-[0.99] disabled:opacity-60"
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
@@ -715,77 +618,10 @@ export const LoginModal: React.FC = () => {
                       />
                     </svg>
                   )}
-                  <span className="text-xs sm:text-sm font-black text-slate-800">
-                    {activeMode === 'register' ? 'ลงทะเบียนรวดเร็วด้วย Google' : 'เข้าสู่ระบบด้วย Google'}
+                  <span className="text-sm font-semibold text-slate-700">
+                    {activeMode === 'register' ? 'ลงทะเบียนด้วยบัญชี Google' : 'เข้าสู่ระบบด้วยบัญชี Google'}
                   </span>
                 </button>
-
-                {/* Instant Google Email Sign-In (For Mobile Browser Popup Blockers) */}
-                <div className="pt-1">
-                  {!showDirectGoogleInput ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowDirectGoogleInput(true)}
-                      className="w-full py-1.5 px-2 text-[11px] text-slate-500 hover:text-blue-600 transition flex items-center justify-center gap-1.5 cursor-pointer font-medium"
-                    >
-                      <Smartphone className="w-3.5 h-3.5 text-blue-500" />
-                      <span>เปิดไม่ได้หรือหน้าจอค้างบนมือถือ? แตะที่นี่เพื่อระบุอีเมล Google โดยตรง</span>
-                    </button>
-                  ) : (
-                    <form
-                      onSubmit={handleDirectGoogleEmailSubmit}
-                      className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2.5 animate-fadeIn"
-                    >
-                      <div className="flex items-center justify-between text-xs font-bold text-blue-900">
-                        <span className="flex items-center gap-1.5">
-                          <Smartphone className="w-3.5 h-3.5 text-blue-600" />
-                          เข้าสู่ระบบด้วยอีเมล Google โดยตรง (ไม่ต้องเปิดหน้าต่างใหม่)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowDirectGoogleInput(false)}
-                          className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer"
-                        >
-                          ปิด
-                        </button>
-                      </div>
-
-                      <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="email"
-                          required
-                          value={directGoogleEmail}
-                          onChange={(e) => setDirectGoogleEmail(e.target.value)}
-                          placeholder="yourname@gmail.com"
-                          className="w-full pl-9 pr-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                        />
-                      </div>
-
-                      {directGoogleEmail.trim().toLowerCase() === 'toonisra33@gmail.com' && (
-                        <div className="relative animate-fadeIn">
-                          <Key className="w-4 h-4 text-amber-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="password"
-                            required
-                            value={directAdminPass}
-                            onChange={(e) => setDirectAdminPass(e.target.value)}
-                            placeholder="รหัสยืนยันผู้ดูแลระบบ (Admin Passcode)"
-                            className="w-full pl-9 pr-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                          />
-                        </div>
-                      )}
-
-                      <button
-                        type="submit"
-                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>เข้าสู่ระบบด้วยอีเมลนี้ทันที</span>
-                      </button>
-                    </form>
-                  )}
-                </div>
               </div>
 
               {/* Mode Switcher Footer */}
