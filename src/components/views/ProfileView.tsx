@@ -93,51 +93,58 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     const currentUid = currentUser.uid;
     const isOwnerAdmin = Boolean(
       currentEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase() ||
-      currentName.includes('อิศราวัฒน์') ||
-      isAdmin
+      currentName.includes('อิศราวัฒน์')
     );
 
     return posts.filter((p) => {
       const author = (p.author || '').trim().toLowerCase();
       const authorId = (p as any).authorId;
+      const authorEmail = ((p as any).authorEmail || '').trim().toLowerCase();
 
-      // ก. ตรวจสอบว่าตนเองเป็นผู้สร้างโพสต์นี้หรือไม่
+      // ก. ตรวจสอบว่าตนเองเป็นผู้สร้างโพสต์นี้ (โพสต์ของเจ้าของบัญชีเท่านั้น)
       const isOriginalAuthor = Boolean(
         (authorId && currentUid && authorId === currentUid) ||
+        (currentEmail && authorEmail && authorEmail === currentEmail) ||
         (currentName && author === currentName) ||
-        (currentEmail && author === currentEmail) ||
-        author === 'คุณ (ผู้ใช้ปัจจุบัน)' ||
-        author.startsWith('คุณ') ||
-        (isOwnerAdmin && (author.includes('อิศราวัฒน์') || author.includes('toonisra')))
+        (isOwnerAdmin && (author.includes('อิศราวัฒน์') || author.includes('toonisra') || authorId === 'admin_toonisra33'))
       );
 
-      // ข. ยกเว้นจะมีการแชร์โพสต์คนอื่นจึงจะมาแสดงในหน้านี้
+      // ข. ยกเว้นจะมีการแชร์โพสต์คนอื่น จึงจะมาปรากฏในหน้าฉัน (โพสต์ที่แชร์โดยตนเอง)
       const isSharedByMe = Boolean(
         p.sharedFrom && (
           isOriginalAuthor ||
-          (Array.isArray(p.sharedBy) && p.sharedBy.some(s => {
-            const lowS = s.trim().toLowerCase();
-            return lowS === currentName || (currentEmail && lowS === currentEmail) || (isOwnerAdmin && lowS.includes('อิศราวัฒน์'));
-          }))
+          ((p as any).sharedByUid && (p as any).sharedByUid === currentUid) ||
+          ((p.sharedFrom as any).sharedBy && (p.sharedFrom as any).sharedBy.trim().toLowerCase() === currentName) ||
+          (Array.isArray(p.sharedBy) && p.sharedBy.some(s => s.trim().toLowerCase() === currentName))
         )
       );
 
       // แสดงเฉพาะโพสต์ที่เป็นของตนเอง หรือโพสต์ที่ตนเองแชร์เท่านั้น (ไม่รวมการกดไลค์หรือ comment)
       return isOriginalAuthor || isSharedByMe;
     });
-  }, [posts, currentUser, isAdmin]);
+  }, [posts, currentUser]);
 
-  // 2. Filter User's Own Incident Reports
+  // 2. Filter User's Own Incident Reports (เฉพาะเหตุการณ์ที่เจ้าของบัญชีเป็นผู้รายงานเท่านั้น)
   const myAlerts = useMemo(() => {
     if (!currentUser) return [];
     const currentName = (currentUser.displayName || '').trim().toLowerCase();
+    const currentEmail = (currentUser.email || '').trim().toLowerCase();
+    const currentUid = currentUser.uid;
+    const isOwnerAdmin = Boolean(
+      currentEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase() ||
+      currentName.includes('อิศราวัฒน์')
+    );
 
     return alerts.filter((a) => {
       const reporter = (a.reporter || '').trim().toLowerCase();
-      return (
-        reporter === currentName ||
-        reporter.includes(currentName) ||
-        (currentUser.displayName && reporter.includes('อิศราวัฒน์'))
+      const reporterId = (a as any).reporterId;
+      const reporterEmail = ((a as any).reporterEmail || '').trim().toLowerCase();
+
+      return Boolean(
+        (reporterId && currentUid && reporterId === currentUid) ||
+        (currentEmail && reporterEmail && reporterEmail === currentEmail) ||
+        (currentName && reporter === currentName) ||
+        (isOwnerAdmin && (reporter.includes('อิศราวัฒน์') || reporter.includes('toonisra')))
       );
     });
   }, [alerts, currentUser]);

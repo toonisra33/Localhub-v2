@@ -51,8 +51,101 @@ function getDB(): Promise<IDBDatabase> {
 }
 
 /**
+ * Compresses an image File or Blob using HTML5 Canvas into a compact,
+ * high-fidelity JPEG data URL (max 1280x1280, 0.8 quality).
+ * Produces ~60KB - 120KB images that easily fit into Firestore documents,
+ * display instantly, and never expire on reload.
+ */
+export function compressImageFile(
+  file: File | Blob,
+  maxWidth = 1280,
+  maxHeight = 1280,
+  quality = 0.8
+): Promise<string> {
+  return new Promise((resolve) => {
+    // If not an image or if FileReader is not available, fallback to ObjectURL
+    const isImage = (file.type && file.type.startsWith('image/')) ||
+      (file instanceof File && /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.name));
+
+    if (!file || !isImage) {
+      if (typeof window !== 'undefined' && typeof window.URL?.createObjectURL === 'function') {
+        resolve(URL.createObjectURL(file));
+      } else {
+        resolve('');
+      }
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rawDataUrl = e.target?.result as string;
+      if (!rawDataUrl) {
+        resolve('');
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+
+          // Downscale if larger than max bounds while maintaining aspect ratio
+          if (width > maxWidth || height > maxHeight) {
+            if (width / height > maxWidth / maxHeight) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, width);
+          canvas.height = Math.max(1, height);
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            resolve(rawDataUrl);
+            return;
+          }
+
+          // Fill white background for transparent PNGs converted to JPEG
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedDataUrl);
+        } catch (err) {
+          console.warn('[mediaStorage] Canvas compression failed, falling back to raw data URL:', err);
+          resolve(rawDataUrl);
+        }
+      };
+
+      img.onerror = () => {
+        resolve(rawDataUrl);
+      };
+
+      img.src = rawDataUrl;
+    };
+
+    reader.onerror = () => {
+      if (typeof window !== 'undefined' && typeof window.URL?.createObjectURL === 'function') {
+        resolve(URL.createObjectURL(file));
+      } else {
+        resolve('');
+      }
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
  * Save a file or Blob into IndexedDB with zero localStorage size limits.
- * Returns a media reference string (e.g. "idb://media_123456") and an active Object URL.
+ * Returns a media reference string (e.g. "idb://media_123456") and an active Object/Data URL.
+ * For images, returns a persistent, compressed Data URL that never dies on reload.
  */
 export async function saveMediaFile(
   file: File | Blob,
@@ -63,6 +156,19 @@ export async function saveMediaFile(
   const name = customName || (file instanceof File ? file.name : `file_${id}`);
   const type = file.type || 'application/octet-stream';
   const size = file.size;
+
+  const isImage = (type && type.startsWith('image/')) ||
+    /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(name);
+
+  // For images, generate persistent compressed Data URL
+  let persistentDataUrl = '';
+  if (isImage) {
+    try {
+      persistentDataUrl = await compressImageFile(file);
+    } catch {
+      // fallback
+    }
+  }
 
   try {
     const db = await getDB();
@@ -84,15 +190,15 @@ export async function saveMediaFile(
       putReq.onerror = () => reject(putReq.error);
     });
 
-    const objectUrl = URL.createObjectURL(file);
+    const objectUrl = persistentDataUrl || URL.createObjectURL(file);
     const ref = `idb://${id}`;
     urlCache.set(ref, objectUrl);
     urlCache.set(id, objectUrl);
 
     return { id, ref, objectUrl, size, type, name };
   } catch (err) {
-    console.warn('[mediaStorage] IndexedDB save failed, falling back to ObjectURL:', err);
-    const objectUrl = URL.createObjectURL(file);
+    console.warn('[mediaStorage] IndexedDB save failed, falling back to DataURL/ObjectURL:', err);
+    const objectUrl = persistentDataUrl || (typeof window !== 'undefined' && window.URL ? URL.createObjectURL(file) : '');
     const ref = objectUrl;
     return { id, ref, objectUrl, size, type, name };
   }

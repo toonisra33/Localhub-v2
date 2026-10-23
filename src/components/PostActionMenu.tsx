@@ -64,33 +64,27 @@ export const PostActionMenu: React.FC<PostActionMenuProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  // Ownership check: matches display name, email, uid, default user author, or admin
-  const isOwner = Boolean(
+  // 1. Is user an authorized administrator? (Only toonisra33@gmail.com / isAdmin)
+  const isUserAdmin = Boolean(
     isAdmin ||
-    (currentUser && (
-      (post.author && currentUser.displayName && (
-        post.author.trim().toLowerCase() === currentUser.displayName.trim().toLowerCase() ||
-        post.author.toLowerCase().includes(currentUser.displayName.trim().toLowerCase()) ||
-        currentUser.displayName.toLowerCase().includes(post.author.trim().toLowerCase())
-      )) ||
-      (post.author && currentUser.email && (
-        post.author.trim().toLowerCase() === currentUser.email.trim().toLowerCase() ||
-        post.author.toLowerCase().includes(currentUser.email.trim().toLowerCase())
-      )) ||
-      (currentUser.uid && (
-        (post as any).authorId === currentUser.uid ||
-        post.author.includes(currentUser.uid)
-      )) ||
-      (currentUser.email && currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()) ||
-      (currentUser.displayName && (post.author.includes('อิศราวัฒน์') || post.author.includes('toonisra')))
-    )) ||
-    post.author === 'คุณ (ผู้ใช้ปัจจุบัน)' ||
-    post.author.startsWith('คุณ') ||
-    post.author.includes('คุณ') ||
-    post.author.includes('(คุณ)') ||
-    post.author.includes('พลเมืองดี')
+    (currentUser?.email && currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase())
   );
-  const canDelete = isOwner || isAdmin;
+
+  // 2. Is current user the original author who posted this content?
+  const isOwner = Boolean(
+    currentUser && (
+      ((post as any).authorId && currentUser.uid && (post as any).authorId === currentUser.uid) ||
+      ((post as any).reporterId && currentUser.uid && (post as any).reporterId === currentUser.uid) ||
+      ((post as any).authorEmail && currentUser.email && (post as any).authorEmail.trim().toLowerCase() === currentUser.email.trim().toLowerCase()) ||
+      ((post as any).reporterEmail && currentUser.email && (post as any).reporterEmail.trim().toLowerCase() === currentUser.email.trim().toLowerCase()) ||
+      (post.author && currentUser.displayName && post.author.trim().toLowerCase() === currentUser.displayName.trim().toLowerCase()) ||
+      ((post as any).sharedByUid && currentUser.uid && (post as any).sharedByUid === currentUser.uid) ||
+      (isUserAdmin && (post.author.includes('อิศราวัฒน์') || post.author.includes('toonisra')))
+    )
+  );
+
+  // Only the creator of the post or an administrator can delete posts
+  const canDelete = isUserAdmin || isOwner;
 
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -189,7 +183,7 @@ export const PostActionMenu: React.FC<PostActionMenuProps> = ({
                 className="w-full px-3 py-2 text-left text-rose-600 hover:bg-rose-50 flex items-center gap-2 font-bold transition"
               >
                 <Trash2 className="w-4 h-4 text-rose-600" />
-                <span>ลบโพสต์นี้ {isOwner ? '(ของฉัน)' : '(แอดมิน)'}</span>
+                <span>ลบโพสต์นี้ {isUserAdmin && !isOwner ? '(สิทธิ์ผู้ดูแลระบบ Admin)' : '(โพสต์ของคุณ)'}</span>
               </button>
             </>
           )}

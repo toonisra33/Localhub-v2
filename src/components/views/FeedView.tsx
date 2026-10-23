@@ -74,6 +74,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // Separate Community Feed vs. Incident/Emergency Alerts per user requirement
   const [mainFeedTab, setMainFeedTab] = useState<'community' | 'alerts'>('community');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [alertSortMode, setAlertSortMode] = useState<'trending' | 'latest'>('trending');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<string | null>(null);
 
@@ -122,7 +123,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
     }
   };
 
-  // Filter alerts by scope and search query for community verification
+  // Filter alerts by scope and search query for community verification, sorted by engagement or recency
   const filteredAlerts = alerts.filter(alert => {
     if (!alert) return false;
     const isInLocalArea = alert.province?.trim() === location.province?.trim();
@@ -136,22 +137,63 @@ export const FeedView: React.FC<FeedViewProps> = ({
     const reporter = (typeof alert.reporter === 'string' ? alert.reporter : '').toLowerCase();
     const sub = (alert.subdistrict || '').toLowerCase();
     return title.includes(q) || desc.includes(q) || reporter.includes(q) || sub.includes(q);
+  }).sort((a, b) => {
+    if (alertSortMode === 'trending') {
+      const scoreB = ((b.verifiedCount || 0) * 3) + ((b.likes || 0) * 2) + ((b.shares || 0) * 3) + ((b.commentsCount || 0) * 2);
+      const scoreA = ((a.verifiedCount || 0) * 3) + ((a.likes || 0) * 2) + ((a.shares || 0) * 3) + ((a.commentsCount || 0) * 2);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    }
+    return (b.createdAt || 0) - (a.createdAt || 0);
   });
 
-  // Filter posts by scope (friends or local GPS area), category, and search query
+  // Map of nearby / adjacent provinces in Thailand
+  const NEARBY_PROVINCES: Record<string, string[]> = {
+    'กรุงเทพมหานคร': ['นนทบุรี', 'ปทุมธานี', 'สมุทรปราการ', 'สมุทรสาคร', 'นครปฐม', 'ฉะเชิงเทรา'],
+    'นนทบุรี': ['กรุงเทพมหานคร', 'ปทุมธานี', 'นครปฐม', 'พระนครศรีอยุธยา'],
+    'ปทุมธานี': ['กรุงเทพมหานคร', 'นนทบุรี', 'พระนครศรีอยุธยา', 'สระบุรี', 'นครนายก'],
+    'สมุทรปราการ': ['กรุงเทพมหานคร', 'ฉะเชิงเทรา', 'สมุทรสาคร'],
+    'สมุทรสาคร': ['กรุงเทพมหานคร', 'สมุทรปราการ', 'สมุทรสงคราม', 'นครปฐม'],
+    'นครปฐม': ['กรุงเทพมหานคร', 'นนทบุรี', 'สุพรรณบุรี', 'สมุทรสาคร', 'ราชบุรี'],
+    'เชียงใหม่': ['เชียงราย', 'ลำพูน', 'ลำปาง', 'แม่ฮ่องสอน'],
+    'เชียงราย': ['เชียงใหม่', 'พะเยา', 'ลำปาง'],
+    'ชลบุรี': ['ระยอง', 'ฉะเชิงเทรา', 'จันทบุรี'],
+    'ขอนแก่น': ['มหาสารคาม', 'กาฬสินธุ์', 'อุดรธานี', 'ชัยภูมิ', 'นครราชสีมา'],
+    'นครราชสีมา': ['ขอนแก่น', 'ชัยภูมิ', 'บุรีรัมย์', 'สระบุรี', 'ลพบุรี', 'ปราจีนบุรี'],
+    'สงขลา': ['พัทลุง', 'ยะลา', 'ปัตตานี', 'สตูล', 'นครศรีธรรมราช'],
+    'ภูเก็ต': ['พังงา', 'กระบี่']
+  };
+
+  // Filter posts by scope (friends, friends of friends, and users in same/nearby area), category, and search query
   const filteredPosts = posts.filter(post => {
     if (!post) return false;
 
     const authorIsFriend = isFriend(post.author);
-    const isInLocalArea = post.location?.province?.trim() === location.province?.trim();
+    const isFriendOfFriend = Boolean(
+      (post.comments && post.comments.some(c => isFriend(c.author))) ||
+      (post.sharedFrom && isFriend(post.sharedFrom.originalAuthor)) ||
+      (Array.isArray(post.sharedBy) && post.sharedBy.some(s => isFriend(s)))
+    );
+
+    const postProvince = (post.location?.province || '').trim();
+    const userProvince = (location.province || '').trim();
+    const isSameProvince = Boolean(postProvince && userProvince && postProvince === userProvince);
+    const isNearbyProvince = Boolean(
+      userProvince &&
+      NEARBY_PROVINCES[userProvince] &&
+      NEARBY_PROVINCES[userProvince].includes(postProvince)
+    );
+    const isInLocalAreaOrNearby = isSameProvince || isNearbyProvince;
+    const isSelf = currentUser?.displayName === post.author;
 
     // 1. Feed Scope Filter
     if (feedScope === 'friends_or_local') {
-      if (!authorIsFriend && !isInLocalArea) return false;
+      // ปรากฏโพสต์ของเพื่อน, เพื่อนของเพื่อน, และผู้ใช้งานที่อยู่ในพื้นที่เดียวกันหรือใกล้เคียงกัน
+      if (!authorIsFriend && !isFriendOfFriend && !isInLocalAreaOrNearby && !isSelf) return false;
     } else if (feedScope === 'friends_only') {
-      if (!authorIsFriend) return false;
+      if (!authorIsFriend && !isFriendOfFriend && !isSelf) return false;
     } else if (feedScope === 'local_only') {
-      if (!isInLocalArea) return false;
+      if (!isInLocalAreaOrNearby && !isSelf) return false;
     }
 
     // 2. Category Filter (Pure community feed categories, alert is separated)
@@ -808,7 +850,21 @@ export const FeedView: React.FC<FeedViewProps> = ({
             ) : (
               filteredPosts.map(post => {
                 const authorIsFriend = isFriend(post.author);
-                const isInLocalArea = post.location?.province?.trim() === location.province?.trim();
+                const isFriendOfFriend = Boolean(
+                  !authorIsFriend && (
+                    (post.comments && post.comments.some(c => isFriend(c.author))) ||
+                    (post.sharedFrom && isFriend(post.sharedFrom.originalAuthor)) ||
+                    (Array.isArray(post.sharedBy) && post.sharedBy.some(s => isFriend(s)))
+                  )
+                );
+                const postProvince = (post.location?.province || '').trim();
+                const userProvince = (location.province || '').trim();
+                const isSameProvince = Boolean(postProvince && userProvince && postProvince === userProvince);
+                const isNearbyProvince = Boolean(
+                  userProvince &&
+                  NEARBY_PROVINCES[userProvince] &&
+                  NEARBY_PROVINCES[userProvince].includes(postProvince)
+                );
                 const isSelf = currentUser?.displayName === post.author;
 
                 return (
@@ -834,7 +890,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                               <CheckCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white shrink-0" />
                             )}
 
-                            {/* Friend / Local Area Badges */}
+                            {/* Friend / Local Area / Friend of Friend Badges */}
                             {authorIsFriend && (
                               <span className="px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200 flex items-center gap-1">
                                 <Users className="w-2.5 h-2.5" />
@@ -842,10 +898,24 @@ export const FeedView: React.FC<FeedViewProps> = ({
                               </span>
                             )}
 
-                            {isInLocalArea && !authorIsFriend && (
+                            {isFriendOfFriend && !authorIsFriend && (
+                              <span className="px-2 py-0.2 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold border border-indigo-200 flex items-center gap-1">
+                                <Users className="w-2.5 h-2.5" />
+                                เพื่อนของเพื่อน
+                              </span>
+                            )}
+
+                            {isSameProvince && !authorIsFriend && !isFriendOfFriend && (
                               <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
                                 <MapPin className="w-2.5 h-2.5" />
                                 คนในพื้นที่
+                              </span>
+                            )}
+
+                            {isNearbyProvince && !isSameProvince && !authorIsFriend && !isFriendOfFriend && (
+                              <span className="px-2 py-0.2 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold border border-teal-200 flex items-center gap-1">
+                                <Compass className="w-2.5 h-2.5" />
+                                พื้นที่ใกล้เคียง
                               </span>
                             )}
                           </div>
@@ -1035,6 +1105,34 @@ export const FeedView: React.FC<FeedViewProps> = ({
             <p className="leading-snug">
               <strong>ระบบร่วมตรวจสอบโดยชุมชน:</strong> คนในพื้นที่สามารถกดปุ่ม <em>"ยืนยันมีเหตุจริง"</em> หรือ <em>"ไม่พบเหตุการณ์"</em> เพื่อช่วยคัดกรองข่าวปลอมได้ทันที
             </p>
+          </div>
+
+          {/* Sub-tabs: โพสต์ที่ได้รับความสนใจ vs โพสต์ใหม่ */}
+          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setAlertSortMode('trending')}
+              className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                alertSortMode === 'trending'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5" />
+              <span>🔥 ได้รับความสนใจ (ยอดนิยม)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAlertSortMode('latest')}
+              className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                alertSortMode === 'latest'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>⏱️ โพสต์ใหม่ (ล่าสุด)</span>
+            </button>
           </div>
 
           {/* Search Bar for Alerts */}

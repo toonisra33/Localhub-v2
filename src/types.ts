@@ -273,6 +273,12 @@ export interface AlertReport {
   coordinates?: { lat: number; lng: number };
   locationName?: string;
   images?: string[];
+  likes?: number;
+  isLiked?: boolean;
+  commentsCount?: number;
+  shares?: number;
+  reporterId?: string;
+  reporterEmail?: string;
 }
 
 export type TestSoundType = 'siren' | 'urgent' | 'high' | 'announcement';

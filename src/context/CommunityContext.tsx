@@ -173,6 +173,8 @@ interface CommunityContextType {
   addAlert: (alert: Omit<AlertReport, 'id' | 'createdAt' | 'verifiedCount' | 'status'>) => void;
   confirmAlert: (alertId: string) => void;
   reportAlertNotFound: (alertId: string) => void;
+  likeAlert: (alertId: string) => void;
+  shareAlert: (alertId: string) => void;
 
   // Friends (เพิ่มเพื่อน / ลบเพื่อน)
   friends: FriendUser[];
@@ -549,6 +551,10 @@ const INITIAL_ALERTS: AlertReport[] = [
     reporter: 'ศูนย์ตรวจสอบสถานการณ์ชุมชน',
     createdAt: Date.now() - 3600000 * 1,
     verifiedCount: 22,
+    notFoundCount: 0,
+    likes: 38,
+    shares: 16,
+    commentsCount: 7,
     status: 'resolved',
     coordinates: { lat: 13.738, lng: 100.57 },
     images: [
@@ -568,6 +574,10 @@ const INITIAL_ALERTS: AlertReport[] = [
     reporter: 'สน.ทองหล่อ',
     createdAt: Date.now() - 3600000 * 2,
     verifiedCount: 28,
+    notFoundCount: 1,
+    likes: 72,
+    shares: 34,
+    commentsCount: 15,
     status: 'investigating',
     coordinates: { lat: 13.748, lng: 100.563 },
     images: [
@@ -1452,13 +1462,21 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               district: raw.location?.district || raw.district || DEFAULT_LOCATION.district,
               subdistrict: raw.location?.subdistrict || raw.subdistrict || DEFAULT_LOCATION.subdistrict,
               reporter: (typeof raw.reporter === 'string' ? raw.reporter : '') || (typeof raw.reportedBy === 'string' ? raw.reportedBy : '') || 'ประชาชนในพื้นที่',
+              reporterAvatar: typeof raw.reporterAvatar === 'string' && raw.reporterAvatar ? raw.reporterAvatar : undefined,
+              images: Array.isArray(raw.images) ? raw.images : (typeof raw.images === 'string' && raw.images.trim() ? [raw.images] : (raw.image ? [raw.image] : [])),
               createdAt: createdAtMs,
               verifiedCount: typeof raw.verifiedCount === 'number' ? raw.verifiedCount : (typeof raw.confirmations === 'number' ? raw.confirmations : 1),
               notFoundCount: typeof raw.notFoundCount === 'number' ? raw.notFoundCount : 0,
               isFakeReport: Boolean(raw.isFakeReport),
               status: raw.status || 'active',
               coordinates: raw.coordinates || (raw.location?.lat && raw.location?.lng ? { lat: raw.location.lat, lng: raw.location.lng } : undefined),
-              locationName: raw.locationName || raw.addressDetails || ''
+              locationName: raw.locationName || raw.addressDetails || '',
+              likes: typeof raw.likes === 'number' ? raw.likes : 0,
+              isLiked: Boolean(raw.isLiked),
+              shares: typeof raw.shares === 'number' ? raw.shares : 0,
+              commentsCount: typeof raw.commentsCount === 'number' ? raw.commentsCount : 0,
+              reporterId: typeof raw.reporterId === 'string' ? raw.reporterId : undefined,
+              reporterEmail: typeof raw.reporterEmail === 'string' ? raw.reporterEmail : undefined
             });
           });
           cloudAlerts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -2355,6 +2373,48 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deletePost = async (id: string): Promise<boolean> => {
     try {
+      const targetPost = posts.find(p => p.id === id);
+      const targetAlert = alerts.find(a => a.id === id);
+
+      // Verify permission: author of post OR admin
+      const isUserAdmin = Boolean(
+        isAdmin ||
+        (currentUser?.email && currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase())
+      );
+
+      if (!isUserAdmin) {
+        if (!currentUser) {
+          showToast('กรุณาเข้าสู่ระบบก่อนดำเนินการลบโพสต์', 'error');
+          return false;
+        }
+
+        const currentUid = currentUser.uid;
+        const currentName = (currentUser.displayName || '').trim().toLowerCase();
+        const currentEmail = (currentUser.email || '').trim().toLowerCase();
+
+        const isPostAuthor = Boolean(
+          targetPost && (
+            ((targetPost as any).authorId && currentUid && (targetPost as any).authorId === currentUid) ||
+            ((targetPost as any).authorEmail && currentEmail && (targetPost as any).authorEmail.trim().toLowerCase() === currentEmail) ||
+            (targetPost.author && currentName && targetPost.author.trim().toLowerCase() === currentName) ||
+            ((targetPost as any).sharedByUid && currentUid && (targetPost as any).sharedByUid === currentUid)
+          )
+        );
+
+        const isAlertReporter = Boolean(
+          targetAlert && (
+            ((targetAlert as any).reporterId && currentUid && (targetAlert as any).reporterId === currentUid) ||
+            ((targetAlert as any).reporterEmail && currentEmail && (targetAlert as any).reporterEmail.trim().toLowerCase() === currentEmail) ||
+            (targetAlert.reporter && currentName && targetAlert.reporter.trim().toLowerCase() === currentName)
+          )
+        );
+
+        if (!isPostAuthor && !isAlertReporter && (targetPost || targetAlert)) {
+          showToast('คุณไม่มีสิทธิ์ลบโพสต์นี้ เฉพาะเจ้าของโพสต์หรือผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถลบได้', 'error');
+          return false;
+        }
+      }
+
       // 1. Mark in deletedPostIds state and localStorage so it can never be resurrected
       setDeletedPostIds(prev => {
         const next = new Set(prev);
@@ -2804,7 +2864,14 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: `alt_${Date.now()}`,
       createdAt: Date.now(),
       verifiedCount: 1,
+      notFoundCount: 0,
+      likes: 0,
+      shares: 0,
+      commentsCount: 0,
       status: 'active',
+      reporter: alertData.reporter || currentUser?.displayName || 'ประชาชนในพื้นที่',
+      reporterId: currentUser?.uid || 'user_local',
+      reporterEmail: currentUser?.email || '',
       coordinates: alertData.coordinates || ((location.lat && location.lng) ? { lat: location.lat, lng: location.lng } : undefined)
     };
     setAlerts(prev => [newAlert, ...prev]);
@@ -2824,6 +2891,46 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       targetArea: `${newAlert.province} ${newAlert.district ? '• ' + newAlert.district : ''}`,
       link: 'alerts'
     }).catch(e => console.warn('Alert notification error:', e));
+  };
+
+  const likeAlert = (alertId: string) => {
+    setAlerts(prev =>
+      prev.map(a => {
+        if (a.id === alertId) {
+          const isLiked = !a.isLiked;
+          const newLikes = isLiked ? (a.likes || 0) + 1 : Math.max(0, (a.likes || 1) - 1);
+          updateDoc(doc(db, 'alerts', a.id), {
+            likes: newLikes
+          }).catch(() => {});
+          return {
+            ...a,
+            likes: newLikes,
+            isLiked
+          };
+        }
+        return a;
+      })
+    );
+  };
+
+  const shareAlert = (alertId: string) => {
+    setAlerts(prev =>
+      prev.map(a => {
+        if (a.id === alertId) {
+          const newShares = (a.shares || 0) + 1;
+          updateDoc(doc(db, 'alerts', a.id), {
+            shares: newShares
+          }).catch(() => {});
+          return { ...a, shares: newShares };
+        }
+        return a;
+      })
+    );
+
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(`${window.location.origin}/#alerts?id=${alertId}`);
+      showToast('🔁 แชร์และคัดลอกลิงก์การแจ้งเหตุเรียบร้อยแล้ว!', 'success');
+    }
   };
 
   const confirmAlert = (alertId: string) => {
@@ -2966,6 +3073,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addAlert,
         confirmAlert,
         reportAlertNotFound,
+        likeAlert,
+        shareAlert,
         friends,
         addFriend,
         removeFriend,
