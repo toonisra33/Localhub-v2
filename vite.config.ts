@@ -46,6 +46,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        navigateFallbackDenylist: [/^\/__/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         importScripts: ['sw-notifications.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

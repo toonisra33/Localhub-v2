@@ -1476,54 +1476,111 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => unsub();
   }, []);
 
+  // Consolidated handler for successful Firebase Authentication user session
+  const handleSuccessfulAuthUser = useCallback(async (user: FirebaseUser, showWelcomeToast = false) => {
+    const userEmail = user.email?.toLowerCase().trim() || '';
+    const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
+
+    const loggedIn = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน Google',
+      photoURL: user.photoURL || null,
+    };
+
+    setCurrentUser(loggedIn);
+    setAdminToggleActive(isOriginalAdmin);
+
+    try {
+      localStorage.removeItem('localhub_logged_out');
+      localStorage.setItem('localhub_user', JSON.stringify(loggedIn));
+      localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
+    } catch {}
+
+    // Ensure user account is present in registered users list
+    setRegisteredUsers(prev => {
+      const exists = prev.some(
+        u => u.uid === user.uid || (user.email && u.email.toLowerCase() === user.email.toLowerCase())
+      );
+      if (exists) return prev;
+      const newUserAcc: UserAccount = {
+        uid: user.uid,
+        email: user.email || 'user@example.com',
+        displayName: loggedIn.displayName,
+        photoURL: loggedIn.photoURL || undefined,
+        role: isOriginalAdmin ? 'admin' : 'user',
+        isAdmin: isOriginalAdmin,
+        province: 'กรุงเทพมหานคร',
+        district: 'วัฒนา',
+        createdAt: Date.now(),
+        lastActiveAt: Date.now(),
+        isInactiveWarning: false
+      };
+      return [newUserAcc, ...prev];
+    });
+
+    // Sync profile to Firestore
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userSnap = await getDocFromServer(userDocRef);
+      if (!userSnap.exists()) {
+        await setDoc(userDocRef, {
+          id: user.uid,
+          email: user.email,
+          displayName: loggedIn.displayName,
+          photoURL: loggedIn.photoURL,
+          role: isOriginalAdmin ? 'admin' : 'user',
+          isAdmin: isOriginalAdmin,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString()
+        });
+      } else {
+        await updateDoc(userDocRef, {
+          lastLogin: new Date().toISOString(),
+          displayName: loggedIn.displayName,
+          photoURL: loggedIn.photoURL
+        });
+      }
+    } catch (e) {
+      console.warn('Firestore profile sync note:', e);
+    }
+
+    if (showWelcomeToast) {
+      if (isOriginalAdmin) {
+        showToast(`🛡️ เข้าสู่ระบบสำเร็จในฐานะผู้ดูแลระบบ (Admin): ${loggedIn.displayName}`, 'success');
+      } else {
+        showToast(`🎉 ยินดีต้อนรับเข้าสู่ชุมชน LocalHub: ${loggedIn.displayName}`, 'success');
+      }
+    }
+  }, [showToast]);
+
   // Auth Listener and Redirect Handler
   useEffect(() => {
     // Process Google redirect result if page reloaded from signInWithRedirect
-    getRedirectResult(auth).then((result) => {
-      if (result && result.user) {
-        const user = result.user;
-        const userEmail = user.email?.toLowerCase().trim();
-        const isOriginalAdmin = Boolean(
-          userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase()
-        );
-        const loggedUser = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน Google',
-          photoURL: user.photoURL || null,
-        };
-        setCurrentUser(loggedUser);
-        setAdminToggleActive(isOriginalAdmin);
-        try {
-          localStorage.removeItem('localhub_logged_out');
-          localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
-          localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
-        } catch {}
-        showToast(`เข้าสู่ระบบด้วย Google สำเร็จ: ${loggedUser.displayName}`, 'success');
-      }
-    }).catch((err) => {
-      console.warn('Redirect sign-in notice:', err);
-    });
+    // Process Google redirect result if page reloaded from signInWithRedirect
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result && result.user) {
+          await handleSuccessfulAuthUser(result.user, true);
+        }
+      })
+      .catch((err: any) => {
+        console.warn('Redirect sign-in notice:', err);
+        const code = err?.code || '';
+        if (code === 'auth/unauthorized-domain') {
+          showToast('โดเมนนี้ยังไม่ได้รับอนุญาตในระบบ Firebase กรุณาตรวจสอบ Authorized Domains', 'error');
+        } else if (code === 'auth/network-request-failed') {
+          showToast('ไม่สามารถเชื่อมต่อเครือข่ายได้ กรุณาตรวจสอบสัญญาณอินเทอร์เน็ต', 'error');
+        } else if (code === 'auth/user-disabled') {
+          showToast('บัญชีผู้ใช้นี้ถูกระงับการใช้งานในระบบ', 'error');
+        } else if (code && code !== 'auth/null-user') {
+          showToast('เข้าสู่ระบบด้วย Google ไม่สำเร็จ โปรดลองใหม่อีกครั้ง', 'error');
+        }
+      });
 
-    const unsub = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
+    const unsub = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
       if (user && !user.isAnonymous) {
-        const userEmail = user.email?.toLowerCase().trim();
-        const isOriginalAdmin = Boolean(
-          userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase()
-        );
-        const loggedUser = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน',
-          photoURL: user.photoURL || null,
-        };
-        setCurrentUser(loggedUser);
-        setAdminToggleActive(isOriginalAdmin);
-        try {
-          localStorage.removeItem('localhub_logged_out');
-          localStorage.setItem('localhub_user', JSON.stringify(loggedUser));
-          localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
-        } catch {}
+        await handleSuccessfulAuthUser(user, false);
       } else {
         // Unauthenticated or anonymous session
         const isLoggedOut = localStorage.getItem('localhub_logged_out');
@@ -1540,77 +1597,84 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     });
     return () => unsub();
-  }, [showToast]);
+  }, [handleSuccessfulAuthUser, showToast]);
 
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
-      // Always use signInWithPopup for Google Sign-In.
-      // signInWithRedirect hangs on a blank screen on modern mobile browsers (Chrome 115+, Safari)
-      // due to third-party storage partitioning on firebaseapp.com/__/auth/handler.
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      const userEmail = user.email?.toLowerCase().trim() || '';
-      const isOriginalAdmin = Boolean(userEmail && userEmail === ORIGINAL_ADMIN_EMAIL.toLowerCase());
-
-      const loggedIn = {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || user.email?.split('@')[0] || 'ผู้ใช้งาน Google',
-        photoURL: user.photoURL || null,
-      };
-
-      setCurrentUser(loggedIn);
-      setAdminToggleActive(isOriginalAdmin);
-
-      try {
-        localStorage.removeItem('localhub_logged_out');
-        localStorage.setItem('localhub_user', JSON.stringify(loggedIn));
-        localStorage.setItem('localhub_is_admin', JSON.stringify(isOriginalAdmin));
-      } catch {}
-
-      // Sync user profile to Firestore
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userSnap = await getDocFromServer(userDocRef);
-        if (!userSnap.exists()) {
-          await setDoc(userDocRef, {
-            id: user.uid,
-            email: user.email,
-            displayName: loggedIn.displayName,
-            photoURL: loggedIn.photoURL,
-            role: isOriginalAdmin ? 'admin' : 'user',
-            isAdmin: isOriginalAdmin,
-            createdAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString()
-          });
-        } else {
-          await updateDoc(userDocRef, {
-            lastLogin: new Date().toISOString(),
-            displayName: loggedIn.displayName,
-            photoURL: loggedIn.photoURL
-          });
+      const isInsideIframe = (() => {
+        try {
+          return typeof window !== 'undefined' && window.self !== window.top;
+        } catch {
+          return true;
         }
-      } catch (e) {
-        console.warn('Firestore profile sync note:', e);
+      })();
+
+      const isMobileOrStandalone = typeof window !== 'undefined' && (
+        /Android|iPhone|iPad|iPod|Mobile|Silk/i.test(navigator.userAgent || '') ||
+        window.matchMedia('(pointer: coarse)').matches ||
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true ||
+        document.referrer.includes('android-app://')
+      );
+
+      // CRITICAL: Google OAuth strictly prohibits being loaded inside an <iframe> (such as the AI Studio Preview panel),
+      // returning HTTP "403. นั่นคือข้อผิดพลาด ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้".
+      // When inside an iframe, we MUST use signInWithPopup so the Google Account Chooser opens externally outside the iframe.
+      if (isInsideIframe) {
+        try {
+          const result = await signInWithPopup(auth, googleProvider);
+          await handleSuccessfulAuthUser(result.user, true);
+          return true;
+        } catch (popupErr: any) {
+          if (popupErr?.code === 'auth/popup-blocked') {
+            showToast('เบราว์เซอร์บล็อกป๊อปอัป กรุณาอนุญาตป๊อปอัป หรือเปิดทดสอบผ่านลิงก์เว็บจริงโดยตรง', 'error');
+            return false;
+          }
+          throw popupErr;
+        }
       }
 
-      if (isOriginalAdmin) {
-        showToast(`🛡️ เข้าสู่ระบบสำเร็จในฐานะผู้ดูแลระบบ (Admin): ${loggedIn.displayName}`, 'success');
-      } else {
-        showToast(`🎉 ยินดีต้อนรับเข้าสู่ชุมชน LocalHub: ${loggedIn.displayName}`, 'success');
+      // On Android / mobile devices and installed standalone PWAs (running in the top-level window):
+      // On the production domain (localhub-69fbe.firebaseapp.com / web.app), signInWithRedirect
+      // redirects the top-level window directly to Google Account Chooser without any 403 or popup issues.
+      if (isMobileOrStandalone) {
+        showToast('กำลังนำคุณไปยังหน้าเลือกบัญชี Google...', 'info');
+        await signInWithRedirect(auth, googleProvider);
+        return true;
       }
-      return true;
+
+      // On Desktop top-level browsers:
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        await handleSuccessfulAuthUser(result.user, true);
+        return true;
+      } catch (popupErr: any) {
+        if (popupErr?.code === 'auth/popup-blocked' || popupErr?.code === 'auth/cancelled-popup-request') {
+          // If popup was blocked by browser, seamlessly switch to redirect
+          showToast('กำลังเปลี่ยนเส้นทางไปหน้าเลือกบัญชี Google...', 'info');
+          await signInWithRedirect(auth, googleProvider);
+          return true;
+        }
+        throw popupErr;
+      }
     } catch (err: any) {
       console.warn('Google sign-in error:', err);
+      const code = err?.code || '';
 
-      if (err?.code === 'auth/popup-blocked') {
-        showToast('เบราว์เซอร์บล็อกหน้าต่างเลือกบัญชี Google โปรดแตะ "อนุญาตป๊อปอัป" แล้วกดใหม่อีกครั้ง', 'error');
-      } else if (err?.code === 'auth/popup-closed-by-user') {
+      if (code === 'auth/popup-blocked') {
+        showToast('กำลังเปลี่ยนเส้นทางไปหน้าเลือกบัญชี Google...', 'info');
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return true;
+        } catch {}
+      } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
         showToast('คุณได้ปิดหน้าต่างเลือกบัญชี Google', 'info');
-      } else if (err?.code === 'auth/unauthorized-domain') {
-        showToast('โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Authentication', 'error');
+      } else if (code === 'auth/unauthorized-domain') {
+        showToast('โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Authentication กรุณาตรวจสอบ Authorized Domains', 'error');
+      } else if (code === 'auth/network-request-failed') {
+        showToast('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Google ได้ กรุณาตรวจสอบอินเทอร์เน็ต', 'error');
       } else {
-        showToast(err?.message || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ โปรดลองอีกครั้ง', 'error');
+        showToast('เข้าสู่ระบบด้วย Google ไม่สำเร็จ โปรดลองใหม่อีกครั้ง', 'error');
       }
       return false;
     }

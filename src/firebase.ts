@@ -33,16 +33,26 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-// Calculate first-party same-origin authDomain to prevent third-party storage partitioning
-// When running on Cloud Run or dev host, proxying /__/auth makes auth same-origin with the app
-const getEffectiveAuthDomain = (): string => {
-  if (typeof window !== 'undefined' && window.location.host) {
-    const host = window.location.host;
-    if (host.includes('run.app') || host.includes('localhost') || host.includes('127.0.0.1')) {
-      return host;
+// Calculate first-party same-origin authDomain to prevent third-party storage partitioning (CHIPS / ITP).
+// Firebase Redirect Best Practice: When running on Firebase Hosting (.web.app or .firebaseapp.com)
+// or custom domains, authDomain MUST match the current host so that /__/auth/handler runs on the same origin.
+export const getEffectiveAuthDomain = (): string => {
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    const hostname = window.location.hostname;
+    // 1. Firebase Hosting domains (matches web.app or firebaseapp.com to eliminate cross-site redirect)
+    if (hostname.endsWith('.web.app') || hostname.endsWith('.firebaseapp.com')) {
+      return hostname;
+    }
+    // 2. Cloud Run preview & local development (proxied /__/auth)
+    if (hostname.includes('run.app') || hostname === 'localhost' || hostname === '127.0.0.1') {
+      return window.location.host;
+    }
+    // 3. Custom domain if configured
+    if (hostname && !hostname.includes(':')) {
+      return hostname;
     }
   }
-  return firebaseConfig.authDomain;
+  return firebaseConfig.authDomain || 'localhub-69fbe.firebaseapp.com';
 };
 
 // Initialize Firebase App
