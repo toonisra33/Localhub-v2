@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, ChevronLeft, ChevronRight, X, Image as ImageIcon } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, X, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { resolveMediaUrl } from '../utils/mediaStorage';
 
 interface PostImageGalleryProps {
   images?: string[];
@@ -7,6 +8,107 @@ interface PostImageGalleryProps {
   className?: string;
   onImageClick?: (url: string, index: number, allImages: string[]) => void;
 }
+
+interface PostImageItemProps {
+  originalSrc: string;
+  index: number;
+  containerClassName?: string;
+  imgClassName?: string;
+  onClick: (e: React.MouseEvent) => void;
+  overlay?: React.ReactNode;
+}
+
+const PostImageItem: React.FC<PostImageItemProps> = ({
+  originalSrc,
+  index,
+  containerClassName = '',
+  imgClassName = '',
+  onClick,
+  overlay
+}) => {
+  const [resolvedSrc, setResolvedSrc] = useState<string>(() => {
+    if (originalSrc.startsWith('http://') || originalSrc.startsWith('https://') || originalSrc.startsWith('data:')) {
+      return originalSrc;
+    }
+    return '';
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(!resolvedSrc);
+  const [hasError, setHasError] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (originalSrc.startsWith('http://') || originalSrc.startsWith('https://') || originalSrc.startsWith('data:')) {
+      setResolvedSrc(originalSrc);
+      setIsLoading(false);
+      setHasError(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setHasError(false);
+
+    resolveMediaUrl(originalSrc)
+      .then((resolved) => {
+        if (!isCancelled) {
+          if (resolved) {
+            setResolvedSrc(resolved);
+          } else {
+            setHasError(true);
+          }
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setHasError(true);
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [originalSrc]);
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative rounded-xl overflow-hidden bg-slate-900/5 border border-slate-200/80 cursor-pointer group flex items-center justify-center transition-all ${containerClassName}`}
+    >
+      {isLoading ? (
+        <div className="w-full h-full min-h-[140px] flex items-center justify-center bg-slate-100/60 text-slate-400">
+          <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+        </div>
+      ) : hasError || !resolvedSrc ? (
+        <div className="w-full h-full min-h-[140px] flex flex-col items-center justify-center p-3 text-slate-400 bg-slate-50 text-center space-y-1">
+          <ImageIcon className="w-7 h-7 text-slate-300 stroke-1" />
+          <span className="text-[11px] font-bold text-slate-500">รูปภาพบันทึกในอุปกรณ์</span>
+          <span className="text-[9px] text-slate-400">แตะเพื่อเปิดดูภาพ</span>
+        </div>
+      ) : (
+        <img
+          src={resolvedSrc}
+          alt=""
+          className={`w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-200 ${imgClassName}`}
+          loading="lazy"
+          onError={() => setHasError(true)}
+        />
+      )}
+
+      {overlay ? (
+        overlay
+      ) : (
+        <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
+          <span className="p-2 bg-black/60 rounded-full shadow-md backdrop-blur-xs flex items-center gap-1 text-xs font-bold">
+            <Eye className="w-3.5 h-3.5 drop-shadow" />
+            <span className="hidden sm:inline">ดูเต็มภาพ</span>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
   images = [],
@@ -16,10 +118,38 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
 }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [resolvedImages, setResolvedImages] = useState<string[]>([]);
 
-  if (!images || images.length === 0) return null;
+  const validImages = (images || []).filter((img) => typeof img === 'string' && img.trim().length > 0);
 
-  const validImages = images.filter((img) => typeof img === 'string' && img.trim().length > 0);
+  // Resolve all valid images in background for Lightbox
+  useEffect(() => {
+    let isCancelled = false;
+    if (validImages.length === 0) {
+      setResolvedImages([]);
+      return;
+    }
+
+    Promise.all(
+      validImages.map(async (img) => {
+        try {
+          const res = await resolveMediaUrl(img);
+          return res || img;
+        } catch {
+          return img;
+        }
+      })
+    ).then((resolved) => {
+      if (!isCancelled) {
+        setResolvedImages(resolved);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [validImages]);
+
   if (validImages.length === 0) return null;
 
   const visibleImages = validImages.slice(0, maxDisplay);
@@ -48,7 +178,7 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
     setCurrentIndex(index);
     setLightboxOpen(true);
     if (onImageClick) {
-      onImageClick(validImages[index], index, validImages);
+      onImageClick(resolvedImages[index] || validImages[index], index, resolvedImages.length > 0 ? resolvedImages : validImages);
     }
   };
 
@@ -66,71 +196,41 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
     <div className={`space-y-1.5 ${className}`}>
       {/* 1 Image: Full Display without cropping (เต็มภาพ) */}
       {visibleImages.length === 1 && (
-        <div
+        <PostImageItem
+          originalSrc={visibleImages[0]}
+          index={0}
+          containerClassName="w-full max-h-[460px] rounded-2xl"
+          imgClassName="max-h-[460px]"
           onClick={(e) => handleOpenPhoto(0, e)}
-          className="relative w-full rounded-2xl overflow-hidden bg-slate-900/5 border border-slate-200/80 cursor-pointer group flex items-center justify-center max-h-[460px]"
-        >
-          <img
-            src={visibleImages[0]}
-            alt="Media 1"
-            className="w-full max-h-[460px] object-contain group-hover:scale-[1.01] transition-transform duration-200"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-            <span className="p-2.5 bg-black/60 rounded-full shadow-md backdrop-blur-xs flex items-center gap-1.5 text-xs font-bold">
-              <Eye className="w-4 h-4 drop-shadow" />
-              <span>ดูเต็มภาพ</span>
-            </span>
-          </div>
-        </div>
+        />
       )}
 
-      {/* 2 Images: 2 Column Grid (เต็มภาพ ไม่ตัดขอบ) */}
+      {/* 2 Images: 2 Column Grid */}
       {visibleImages.length === 2 && (
         <div className="grid grid-cols-2 gap-2 rounded-2xl overflow-hidden">
           {visibleImages.map((img, idx) => (
-            <div
+            <PostImageItem
               key={idx}
+              originalSrc={img}
+              index={idx}
+              containerClassName="h-48 sm:h-60 rounded-xl"
               onClick={(e) => handleOpenPhoto(idx, e)}
-              className="relative h-48 sm:h-60 rounded-xl overflow-hidden bg-slate-900/5 border border-slate-200/80 cursor-pointer group flex items-center justify-center"
-            >
-              <img
-                src={img}
-                alt={`Media ${idx + 1}`}
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                <span className="p-2 bg-black/60 rounded-full shadow-md backdrop-blur-xs">
-                  <Eye className="w-4 h-4 drop-shadow" />
-                </span>
-              </div>
-            </div>
+            />
           ))}
         </div>
       )}
 
-      {/* 3 Images: 3 Column Grid (เต็มภาพ) */}
+      {/* 3 Images: 3 Column Grid */}
       {visibleImages.length === 3 && (
         <div className="grid grid-cols-3 gap-2 rounded-2xl overflow-hidden">
           {visibleImages.map((img, idx) => (
-            <div
+            <PostImageItem
               key={idx}
+              originalSrc={img}
+              index={idx}
+              containerClassName="h-40 sm:h-52 rounded-xl"
               onClick={(e) => handleOpenPhoto(idx, e)}
-              className="relative h-40 sm:h-52 rounded-xl overflow-hidden bg-slate-900/5 border border-slate-200/80 cursor-pointer group flex items-center justify-center"
-            >
-              <img
-                src={img}
-                alt={`Media ${idx + 1}`}
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                <span className="p-2 bg-black/60 rounded-full shadow-md backdrop-blur-xs">
-                  <Eye className="w-4 h-4 drop-shadow" />
-                </span>
-              </div>
-            </div>
+            />
           ))}
         </div>
       )}
@@ -141,42 +241,32 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
           {visibleImages.map((img, idx) => {
             const isFourthAndHasMore = idx === 3 && hasMore;
             return (
-              <div
+              <PostImageItem
                 key={idx}
+                originalSrc={img}
+                index={idx}
+                containerClassName="h-44 sm:h-56 rounded-xl"
                 onClick={(e) => handleOpenPhoto(idx, e)}
-                className="relative h-44 sm:h-56 rounded-xl overflow-hidden bg-slate-900/5 border border-slate-200/80 cursor-pointer group flex items-center justify-center"
-              >
-                <img
-                  src={img}
-                  alt={`Media ${idx + 1}`}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                  loading="lazy"
-                />
-
-                {isFourthAndHasMore ? (
-                  <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[2px] flex flex-col items-center justify-center text-white transition-colors hover:bg-slate-950/85">
-                    <span className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow">
-                      +{extraCount + 1}
-                    </span>
-                    <span className="text-xs font-bold text-white mt-1 px-3 py-1 bg-white/25 rounded-full shadow-xs flex items-center gap-1 border border-white/20">
-                      <ImageIcon className="w-3.5 h-3.5" />
-                      กดดูเพิ่มเติม
-                    </span>
-                  </div>
-                ) : (
-                  <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                    <span className="p-2 bg-black/60 rounded-full shadow-md backdrop-blur-xs">
-                      <Eye className="w-4 h-4 drop-shadow" />
-                    </span>
-                  </div>
-                )}
-              </div>
+                overlay={
+                  isFourthAndHasMore ? (
+                    <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[2px] flex flex-col items-center justify-center text-white transition-colors hover:bg-slate-950/85">
+                      <span className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow">
+                        +{extraCount + 1}
+                      </span>
+                      <span className="text-xs font-bold text-white mt-1 px-3 py-1 bg-white/25 rounded-full shadow-xs flex items-center gap-1 border border-white/20">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        กดดูเพิ่มเติม
+                      </span>
+                    </div>
+                  ) : undefined
+                }
+              />
             );
           })}
         </div>
       )}
 
-      {/* Explicit "กดดูเพิ่มเติม" Action Bar if there are more than 4 images */}
+      {/* Explicit "กดดูรูปภาพเพิ่มเติม" Action Bar if there are more than 4 images */}
       {hasMore && (
         <button
           type="button"
@@ -188,7 +278,7 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
         </button>
       )}
 
-      {/* Lightbox / Full Photo Viewer Modal (เต็มภาพ & สามารถเลื่อนดูได้ทุกภาพ) */}
+      {/* Lightbox / Full Photo Viewer Modal */}
       {lightboxOpen && (
         <div
           onClick={() => setLightboxOpen(false)}
@@ -213,15 +303,20 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
             </button>
           </div>
 
-          {/* Main Full Image View (เต็มภาพ object-contain) */}
+          {/* Main Full Image View */}
           <div
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-4xl flex-1 flex items-center justify-center overflow-hidden my-auto"
           >
             <img
-              src={validImages[currentIndex]}
-              alt={`Photo preview ${currentIndex + 1}`}
+              src={resolvedImages[currentIndex] || validImages[currentIndex]}
+              alt=""
               className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl transition-all"
+              onError={(e) => {
+                // If it fails in lightbox, try resolving or show graceful fallback
+                const target = e.currentTarget;
+                target.style.display = 'none';
+              }}
             />
 
             {/* Prev Button */}
@@ -264,7 +359,14 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
                   }`}
                   title={`ดูภาพที่ ${idx + 1}`}
                 >
-                  <img src={thumb} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={resolvedImages[idx] || thumb}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                  />
                 </button>
               ))}
             </div>

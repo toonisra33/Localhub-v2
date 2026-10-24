@@ -13,6 +13,7 @@ interface StoredMedia {
   size: number;
   createdAt: number;
   thumbnailUrl?: string;
+  dataUrl?: string;
 }
 
 // In-memory object URL cache to avoid re-generating blobs and avoid leaks
@@ -63,27 +64,20 @@ export function compressImageFile(
   quality = 0.8
 ): Promise<string> {
   return new Promise((resolve) => {
-    // If not an image or if FileReader is not available, fallback to ObjectURL
-    const isImage = (file.type && file.type.startsWith('image/')) ||
-      (file instanceof File && /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.name));
-
-    if (!file || !isImage) {
-      if (typeof window !== 'undefined' && typeof window.URL?.createObjectURL === 'function') {
-        resolve(URL.createObjectURL(file));
-      } else {
-        resolve('');
-      }
+    if (!file) {
+      resolve('');
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const rawDataUrl = e.target?.result as string;
-      if (!rawDataUrl) {
+      if (!rawDataUrl || typeof rawDataUrl !== 'string') {
         resolve('');
         return;
       }
 
+      // Check if it's an image data URL or attempt image decode
       const img = new Image();
       img.onload = () => {
         try {
@@ -124,7 +118,12 @@ export function compressImageFile(
       };
 
       img.onerror = () => {
-        resolve(rawDataUrl);
+        // Not a valid renderable image or video file
+        if (typeof window !== 'undefined' && typeof window.URL?.createObjectURL === 'function') {
+          resolve(URL.createObjectURL(file));
+        } else {
+          resolve(rawDataUrl);
+        }
       };
 
       img.src = rawDataUrl;
@@ -157,17 +156,12 @@ export async function saveMediaFile(
   const type = file.type || 'application/octet-stream';
   const size = file.size;
 
-  const isImage = (type && type.startsWith('image/')) ||
-    /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(name);
-
-  // For images, generate persistent compressed Data URL
+  // Try generating persistent compressed Data URL
   let persistentDataUrl = '';
-  if (isImage) {
-    try {
-      persistentDataUrl = await compressImageFile(file);
-    } catch {
-      // fallback
-    }
+  try {
+    persistentDataUrl = await compressImageFile(file);
+  } catch {
+    // fallback
   }
 
   try {
@@ -182,7 +176,8 @@ export async function saveMediaFile(
         type,
         size,
         createdAt: Date.now(),
-        thumbnailUrl
+        thumbnailUrl,
+        dataUrl: persistentDataUrl || undefined
       };
 
       const putReq = store.put(record);
@@ -190,16 +185,21 @@ export async function saveMediaFile(
       putReq.onerror = () => reject(putReq.error);
     });
 
-    const objectUrl = persistentDataUrl || URL.createObjectURL(file);
+    const objectUrl = persistentDataUrl || (typeof window !== 'undefined' && window.URL ? URL.createObjectURL(file) : '');
     const ref = `idb://${id}`;
-    urlCache.set(ref, objectUrl);
-    urlCache.set(id, objectUrl);
+    if (persistentDataUrl) {
+      urlCache.set(ref, persistentDataUrl);
+      urlCache.set(id, persistentDataUrl);
+    } else if (objectUrl) {
+      urlCache.set(ref, objectUrl);
+      urlCache.set(id, objectUrl);
+    }
 
     return { id, ref, objectUrl, size, type, name };
   } catch (err) {
     console.warn('[mediaStorage] IndexedDB save failed, falling back to DataURL/ObjectURL:', err);
     const objectUrl = persistentDataUrl || (typeof window !== 'undefined' && window.URL ? URL.createObjectURL(file) : '');
-    const ref = objectUrl;
+    const ref = objectUrl || `idb://${id}`;
     return { id, ref, objectUrl, size, type, name };
   }
 }
@@ -208,45 +208,52 @@ export async function saveMediaFile(
  * Resolve a media reference (either idb://..., blob:..., or https://...) to an active playable URL.
  */
 export async function resolveMediaUrl(refOrUrl: string): Promise<string> {
-  if (!refOrUrl) return '';
+  if (!refOrUrl || typeof refOrUrl !== 'string') return '';
 
-  // Already a web URL or active blob
-  if (refOrUrl.startsWith('http://') || refOrUrl.startsWith('https://') || refOrUrl.startsWith('data:')) {
-    return refOrUrl;
+  const clean = refOrUrl.trim();
+  // Already a permanent web URL or data URL
+  if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')) {
+    return clean;
   }
 
   // Check cache first
-  if (urlCache.has(refOrUrl)) {
-    return urlCache.get(refOrUrl)!;
+  if (urlCache.has(clean)) {
+    return urlCache.get(clean)!;
   }
 
-  const id = refOrUrl.replace(/^idb:\/\//, '');
+  const id = clean.replace(/^idb:\/\//, '');
 
   try {
     const db = await getDB();
-    const blob = await new Promise<Blob | null>((resolve, reject) => {
+    const stored = await new Promise<StoredMedia | null>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
       const getReq = store.get(id);
 
       getReq.onsuccess = () => {
-        const result = getReq.result as StoredMedia | undefined;
-        resolve(result ? result.blob : null);
+        resolve((getReq.result as StoredMedia) || null);
       };
       getReq.onerror = () => reject(getReq.error);
     });
 
-    if (blob) {
-      const objectUrl = URL.createObjectURL(blob);
-      urlCache.set(refOrUrl, objectUrl);
-      urlCache.set(id, objectUrl);
-      return objectUrl;
+    if (stored) {
+      if (stored.dataUrl) {
+        urlCache.set(clean, stored.dataUrl);
+        urlCache.set(id, stored.dataUrl);
+        return stored.dataUrl;
+      }
+      if (stored.blob) {
+        const objectUrl = URL.createObjectURL(stored.blob);
+        urlCache.set(clean, objectUrl);
+        urlCache.set(id, objectUrl);
+        return objectUrl;
+      }
     }
   } catch (err) {
     console.warn('[mediaStorage] Error loading media from IndexedDB:', err);
   }
 
-  return refOrUrl;
+  return clean;
 }
 
 /**

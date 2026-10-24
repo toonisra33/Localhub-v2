@@ -69,6 +69,7 @@ interface CommunityContextType {
     bio?: string;
     emergencyContact?: string;
     occupation?: string;
+    isProfilePrivate?: boolean;
   } | null;
   updateUserProfile: (profileData: Partial<{
     displayName: string;
@@ -85,6 +86,7 @@ interface CommunityContextType {
     emergencyContact: string;
     occupation: string;
     photoURL: string;
+    isProfilePrivate: boolean;
   }>) => Promise<boolean>;
   isFirebaseConnected: boolean;
   loginWithGoogle: () => Promise<boolean>;
@@ -203,6 +205,9 @@ interface CommunityContextType {
   confirmActiveStatus: (uid?: string) => void;
   simulateInactivity: (enable: boolean) => void;
   deleteUserAccount: (uid: string) => void;
+  adminEmails: string[];
+  addAdminEmail: (email: string) => boolean;
+  removeAdminEmail: (email: string) => boolean;
 }
 
 export const ORIGINAL_ADMIN_EMAIL = 'toonisra33@gmail.com';
@@ -959,13 +964,64 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return DEFAULT_ADMIN_USER;
   });
 
-  // Strict check: only toonisra33@gmail.com is ever eligible to be Admin
+  // Admin Email Management: toonisra33@gmail.com is permanent Super Admin and cannot be removed
+  const [adminEmails, setAdminEmails] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('localhub_admin_emails');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const list = parsed.map(e => String(e).toLowerCase().trim()).filter(Boolean);
+          if (!list.includes(ORIGINAL_ADMIN_EMAIL.toLowerCase())) {
+            list.unshift(ORIGINAL_ADMIN_EMAIL.toLowerCase());
+          }
+          return list;
+        }
+      }
+    } catch {}
+    return [ORIGINAL_ADMIN_EMAIL.toLowerCase()];
+  });
+
+  const addAdminEmail = useCallback((email: string): boolean => {
+    const clean = email.toLowerCase().trim();
+    if (!clean || !clean.includes('@')) {
+      showToast('กรุณาระบุที่อยู่อีเมลให้ถูกต้อง เช่น admin2@example.com', 'error');
+      return false;
+    }
+    if (adminEmails.includes(clean)) {
+      showToast('อีเมลนี้ได้รับสิทธิ์ผู้ดูแลระบบ (Admin) อยู่แล้ว', 'info');
+      return false;
+    }
+    const updated = [...adminEmails, clean];
+    setAdminEmails(updated);
+    try {
+      localStorage.setItem('localhub_admin_emails', JSON.stringify(updated));
+    } catch {}
+    showToast(`✅ เพิ่ม ${clean} เข้าสู่รายชื่อผู้ดูแลระบบเรียบร้อยแล้ว`, 'success');
+    return true;
+  }, [adminEmails, showToast]);
+
+  const removeAdminEmail = useCallback((email: string): boolean => {
+    const clean = email.toLowerCase().trim();
+    if (clean === ORIGINAL_ADMIN_EMAIL.toLowerCase()) {
+      showToast('⚠️ ไม่สามารถลบอีเมลผู้พัฒนาและแอดมินสูงสุด (toonisra33@gmail.com) ได้ แอดมินหลักจะอยู่คู่ระบบถาวร', 'error');
+      return false;
+    }
+    const updated = adminEmails.filter(e => e !== clean);
+    setAdminEmails(updated);
+    try {
+      localStorage.setItem('localhub_admin_emails', JSON.stringify(updated));
+    } catch {}
+    showToast(`🗑️ ลบสิทธิ์ผู้ดูแลระบบของ ${clean} เรียบร้อยแล้ว`, 'info');
+    return true;
+  }, [adminEmails, showToast]);
+
+  // Check if current user is Super Admin or assigned Admin
   const isEligibleAdmin = useMemo(() => {
-    return Boolean(
-      currentUser?.email &&
-      currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
-    );
-  }, [currentUser]);
+    if (!currentUser?.email) return false;
+    const current = currentUser.email.toLowerCase().trim();
+    return current === ORIGINAL_ADMIN_EMAIL.toLowerCase() || adminEmails.includes(current);
+  }, [currentUser, adminEmails]);
 
   const [adminToggleActive, setAdminToggleActive] = useState<boolean>(() => {
     try {
@@ -974,10 +1030,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const storedUser = localStorage.getItem('localhub_user');
       if (storedUser) {
         const u = JSON.parse(storedUser);
-        if (u?.email && u.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()) {
-          const stored = localStorage.getItem('localhub_is_admin');
-          if (stored !== null) return JSON.parse(stored);
-          return true;
+        if (u?.email) {
+          const emailLower = u.email.toLowerCase().trim();
+          if (emailLower === ORIGINAL_ADMIN_EMAIL.toLowerCase() || adminEmails.includes(emailLower)) {
+            const stored = localStorage.getItem('localhub_is_admin');
+            if (stored !== null) return JSON.parse(stored);
+            return true;
+          }
         }
       }
       return true; // Default admin mode active for toonisra33
@@ -985,7 +1044,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return true;
   });
 
-  // Effective isAdmin: STRICTLY FALSE if user is not signed in with toonisra33@gmail.com!
+  // Effective isAdmin
   const isAdmin = Boolean(isEligibleAdmin && adminToggleActive);
 
   // Auto redirect away from admin if user loses admin privileges or logs out
@@ -1227,8 +1286,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [currentUser, showToast]);
 
-  // Action: Delete user account
+  // Action: Delete user account (ป้องกันการลบบัญชี Super Admin ถาวร)
   const deleteUserAccount = useCallback((uid: string) => {
+    const target = registeredUsers.find(u => u.uid === uid);
+    if (target && (target.email?.toLowerCase() === ORIGINAL_ADMIN_EMAIL.toLowerCase() || target.uid === 'admin_toonisra33')) {
+      showToast('⚠️ ไม่สามารถลบบัญชีผู้ดูแลระบบสูงสุด (Super Admin) ได้', 'error');
+      return;
+    }
     setRegisteredUsers(prev => {
       const updated = prev.map(u => (u.uid === uid ? { ...u, isAutoDeleted: true, warningDaysRemaining: 0 } : u));
       try {
@@ -1237,7 +1301,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return updated;
     });
     showToast('ลบบัญชีผู้ใช้เรียบร้อยแล้ว', 'info');
-  }, [showToast]);
+  }, [registeredUsers, showToast]);
 
   // Real-time Firestore sync: Posts
   useEffect(() => {
@@ -2095,11 +2159,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const safeSetIsAdmin = useCallback((val: boolean) => {
     if (val) {
-      const isOwner = Boolean(
-        currentUser?.email &&
-        currentUser.email.toLowerCase().trim() === ORIGINAL_ADMIN_EMAIL.toLowerCase()
-      );
-      if (!isOwner) {
+      if (!isEligibleAdmin) {
         showToast('เฉพาะบัญชีผู้ดูแลระบบเท่านั้นที่มีสิทธิ์เข้าถึงระบบ Admin', 'error');
         setAdminToggleActive(false);
         try {
@@ -2120,7 +2180,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       showToast('สลับเข้าสู่มุมมองสมาชิกทั่วไป', 'info');
       setActiveTab('home');
     }
-  }, [currentUser, showToast, setActiveTab]);
+  }, [isEligibleAdmin, showToast, setActiveTab]);
 
   // Modal navigation handlers with browser history synchronization
   const openPostDetail = useCallback((postOrId: Post | string) => {
@@ -2482,6 +2542,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     emergencyContact: string;
     occupation: string;
     photoURL: string;
+    isProfilePrivate: boolean;
   }>): Promise<boolean> => {
     try {
       if (!currentUser) {
@@ -3106,6 +3167,9 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         confirmActiveStatus,
         simulateInactivity,
         deleteUserAccount,
+        adminEmails,
+        addAdminEmail,
+        removeAdminEmail,
       }}
     >
       {children}

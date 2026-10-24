@@ -12,7 +12,9 @@ import {
   CheckCircle2,
   Home,
   Building,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Lock,
+  Globe
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 
@@ -38,6 +40,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   const [emergencyContact, setEmergencyContact] = useState('');
   const [occupation, setOccupation] = useState('');
   const [photoURL, setPhotoURL] = useState('');
+  const [isProfilePrivate, setIsProfilePrivate] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -62,6 +65,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       setEmergencyContact(currentUser.emergencyContact || '');
       setOccupation(currentUser.occupation || '');
       setPhotoURL(currentUser.photoURL || '');
+      setIsProfilePrivate(Boolean((currentUser as any)?.isProfilePrivate));
     }
   }, [isOpen, currentUser]);
 
@@ -91,7 +95,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
         bio: bio.trim(),
         emergencyContact: emergencyContact.trim(),
         occupation: occupation.trim(),
-        photoURL: photoURL.trim() || currentUser?.photoURL || undefined
+        photoURL: photoURL.trim() || currentUser?.photoURL || undefined,
+        isProfilePrivate
       });
 
       if (success) {
@@ -365,16 +370,48 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-bold text-slate-700">
-                ข้อความแนะนำตัวในชุมชน (Bio)
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700">
+                  ข้อความแนะนำตัวในชุมชน (Bio)
+                </label>
+                <span className={`text-[10px] font-bold ${bio.length > 230 ? 'text-rose-500' : 'text-slate-400'}`}>
+                  {bio.length}/250 ตัวอักษร
+                </span>
+              </div>
               <textarea
-                rows={2}
+                rows={3}
+                maxLength={250}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="เขียนข้อความสั้นๆ แนะนำตัวเองกับเพื่อนบ้านในชุมชน..."
+                placeholder="เขียนข้อความสั้นๆ แนะนำตัวเองกับเพื่อนบ้านในชุมชน (ไม่เกิน 250 ตัวอักษร)..."
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"
               />
+            </div>
+
+            {/* Privacy Setting Toggle */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  {isProfilePrivate ? <Lock className="w-3.5 h-3.5 text-amber-600" /> : <Globe className="w-3.5 h-3.5 text-emerald-600" />}
+                  <span>การเปิดเผยข้อมูลส่วนตัว</span>
+                </span>
+                <p className="text-[11px] text-slate-500">
+                  {isProfilePrivate
+                    ? '🔒 ซ่อนเป็นส่วนตัว (เฉพาะคุณเท่านั้นที่เห็นข้อมูลส่วนตัว)'
+                    : '🌐 เปิดเผยสาธารณะ (เพื่อนบ้านในชุมชนสามารถมองเห็นข้อมูลได้)'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsProfilePrivate(!isProfilePrivate)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  isProfilePrivate
+                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                }`}
+              >
+                {isProfilePrivate ? '🔒 ส่วนตัว' : '🌐 สาธารณะ'}
+              </button>
             </div>
           </div>
 

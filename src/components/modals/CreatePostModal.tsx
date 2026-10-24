@@ -148,10 +148,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
         // Convert dataURL to blob and save in IndexedDB
         const blob = await (await fetch(dataUrl)).blob();
-        setIsProcessingMedia(true);
-        setProcessingStatus('กำลังบันทึกภาพถ่าย...');
         const saved = await saveMediaFile(blob, `camera_${Date.now()}.jpg`);
-        setImages(prev => [...prev, saved.objectUrl]);
+        setImages(prev => [...prev, dataUrl || saved.objectUrl]);
         showToast('📸 ถ่ายรูปภาพสำเร็จ! พร้อมโพสต์', 'success');
       }
     } catch (err) {

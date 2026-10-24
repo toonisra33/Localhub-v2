@@ -36,10 +36,8 @@ export const DirectChatModal: React.FC = () => {
 
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [isViewingListOnMobile, setIsViewingListOnMobile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto scroll to bottom on new messages
   useEffect(() => {
@@ -61,29 +59,14 @@ export const DirectChatModal: React.FC = () => {
 
   const handleSendMessage = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!messageText.trim() && !selectedPhoto) return;
+    if (!messageText.trim()) return;
     if (!activeChatContact) {
       showToast('กรุณาเลือกผู้ติดต่อเพื่อเริ่มการสนทนา', 'info');
       return;
     }
 
-    sendDirectMessage(activeChatContact.id, messageText, selectedPhoto || undefined);
+    sendDirectMessage(activeChatContact.id, messageText.trim());
     setMessageText('');
-    setSelectedPhoto(null);
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setSelectedPhoto(reader.result);
-        showToast('แนบรูปภาพเรียบร้อยแล้ว', 'info');
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const formatTime = (timestamp: number) => {
@@ -107,15 +90,6 @@ export const DirectChatModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-      {/* Hidden file input for photo upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleImageUpload}
-      />
-
       <div className="relative w-full max-w-4xl h-[92vh] sm:h-[84vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
         {/* Main Content Area: Split 2 columns (Contacts List & Chat Area) */}
         <div className="flex-1 flex overflow-hidden">
@@ -435,49 +409,24 @@ export const DirectChatModal: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Attached Photo Preview */}
-                {selectedPhoto && (
-                  <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <img src={selectedPhoto} alt="preview" className="w-10 h-10 rounded-lg object-cover border border-slate-300" />
-                      <span className="text-xs text-slate-600 font-medium">รูปภาพพร้อมส่ง</span>
-                    </div>
-                    <button
-                      onClick={() => setSelectedPhoto(null)}
-                      className="p-1 hover:bg-slate-200 rounded-lg text-slate-500"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Chat Input Bar */}
+                {/* Chat Input Bar - ข้อความตัวต่อตัวเท่านั้น */}
                 <form
                   onSubmit={handleSendMessage}
                   className="p-2.5 sm:p-3 bg-white border-t border-slate-200 flex items-center gap-2"
                 >
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 sm:p-2.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition shrink-0 cursor-pointer"
-                    title="แนบรูปภาพ"
-                  >
-                    <ImageIcon className="w-5 h-5" />
-                  </button>
-
                   <input
                     type="text"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder={`พิมพ์ข้อความถึง ${activeChatContact.name}...`}
-                    className="flex-1 py-2 px-3 text-xs sm:text-sm bg-slate-100 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-emerald-500 transition"
+                    className="flex-1 py-2.5 px-4 text-xs sm:text-sm bg-slate-100 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 transition"
                   />
 
                   <button
                     type="submit"
-                    disabled={!messageText.trim() && !selectedPhoto}
-                    className={`p-2 sm:p-2.5 rounded-xl font-bold transition flex items-center justify-center shrink-0 ${
-                      messageText.trim() || selectedPhoto
+                    disabled={!messageText.trim()}
+                    className={`p-2.5 sm:p-3 rounded-2xl font-bold transition flex items-center justify-center shrink-0 ${
+                      messageText.trim()
                         ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md active:scale-95 cursor-pointer'
                         : 'bg-slate-100 text-slate-300 cursor-not-allowed'
                     }`}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   User,
   Shield,
@@ -33,13 +33,19 @@ import {
   LayoutDashboard,
   Phone,
   Building,
-  Home
+  Home,
+  Camera,
+  Globe,
+  Lock,
+  Mail,
+  Loader2
 } from 'lucide-react';
 import { useCommunity, ORIGINAL_ADMIN_EMAIL } from '../../context/CommunityContext';
 import { Post, AlertReport } from '../../types';
 import { PostImageGallery } from '../PostImageGallery';
 import { PostActionMenu } from '../PostActionMenu';
 import { EditProfileModal } from '../modals/EditProfileModal';
+import { compressImageFile } from '../../utils/mediaStorage';
 
 interface ProfileViewProps {
   onOpenCreatePost?: () => void;
@@ -64,6 +70,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     showToast,
     goBack,
     createPost,
+    updateUserProfile,
     isCurrentAccountInactiveWarning,
     currentAccountDaysRemaining,
     confirmActiveStatus,
@@ -75,6 +82,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
   const [activeTabSub, setActiveTabSub] = useState<ProfileActiveTab>('posts');
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [quickPostText, setQuickPostText] = useState('');
+  const [quickPostImages, setQuickPostImages] = useState<string[]>([]);
+  const [isProcessingQuickImage, setIsProcessingQuickImage] = useState(false);
+  const quickCameraInputRef = useRef<HTMLInputElement>(null);
+  const quickGalleryInputRef = useRef<HTMLInputElement>(null);
+
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -211,18 +223,61 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
     );
   }, [friends, friendSearchQuery]);
 
+  const handleQuickCameraUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsProcessingQuickImage(true);
+    try {
+      const file = files[0];
+      const compressed = await compressImageFile(file, 960, 960, 0.72);
+      if (compressed) {
+        setQuickPostImages(prev => [...prev, compressed]);
+        showToast('📸 ถ่ายภาพสดเรียบร้อย แนบในโพสต์แล้ว!', 'success');
+      }
+    } catch {
+      showToast('ไม่สามารถบันทึกภาพถ่ายได้', 'error');
+    } finally {
+      setIsProcessingQuickImage(false);
+      if (quickCameraInputRef.current) quickCameraInputRef.current.value = '';
+    }
+  };
+
+  const handleQuickGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsProcessingQuickImage(true);
+    try {
+      const newImgs: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const compressed = await compressImageFile(files[i], 960, 960, 0.72);
+        if (compressed) newImgs.push(compressed);
+      }
+      if (newImgs.length > 0) {
+        setQuickPostImages(prev => [...prev, ...newImgs]);
+        showToast(`🖼️ แนบรูปภาพ ${newImgs.length} รูปเรียบร้อย!`, 'success');
+      }
+    } catch {
+      showToast('เกิดข้อผิดพลาดในการโหลดรูปภาพ', 'error');
+    } finally {
+      setIsProcessingQuickImage(false);
+      if (quickGalleryInputRef.current) quickGalleryInputRef.current.value = '';
+    }
+  };
+
   const handleQuickCreatePost = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickPostText.trim()) {
-      showToast('กรุณากรอกข้อความเพื่อแชร์เรื่องราว', 'info');
+    if (!quickPostText.trim() && quickPostImages.length === 0) {
+      showToast('กรุณากรอกข้อความหรือแนบรูปภาพเพื่อแชร์เรื่องราว', 'info');
       return;
     }
     createPost({
-      title: quickPostText.slice(0, 40),
-      content: quickPostText,
-      category: 'general'
+      title: quickPostText.trim() ? quickPostText.slice(0, 40) : 'ภาพถ่ายเรื่องราวในชุมชน',
+      content: quickPostText.trim() || 'แชร์ภาพถ่ายเรื่องราว',
+      category: 'general',
+      images: quickPostImages.length > 0 ? quickPostImages : undefined
     });
     setQuickPostText('');
+    setQuickPostImages([]);
     showToast('สร้างโพสต์ของคุณเรียบร้อยแล้ว!', 'success');
   };
 
@@ -402,24 +457,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
         </div>
       )}
 
-      {/* Real Account Status Bar (ระบบใช้งานจริง) */}
-      <div className="p-3 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between text-xs text-slate-600 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full ${isCurrentAccountInactiveWarning ? 'bg-amber-500 animate-bounce' : 'bg-emerald-500 animate-pulse'} shrink-0`} />
-          <span className="text-xs">
-            สถานะการใช้งานบัญชี: <strong className={isCurrentAccountInactiveWarning ? 'text-amber-700 font-bold' : 'text-emerald-700 font-bold'}>
-              {isCurrentAccountInactiveWarning
-                ? `⚠️ แจ้งเตือนไม่เคลื่อนไหวเกิน 3 เดือน (เหลือเวลา ${currentAccountDaysRemaining} วัน)`
-                : '🟢 บัญชีปกติ (Active - มีการเข้าใช้งานและเคลื่อนไหวสม่ำเสมอ)'}
-            </strong>
-          </span>
+      {/* Real Account Status Bar: แสดงเฉพาะ Admin หรือ บัญชีที่ได้รับการแจ้งเตือนเหลือเวลา 30 วัน */}
+      {(isAdmin || isCurrentAccountInactiveWarning) && (
+        <div className="p-3 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between text-xs text-slate-600 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${isCurrentAccountInactiveWarning ? 'bg-amber-500 animate-bounce' : 'bg-emerald-500 animate-pulse'} shrink-0`} />
+            <span className="text-xs">
+              สถานะการใช้งานบัญชี: <strong className={isCurrentAccountInactiveWarning ? 'text-amber-700 font-bold' : 'text-emerald-700 font-bold'}>
+                {isCurrentAccountInactiveWarning
+                  ? `⚠️ แจ้งเตือนไม่เคลื่อนไหวเกิน 3 เดือน (เหลือเวลา ${currentAccountDaysRemaining} วัน)`
+                  : '🟢 บัญชีปกติ (Active - มีการเข้าใช้งานและเคลื่อนไหวสม่ำเสมอ)'}
+              </strong>
+            </span>
+          </div>
+          <div className="text-[11px] text-slate-400 font-medium hidden sm:block">
+            ระบบความปลอดภัย LocalHub
+          </div>
         </div>
-        <div className="text-[11px] text-slate-400 font-medium hidden sm:block">
-          ระบบความปลอดภัย LocalHub
-        </div>
-      </div>
+      )}
 
-      {/* 1. Profile Header Card (ไม่มีตัวจับพิกัด GPS ตามที่สั่ง) */}
+      {/* 1. Profile Header Card */}
       <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -434,7 +491,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
               </span>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                   {currentUser.displayName || 'อิศราวัฒน์ ปวินทกานต์'}
@@ -449,61 +506,77 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
                     สมาชิกชุมชน
                   </span>
                 )}
+                {currentUser.isProfilePrivate ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-amber-600" />
+                    <span>โปรไฟล์ส่วนตัว</span>
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200 flex items-center gap-1">
+                    <Globe className="w-3 h-3 text-blue-600" />
+                    <span>โปรไฟล์สาธารณะ</span>
+                  </span>
+                )}
               </div>
 
               <p className="text-xs text-slate-500">{currentUser.email}</p>
 
-              {/* Personal Details Badges (เบอร์โทร, ที่อยู่, อาชีพ) */}
-              {(currentUser.phone || currentUser.address || currentUser.district || currentUser.province || currentUser.occupation) && (
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px] text-slate-600">
-                  {currentUser.phone && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-medium">
-                      <Phone className="w-3 h-3 text-blue-600 shrink-0" />
-                      <span>{currentUser.phone}</span>
-                    </span>
-                  )}
-                  {(currentUser.address || currentUser.district || currentUser.province) && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-medium">
-                      <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
-                      <span>{[currentUser.address, currentUser.subdistrict, currentUser.district, currentUser.province].filter(Boolean).join(' ')}</span>
-                    </span>
-                  )}
-                  {currentUser.occupation && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-lg text-slate-700 font-medium">
-                      <Building className="w-3 h-3 text-amber-600 shrink-0" />
-                      <span>{currentUser.occupation}</span>
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Bio / About */}
-              <div className="pt-0.5">
+              {/* Bio / About: แสดงแบบเต็ม ไม่ตัดบรรทัด อนุญาตไม่เกิน 250 ตัวอักษร */}
+              <div className="pt-1.5">
                 {isEditingBio ? (
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <input
-                      type="text"
+                  <div className="space-y-1.5 pt-1 max-w-md">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                      <span>แก้ไขข้อความแนะนำตัว:</span>
+                      <span className={userBio.length > 230 ? 'text-rose-500 font-bold' : 'text-slate-400'}>
+                        {userBio.length}/250 ตัวอักษร
+                      </span>
+                    </div>
+                    <textarea
+                      maxLength={250}
+                      rows={3}
                       value={userBio}
                       onChange={(e) => setUserBio(e.target.value)}
-                      className="px-2 py-1 text-xs border border-slate-300 rounded-lg text-slate-700 outline-none focus:border-emerald-500"
+                      placeholder="เขียนข้อความแนะนำตัวของคุณ (ไม่เกิน 250 ตัวอักษร)..."
+                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl text-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none bg-white"
                     />
-                    <button
-                      onClick={() => setIsEditingBio(false)}
-                      className="px-2 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg"
-                    >
-                      บันทึก
-                    </button>
+                    <div className="flex items-center gap-2 justify-end">
+                      <button
+                        onClick={() => setIsEditingBio(false)}
+                        className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg transition"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        onClick={() => {
+                          updateUserProfile({ bio: userBio });
+                          setIsEditingBio(false);
+                          showToast('บันทึกข้อความแนะนำตัวเรียบร้อยแล้ว', 'success');
+                        }}
+                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-xs"
+                      >
+                        บันทึก Bio
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                    <span className="line-clamp-1">{currentUser.bio || userBio}</span>
-                    <button
-                      onClick={() => setIsEditingBio(true)}
-                      className="text-slate-400 hover:text-slate-700 p-0.5"
-                      title="แก้ไขข้อความแนะนำตัว"
-                    >
-                      <Edit3 className="w-3 h-3" />
-                    </button>
+                  <div className="space-y-1 text-xs text-slate-700 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/60 max-w-xl">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
+                      <span>ข้อความแนะนำตัว (Bio)</span>
+                      <button
+                        onClick={() => {
+                          setUserBio(currentUser.bio || userBio);
+                          setIsEditingBio(true);
+                        }}
+                        className="text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer font-bold"
+                        title="แก้ไขข้อความแนะนำตัว"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>แก้ไข</span>
+                      </button>
+                    </div>
+                    <p className="whitespace-pre-wrap break-words leading-relaxed text-slate-800 font-normal">
+                      {currentUser.bio || userBio}
+                    </p>
                   </div>
                 )}
               </div>
@@ -590,7 +663,141 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
         </div>
       </div>
 
-      {/* 2. Admin Role Switcher (แสดงเฉพาะ Admin เท่านั้น) */}
+      {/* 2. ข้อมูลส่วนตัวของฉันทั้งหมด (แสดงทั้งหมดตามคำสั่ง พร้อมปุ่มเปิด/ปิด สถานะสาธารณะหรือส่วนตัว) */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-emerald-100 text-emerald-800 rounded-2xl">
+              <User className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">
+                ข้อมูลส่วนตัวของเจ้าของบัญชี
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                {currentUser.isProfilePrivate
+                  ? '🔒 สถานะ: ข้อมูลส่วนตัว (ซ่อนข้อมูลจากสมาชิกคนอื่น มีเพียงคุณที่เห็น)'
+                  : '🌐 สถานะ: ข้อมูลสาธารณะ (เปิดเผยข้อมูลส่วนตัวให้เพื่อนบ้านในพื้นที่มองเห็น)'}
+              </p>
+            </div>
+          </div>
+
+          {/* Privacy Toggle: ส่วนตัว หรือ สาธารณะ */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                const nextState = !currentUser.isProfilePrivate;
+                updateUserProfile({ isProfilePrivate: nextState });
+                showToast(
+                  nextState
+                    ? '🔒 เปลี่ยนสถานะเป็น: บัญชีส่วนตัว (ซ่อนข้อมูลจากสาธารณะเรียบร้อย)'
+                    : '🌐 เปลี่ยนสถานะเป็น: บัญชีสาธารณะ (เปิดเผยข้อมูลต่อสมาชิกในชุมชนเรียบร้อย)',
+                  'info'
+                );
+              }}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer border ${
+                currentUser.isProfilePrivate
+                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
+                  : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300'
+              }`}
+              title="คลิกเพื่อสลับระหว่างเปิดเผยสาธารณะ หรือซ่อนเป็นข้อมูลส่วนตัว"
+            >
+              {currentUser.isProfilePrivate ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-700" />
+                  <span>โหมด: ซ่อนเป็นส่วนตัว (Private)</span>
+                </>
+              ) : (
+                <>
+                  <Globe className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>โหมด: เปิดเผยสาธารณะ (Public)</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsEditProfileModalOpen(true)}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-slate-200 cursor-pointer"
+              title="แก้ไขข้อมูลส่วนตัว"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+              <span>แก้ไข</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ข้อมูลส่วนตัวทั้งหมด (แสดงครบทุกฟิลด์) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1">
+            <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+              <User className="w-3 h-3 text-slate-400" />
+              <span>ชื่อ - นามสกุล</span>
+            </div>
+            <div className="font-extrabold text-slate-900 text-xs sm:text-sm">
+              {currentUser.firstName || currentUser.lastName
+                ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim()
+                : currentUser.displayName}
+            </div>
+            {currentUser.displayName && (
+              <div className="text-[10px] text-slate-500">ชื่อที่แสดง: {currentUser.displayName}</div>
+            )}
+          </div>
+
+          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1">
+            <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+              <Mail className="w-3 h-3 text-slate-400" />
+              <span>อีเมลประจำบัญชี</span>
+            </div>
+            <div className="font-semibold text-slate-800 truncate text-xs sm:text-sm">
+              {currentUser.email || '-'}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1">
+            <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+              <Phone className="w-3 h-3 text-blue-500" />
+              <span>เบอร์โทรศัพท์</span>
+            </div>
+            <div className="font-semibold text-slate-800 text-xs sm:text-sm">
+              {currentUser.phone || 'ยังไม่ได้ระบุ'}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1">
+            <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+              <Phone className="w-3 h-3 text-rose-500" />
+              <span>เบอร์โทรติดต่อฉุกเฉิน</span>
+            </div>
+            <div className="font-semibold text-rose-700 text-xs sm:text-sm">
+              {currentUser.emergencyContact || 'ยังไม่ได้ระบุ'}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1">
+            <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+              <Building className="w-3 h-3 text-amber-500" />
+              <span>อาชีพ / ความเชี่ยวชาญ</span>
+            </div>
+            <div className="font-semibold text-slate-800 text-xs sm:text-sm">
+              {currentUser.occupation || 'ยังไม่ได้ระบุ'}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1 sm:col-span-2 md:col-span-1">
+            <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-emerald-500" />
+              <span>ที่อยู่ / ตำบล / อำเภอ / จังหวัด</span>
+            </div>
+            <div className="font-semibold text-slate-800 text-xs sm:text-sm leading-snug">
+              {[currentUser.address, currentUser.subdistrict, currentUser.district, currentUser.province, currentUser.postalCode].filter(Boolean).join(' ') || 'ยังไม่ได้ระบุ'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Admin Role Switcher (แสดงเฉพาะ Admin เท่านั้น) */}
       {isEligibleAdmin && (
         <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl shadow-md border-2 border-red-500/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="space-y-1">
@@ -632,7 +839,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
         </div>
       )}
 
-      {/* 3. Segmented Navigation Tabs */}
+      {/* 4. Segmented Navigation Tabs */}
       <div className="flex items-center gap-1 p-1 bg-slate-200/80 rounded-2xl text-xs font-bold overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveTabSub('posts')}
@@ -675,7 +882,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
         </button>
       </div>
 
-      {/* 4. Tab 1: ข้อมูลเฉพาะบุคคลของเจ้าของบัญชี (โพสต์ส่วนตัว + โพสต์ที่แชร์เท่านั้น) */}
+      {/* Hidden inputs for Quick Post Camera & Gallery */}
+      <input
+        ref={quickCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleQuickCameraUpload}
+      />
+      <input
+        ref={quickGalleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleQuickGalleryUpload}
+      />
+
+      {/* 5. Tab 1: ข้อมูลเฉพาะบุคคลของเจ้าของบัญชี (โพสต์ส่วนตัว + โพสต์ที่แชร์เท่านั้น) */}
       {activeTabSub === 'posts' && (
         <div className="space-y-3">
           {/* Personal Scope Indicator Banner */}
@@ -698,8 +923,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
             </span>
           </div>
 
-          {/* Quick Post Box */}
-          <form onSubmit={handleQuickCreatePost} className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs space-y-2.5">
+          {/* Quick Post Box with Camera Shutter & Gallery Upload Buttons */}
+          <form onSubmit={handleQuickCreatePost} className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs space-y-3">
             <div className="flex items-center gap-2">
               <img
                 src={currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
@@ -717,11 +942,71 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenCreatePost }) =>
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-500 focus:bg-white transition resize-none"
             />
 
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-slate-400">โพสต์จะแสดงในโปรไฟล์และฟีดชุมชน</span>
+            {/* Attached Thumbnails Preview */}
+            {quickPostImages.length > 0 && (
+              <div className="space-y-1 pt-1">
+                <div className="text-[11px] font-bold text-slate-600">รูปภาพที่แนบ ({quickPostImages.length} รูป):</div>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {quickPostImages.map((img, idx) => (
+                    <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 shrink-0 group">
+                      <img src={img} alt={`Attached ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setQuickPostImages(prev => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-1 right-1 p-0.5 bg-black/70 hover:bg-rose-600 text-white rounded-full transition cursor-pointer"
+                        title="ลบรูปนี้"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action Row: Camera, Gallery & Post Button */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                {/* ปุ่มเข้ากล้องถ่ายรูป (ปุ่มข้าวกล้อง) */}
+                <button
+                  type="button"
+                  disabled={isProcessingQuickImage}
+                  onClick={() => quickCameraInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                  title="เปิดกล้องถ่ายภาพสดทันที"
+                >
+                  <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>ถ่ายรูปสด (เข้ากล้อง)</span>
+                </button>
+
+                {/* ปุ่มอัปโหลดรูปภาพจากแกลเลอรี */}
+                <button
+                  type="button"
+                  disabled={isProcessingQuickImage}
+                  onClick={() => quickGalleryInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                  title="เลือกรูปภาพจากคลังภาพในเครื่อง"
+                >
+                  <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                  <span>แกลเลอรี</span>
+                </button>
+
+                {isProcessingQuickImage && (
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
+                    <span>กำลังประมวลผลภาพ...</span>
+                  </span>
+                )}
+              </div>
+
               <button
                 type="submit"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs"
+                disabled={isProcessingQuickImage || (!quickPostText.trim() && quickPostImages.length === 0)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer ${
+                  quickPostText.trim() || quickPostImages.length > 0
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                }`}
               >
                 <span>โพสต์เลย</span>
               </button>

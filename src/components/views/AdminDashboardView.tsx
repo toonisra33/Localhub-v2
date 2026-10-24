@@ -111,7 +111,10 @@ export const AdminDashboardView: React.FC = () => {
     inactiveUsersCount,
     pendingDeletionUsersCount,
     confirmActiveStatus,
-    deleteUserAccount
+    deleteUserAccount,
+    adminEmails,
+    addAdminEmail,
+    removeAdminEmail
   } = useCommunity();
 
   // Active activity filter
@@ -130,6 +133,7 @@ export const AdminDashboardView: React.FC = () => {
   // User Management filters
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userFilterStatus, setUserFilterStatus] = useState<'all' | 'active' | 'inactive' | 'admin'>('all');
+  const [newAdminEmailInput, setNewAdminEmailInput] = useState('');
 
   // Test sound settings
   const [localSoundType, setLocalSoundType] = useState<TestSoundType>('siren');
@@ -1545,6 +1549,105 @@ export const AdminDashboardView: React.FC = () => {
             </div>
           </div>
 
+          {/* Admin Team & Super Admin Management Section */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white border-2 border-indigo-500/30 space-y-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                <div>
+                  <h3 className="font-extrabold text-xs sm:text-sm text-white">
+                    รายชื่อผู้ดูแลระบบ (Admin Team Management)
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    อีเมล <strong>{ORIGINAL_ADMIN_EMAIL}</strong> คือผู้พัฒนาและแอดมินสูงสุด อยู่คู่ระบบถาวรตลอดกาล ไม่สามารถลบได้
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 text-[10px] font-black">
+                {adminEmails.length} ผู้ดูแลระบบ
+              </span>
+            </div>
+
+            {/* Admin Emails List */}
+            <div className="space-y-2">
+              {adminEmails.map((email) => {
+                const isSuperAdmin = email.toLowerCase() === ORIGINAL_ADMIN_EMAIL.toLowerCase();
+                return (
+                  <div
+                    key={email}
+                    className="p-3 bg-white/10 rounded-xl border border-white/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/30 flex items-center justify-center shrink-0 text-white font-bold text-xs">
+                        {isSuperAdmin ? '👑' : '🛡️'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-white truncate">{email}</span>
+                          {isSuperAdmin ? (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[9px] font-black">
+                              ผู้พัฒนา & แอดมินสูงสุด (คุ้มครองถาวรตลอดกาล)
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/40 text-[9px] font-black">
+                              ผู้ดูแลระบบร่วม (Admin)
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-400">
+                          {isSuperAdmin
+                            ? 'แอดมินผู้สร้างระบบ ไม่สามารถลบออกจากระบบได้ในทุกกรณี'
+                            : 'ได้รับสิทธิ์จัดการระบบ แดชบอร์ด และข้อมูลผู้ใช้'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {!isSuperAdmin && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการเพิกถอนสิทธิ์แอดมินของ "${email}"?`)) {
+                            removeAdminEmail(email);
+                          }
+                        }}
+                        className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold rounded-lg border border-rose-400/40 transition flex items-center gap-1 shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>ลบสิทธิ์แอดมิน</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add New Admin Email Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newAdminEmailInput.trim()) {
+                  const success = addAdminEmail(newAdminEmailInput.trim());
+                  if (success) setNewAdminEmailInput('');
+                }
+              }}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-white/10"
+            >
+              <input
+                type="email"
+                value={newAdminEmailInput}
+                onChange={(e) => setNewAdminEmailInput(e.target.value)}
+                placeholder="ระบุอีเมลเพื่อแต่งตั้งเป็นแอดมินใหม่ เช่น admin2@example.com"
+                className="flex-1 px-3.5 py-2 bg-white/10 border border-white/20 rounded-xl text-xs font-medium text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-400"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30 shrink-0 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>เพิ่มอีเมลแอดมิน</span>
+              </button>
+            </form>
+          </div>
+
           {/* Search Bar & Filter Tabs */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
             <div className="relative flex-1">
@@ -1637,6 +1740,7 @@ export const AdminDashboardView: React.FC = () => {
                 .map((user) => {
                   const daysSinceActive = Math.floor((Date.now() - user.lastActiveAt) / (24 * 60 * 60 * 1000));
                   const isCurrentAccount = currentUser?.uid === user.uid || (currentUser?.email && currentUser.email.toLowerCase() === user.email.toLowerCase());
+                  const isSuperAdminAccount = user.email?.toLowerCase() === ORIGINAL_ADMIN_EMAIL.toLowerCase() || user.uid === 'admin_toonisra33';
 
                   return (
                     <div
@@ -1736,19 +1840,31 @@ export const AdminDashboardView: React.FC = () => {
                             </button>
                           )}
 
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี "${user.displayName}" (${user.email})? การดำเนินการนี้ไม่สามารถยกเลิกได้`)) {
-                                deleteUserAccount(user.uid);
-                                showToast(`🗑️ ลบบัญชี ${user.displayName} เรียบร้อยแล้ว`, 'info');
-                              }
-                            }}
-                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center gap-1 transition cursor-pointer"
-                            title="ลบบัญชีผู้ใช้งานนี้ออกจากระบบ"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>ลบบัญชี</span>
-                          </button>
+                          {isSuperAdminAccount ? (
+                            <span className="px-3 py-1.5 bg-blue-50 text-blue-700 font-extrabold rounded-xl text-xs flex items-center gap-1.5 border border-blue-200">
+                              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                              <span>ผู้ดูแลระบบสูงสุด (คุ้มครองถาวร)</span>
+                            </span>
+                          ) : isCurrentAccount ? (
+                            <span className="px-3 py-1.5 bg-emerald-50 text-emerald-800 font-bold rounded-xl text-xs flex items-center gap-1.5 border border-emerald-200">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>บัญชีของคุณ</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี "${user.displayName}" (${user.email})? การดำเนินการนี้ไม่สามารถยกเลิกได้`)) {
+                                  deleteUserAccount(user.uid);
+                                  showToast(`🗑️ ลบบัญชี ${user.displayName} เรียบร้อยแล้ว`, 'info');
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center gap-1 transition cursor-pointer"
+                              title="ลบบัญชีผู้ใช้งานนี้ออกจากระบบ"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>ลบบัญชี</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

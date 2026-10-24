@@ -53,6 +53,7 @@ export interface UserAccount {
   bio?: string;
   emergencyContact?: string;
   occupation?: string;
+  isProfilePrivate?: boolean;
   createdAt: number;
   lastActiveAt: number;
   isInactiveWarning?: boolean;
