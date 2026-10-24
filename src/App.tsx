@@ -232,7 +232,7 @@ function AppContent() {
       }
       if (targetTab && VALID_TABS.includes(targetTab)) {
         if (targetTab !== activeTab) {
-          setActiveTab(targetTab);
+          setActiveTab(targetTab, true);
           window.scrollTo({ top: 0, behavior: 'smooth' });
           return;
         }

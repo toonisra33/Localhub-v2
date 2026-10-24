@@ -100,7 +100,7 @@ interface CommunityContextType {
   closeLoginModal: () => void;
 
   activeTab: Tab;
-  setActiveTab: (tab: Tab) => void;
+  setActiveTab: (tab: Tab, skipPushState?: boolean) => void;
   goBack: () => void;
   canGoBack: boolean;
   location: Location;
@@ -781,7 +781,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return ['home'];
   });
 
-  const setActiveTab = useCallback((nextTab: Tab) => {
+  const setActiveTab = useCallback((nextTab: Tab, skipPushState = false) => {
     setActiveTabState(prev => {
       if (prev === nextTab) {
         if (typeof window !== 'undefined') {
@@ -789,13 +789,20 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
         return prev;
       }
-      if (typeof window !== 'undefined') {
-        window.history.pushState({ type: 'tab', tab: nextTab }, '', '#' + nextTab);
-        window.scrollTo({ top: 0, behavior: 'instant' });
-      }
-      setTabHistory(h => [...h, nextTab]);
       return nextTab;
     });
+
+    setTabHistory(h => (h[h.length - 1] === nextTab ? h : [...h, nextTab]));
+
+    if (typeof window !== 'undefined') {
+      if (!skipPushState) {
+        const cleanHash = window.location.hash.replace(/^#/, '').split('?')[0];
+        if (cleanHash !== nextTab) {
+          window.history.pushState({ type: 'tab', tab: nextTab }, '', '#' + nextTab);
+        }
+      }
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   }, []);
 
   // Friends state with persistence

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Eye, ChevronLeft, ChevronRight, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { resolveMediaUrl } from '../utils/mediaStorage';
 
@@ -26,20 +26,18 @@ const PostImageItem: React.FC<PostImageItemProps> = ({
   onClick,
   overlay
 }) => {
-  const [resolvedSrc, setResolvedSrc] = useState<string>(() => {
-    if (originalSrc.startsWith('http://') || originalSrc.startsWith('https://') || originalSrc.startsWith('data:')) {
-      return originalSrc;
-    }
-    return '';
-  });
-  const [isLoading, setIsLoading] = useState<boolean>(!resolvedSrc);
+  const isDirectUrl = originalSrc.startsWith('http://') || originalSrc.startsWith('https://') || originalSrc.startsWith('data:');
+  const [resolvedSrc, setResolvedSrc] = useState<string>(() => (isDirectUrl ? originalSrc : ''));
+  const [isLoading, setIsLoading] = useState<boolean>(!isDirectUrl);
   const [hasError, setHasError] = useState<boolean>(false);
 
   useEffect(() => {
     let isCancelled = false;
 
-    if (originalSrc.startsWith('http://') || originalSrc.startsWith('https://') || originalSrc.startsWith('data:')) {
-      setResolvedSrc(originalSrc);
+    if (isDirectUrl) {
+      if (resolvedSrc !== originalSrc) {
+        setResolvedSrc(originalSrc);
+      }
       setIsLoading(false);
       setHasError(false);
       return;
@@ -69,7 +67,7 @@ const PostImageItem: React.FC<PostImageItemProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [originalSrc]);
+  }, [originalSrc, isDirectUrl]);
 
   return (
     <div
@@ -120,19 +118,24 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [resolvedImages, setResolvedImages] = useState<string[]>([]);
 
-  const validImages = (images || []).filter((img) => typeof img === 'string' && img.trim().length > 0);
+  // Memoize validImages to avoid reference recreation on each render
+  const validImages = useMemo(() => {
+    return (images || []).filter((img) => typeof img === 'string' && img.trim().length > 0);
+  }, [images]);
 
-  // Resolve all valid images in background for Lightbox
+  // Resolve images ONLY when Lightbox is actually open to avoid background loops on feed/profile
   useEffect(() => {
     let isCancelled = false;
-    if (validImages.length === 0) {
-      setResolvedImages([]);
+    if (!lightboxOpen || validImages.length === 0) {
       return;
     }
 
     Promise.all(
       validImages.map(async (img) => {
         try {
+          if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('data:')) {
+            return img;
+          }
           const res = await resolveMediaUrl(img);
           return res || img;
         } catch {
@@ -148,7 +151,7 @@ export const PostImageGallery: React.FC<PostImageGalleryProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [validImages]);
+  }, [lightboxOpen, validImages]);
 
   if (validImages.length === 0) return null;
 
